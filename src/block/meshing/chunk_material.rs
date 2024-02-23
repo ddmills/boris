@@ -1,0 +1,55 @@
+use bevy::{
+    asset::{Asset, AssetServer, Assets, Handle},
+    ecs::system::{Commands, Res, ResMut},
+    pbr::{Material, MaterialPipeline, MaterialPipelineKey},
+    reflect::TypePath,
+    render::{
+        color::Color,
+        mesh::{Mesh, MeshVertexAttribute, MeshVertexBufferLayout},
+        render_resource::{
+            AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
+            VertexFormat,
+        },
+        texture::{Image, ImageLoaderSettings, ImageSampler},
+    },
+};
+
+const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
+    MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
+
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+pub struct ChunkMaterial {
+    #[texture(0)]
+    #[sampler(1)]
+    pub texture: Handle<Image>,
+    #[uniform[2]]
+    pub color: Color,
+    #[uniform[3]]
+    pub texture_count: u32,
+    #[uniform[4]]
+    pub terrain_slice_y: u32,
+}
+
+impl Material for ChunkMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/terrain.wgsl".into()
+    }
+
+    fn fragment_shader() -> ShaderRef {
+        "shaders/terrain.wgsl".into()
+    }
+
+    fn specialize(
+        _pipeline: &MaterialPipeline<Self>,
+        descriptor: &mut RenderPipelineDescriptor,
+        layout: &MeshVertexBufferLayout,
+        _key: MaterialPipelineKey<Self>,
+    ) -> Result<(), SpecializedMeshPipelineError> {
+        let vertex_layout = layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            ATTRIBUTE_PACKED_BLOCK.at_shader_location(1),
+        ])?;
+        descriptor.vertex.buffers = vec![vertex_layout];
+        Ok(())
+    }
+}

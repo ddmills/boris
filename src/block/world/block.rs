@@ -11,6 +11,7 @@ impl Block {
 impl Block {
     pub fn is_filled(&self) -> bool {
         match self {
+            &Self::OOB => false,
             &Self::EMPTY => false,
             &Self::STONE => true,
             _ => false,

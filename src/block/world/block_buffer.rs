@@ -8,6 +8,7 @@ pub struct BlockBuffer {
     pub blocks: Box<[Block]>,
     pub block_count: u32,
     pub chunk_idx: u32,
+    pub chunk_size: u32,
     pub world_x: u32,
     pub world_y: u32,
     pub world_z: u32,
@@ -20,6 +21,7 @@ impl BlockBuffer {
             block_count: shape.size(),
             shape: shape,
             chunk_idx: 0,
+            chunk_size: 0,
             world_x: 0,
             world_y: 0,
             world_z: 0,
@@ -46,8 +48,22 @@ impl BlockBuffer {
         return Block::OOB;
     }
 
-    pub fn get_block_by_xyz(&self, x: u32, y: u32, z: u32) -> Block {
-        let block_idx = self.get_block_idx(x, y, z);
+    pub fn is_oob(&self, x: i32, y: i32, z: i32) -> bool {
+        let chunk_size_i32 = self.chunk_size as i32;
+        return x < 0
+            || y < 0
+            || z < 0
+            || x >= chunk_size_i32
+            || y >= chunk_size_i32
+            || z >= chunk_size_i32;
+    }
+
+    pub fn get_block_by_xyz(&self, x: i32, y: i32, z: i32) -> Block {
+        if self.is_oob(x, y, z) {
+            return Block::OOB;
+        }
+
+        let block_idx = self.get_block_idx(x as u32, y as u32, z as u32);
 
         if let Some(block) = self.blocks.get(block_idx as usize) {
             return *block;
@@ -57,13 +73,17 @@ impl BlockBuffer {
     }
 
     pub fn get_immediate_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 6] {
+        let x_i32 = x as i32;
+        let y_i32 = y as i32;
+        let z_i32 = z as i32;
+
         return [
-            self.get_block_by_xyz(x, y + 1, z), // above
-            self.get_block_by_xyz(x, y, z - 1), // front
-            self.get_block_by_xyz(x + 1, y, z), // right
-            self.get_block_by_xyz(x, y, z + 1), // behind
-            self.get_block_by_xyz(x - 1, y, z), // left
-            self.get_block_by_xyz(x, y - 1, z), // below
+            self.get_block_by_xyz(x_i32, y_i32 + 1, z_i32), // above
+            self.get_block_by_xyz(x_i32, y_i32, z_i32 - 1), // front
+            self.get_block_by_xyz(x_i32 + 1, y_i32, z_i32), // right
+            self.get_block_by_xyz(x_i32, y_i32, z_i32 + 1), // behind
+            self.get_block_by_xyz(x_i32 - 1, y_i32, z_i32), // left
+            self.get_block_by_xyz(x_i32, y_i32 - 1, z_i32), // below
         ];
     }
 }

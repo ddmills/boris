@@ -17,7 +17,7 @@ pub struct TerrainGenerator;
 
 impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(5, 3, 6, 32))
+        app.insert_resource(Terrain::new(2, 1, 2, 64))
             .add_event::<TerrainSliceChanged>()
             .add_systems(
                 Startup,
@@ -39,20 +39,22 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
         let chunk_world_x = terrain.chunk_size * chunk_pos[0];
         let chunk_world_y = terrain.chunk_size * chunk_pos[1];
         let chunk_world_z = terrain.chunk_size * chunk_pos[2];
+        let chunk_size = terrain.chunk_size;
 
         if let Some(chunk) = terrain.get_chunk_mut(chunk_idx) {
             chunk.chunk_idx = chunk_idx;
             chunk.world_x = chunk_world_x;
             chunk.world_y = chunk_world_y;
             chunk.world_z = chunk_world_z;
+            chunk.chunk_size = chunk_size;
 
             for block_idx in 0..chunk.block_count {
                 let pos = chunk.shape.delinearize(block_idx);
                 let pvec = Vec3::new(pos[0] as f32, pos[1] as f32, pos[2] as f32);
 
-                if pvec.distance(center) < rad {
-                    chunk.set(block_idx, Block::STONE);
-                }
+                // if pvec.distance(center) < rad {
+                chunk.set(block_idx, Block::STONE);
+                // }
             }
         }
     }

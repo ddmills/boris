@@ -100,7 +100,7 @@ pub fn process_dirty_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     dirty_chunk_query: Query<(Entity, &Chunk), With<DirtyChunk>>,
 ) {
-    let maximum = 8;
+    let maximum = 30;
     let mut cur = 0;
     dirty_chunk_query.iter().for_each(|(entity, chunk)| {
         cur = cur + 1;
@@ -131,7 +131,11 @@ pub fn on_slice_changed(
     }
 
     if let Some(ev) = ev_slice_changed.read().last() {
+        let s = terrain_slice.get_value();
         let chunk_indexes = terrain.get_chunks_in_y(terrain_slice.get_value());
+
+        let mv = (s) % terrain.chunk_size;
+        println!("index at {} = {}", s, mv);
 
         non_dirty_chunk_query.iter().for_each(|(entity, chunk)| {
             if chunk_indexes.contains(&chunk.chunk_idx) {

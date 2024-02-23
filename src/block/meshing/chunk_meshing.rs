@@ -135,7 +135,6 @@ pub fn on_slice_changed(
         let chunk_indexes = terrain.get_chunks_in_y(terrain_slice.get_value());
 
         let mv = (s) % terrain.chunk_size;
-        println!("index at {} = {}", s, mv);
 
         non_dirty_chunk_query.iter().for_each(|(entity, chunk)| {
             if chunk_indexes.contains(&chunk.chunk_idx) {

@@ -11,6 +11,7 @@ use bevy::{
     ecs::{schedule::IntoSystemConfigs, system::ResMut},
     math::Vec3,
 };
+use bracket_noise::prelude::FastNoise;
 use ndshape::AbstractShape;
 
 pub struct TerrainGenerator;
@@ -33,6 +34,8 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
     let chunk_size: f32 = terrain.chunk_size as f32;
     let rad = chunk_size / 2.;
     let center = Vec3::new(chunk_size / 2., chunk_size / 2., chunk_size / 2.);
+    let mut nz = FastNoise::new();
+    nz.set_frequency(0.825);
 
     for chunk_idx in 0..terrain.chunk_count {
         let chunk_pos = terrain.shape.delinearize(chunk_idx);
@@ -50,10 +53,24 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
 
             for block_idx in 0..chunk.block_count {
                 let pos = chunk.shape.delinearize(block_idx);
-                let pvec = Vec3::new(pos[0] as f32, pos[1] as f32, pos[2] as f32);
+                let pvec = Vec3::new(
+                    (pos[0] + chunk_world_x) as f32,
+                    (pos[1] + chunk_world_y) as f32,
+                    (pos[2] + chunk_world_z) as f32,
+                );
+                let v = nz.get_noise3d(pvec.x / 30., pvec.y / 30., pvec.z / 30.);
+
+                if v < 0. {
+                    chunk.set(block_idx, Block::DIRT);
+                } else if v < 0.5 {
+                    chunk.set(block_idx, Block::STONE);
+                } else if v < 1. {
+                    chunk.set(block_idx, Block::EMPTY);
+                } else {
+                    chunk.set(block_idx, Block::DIRT);
+                }
 
                 // if pvec.distance(center) < rad {
-                chunk.set(block_idx, Block::STONE);
                 // }
             }
         }

@@ -4,8 +4,9 @@ pub struct Block(pub u8);
 impl Block {
     pub const OOB: Self = Self(0);
     pub const EMPTY: Self = Self(1);
-    // pub const DIRT: Self = Self(2);
+    pub const DIRT: Self = Self(2);
     pub const STONE: Self = Self(3);
+    pub const GRASS: Self = Self(4);
 }
 
 impl Block {
@@ -14,12 +15,16 @@ impl Block {
             &Self::OOB => false,
             &Self::EMPTY => false,
             &Self::STONE => true,
+            &Self::DIRT => true,
+            &Self::GRASS => true,
             _ => false,
         }
     }
 
     pub fn texture_idx(&self) -> u32 {
         match self {
+            &Self::DIRT => 1,
+            &Self::GRASS => 2,
             &Self::STONE => 3,
             _ => 0,
         }

@@ -18,7 +18,7 @@ pub struct TerrainGenerator;
 
 impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(8, 4, 8, 32))
+        app.insert_resource(Terrain::new(12, 4, 12, 32))
             .add_event::<TerrainSliceChanged>()
             .add_systems(
                 Startup,

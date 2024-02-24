@@ -151,7 +151,7 @@ impl Terrain {
             && if step_z > 0 { z < wz } else { z >= 0 })
         {
             attempts = attempts + 1;
-            if !(y > slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {
+            if !(y >= slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {
                 let b = self.get_block(x as u32, y as u32, z as u32);
                 if b.is_filled() {
                     return RayResult {

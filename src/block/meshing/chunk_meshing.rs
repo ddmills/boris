@@ -66,7 +66,7 @@ pub fn setup_chunk_meshes(
             let x = chunk_pos[0] * terrain.chunk_size;
             let y = chunk_pos[1] * terrain.chunk_size;
             let z = chunk_pos[2] * terrain.chunk_size;
-            let mesh_data = build_chunk_mesh(block_buffer, slice.get_value());
+            let mesh_data = build_chunk_mesh(block_buffer);
             let mesh = Mesh::new(
                 PrimitiveTopology::TriangleList,
                 RenderAssetUsages::default(),
@@ -109,7 +109,6 @@ pub fn setup_chunk_meshes(
 pub fn process_dirty_chunks(
     mut commands: Commands,
     terrain: Res<Terrain>,
-    terrain_slice: Res<TerrainSlice>,
     mut meshes: ResMut<Assets<Mesh>>,
     dirty_chunk_query: Query<(Entity, &Chunk), With<DirtyChunk>>,
 ) {
@@ -123,7 +122,7 @@ pub fn process_dirty_chunks(
 
         if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
             let block_buffer = terrain.get_chunk(chunk.chunk_idx).unwrap();
-            let mesh_data = build_chunk_mesh(&block_buffer, terrain_slice.get_value());
+            let mesh_data = build_chunk_mesh(&block_buffer);
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
             mesh.insert_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed);
@@ -135,12 +134,9 @@ pub fn process_dirty_chunks(
 }
 
 pub fn on_slice_changed(
-    mut commands: Commands,
     terrain_slice: Res<TerrainSlice>,
-    terrain: Res<Terrain>,
     chunk_material_res: Res<ChunkMaterialRes>,
     mut ev_slice_changed: EventReader<TerrainSliceChanged>,
-    non_dirty_chunk_query: Query<(Entity, &Chunk), Without<DirtyChunk>>,
     mut terrain_material: ResMut<Assets<ChunkMaterial>>,
 ) {
     if ev_slice_changed.is_empty() {
@@ -152,26 +148,15 @@ pub fn on_slice_changed(
         let m = terrain_material.get_mut(chunk_material_res.handle.clone());
 
         m.unwrap().terrain_slice_y = s;
-
-        // let chunk_indexes = terrain.get_chunks_in_y(terrain_slice.get_value());
-
-        // let mv = (s) % terrain.chunk_size;
-
-        // non_dirty_chunk_query.iter().for_each(|(entity, chunk)| {
-        //     if chunk_indexes.contains(&chunk.chunk_idx) {
-        //         commands.entity(entity).insert(DirtyChunk);
-        //     }
-        // });
     };
 }
 
 pub fn update_chunk_mesh(
     chunk: &Chunk,
     block_buffer: &BlockBuffer,
-    terrain_slice: Res<TerrainSlice>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let mesh_data = build_chunk_mesh(&block_buffer, terrain_slice.get_value());
+    let mesh_data = build_chunk_mesh(&block_buffer);
     if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
@@ -188,7 +173,7 @@ struct ChunkMeshData {
     pub packed: Vec<u32>,
 }
 
-fn build_chunk_mesh(block_buffer: &BlockBuffer, slice: u32) -> ChunkMeshData {
+fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
     let mut data = ChunkMeshData::default();
     data.positions = vec![];
     data.normals = vec![];
@@ -209,31 +194,19 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer, slice: u32) -> ChunkMeshData {
         let fy = y as f32;
         let fz = z as f32;
 
-        // if (block_buffer.world_y + y) > slice {
-        //     continue;
-        // }
-
         let neighbors = block_buffer.get_immediate_neighbors(x, y, z);
-        let is_slice_y = block_buffer.world_y + y == slice;
-        let has_neighbor_y = neighbors[0].is_filled();
 
-        if !has_neighbor_y {
+        if !neighbors[0].is_filled() {
             // add face above
             data.positions.push([fx, fy + 1., fz]);
             data.positions.push([fx + 1., fy + 1., fz]);
             data.positions.push([fx + 1., fy + 1., fz + 1.]);
             data.positions.push([fx, fy + 1., fz + 1.]);
 
-            let face_dir = if is_slice_y && has_neighbor_y {
-                FaceDir::Slice
-            } else {
-                FaceDir::PosY
-            };
-
-            data.packed.push(pack_block(block, face_dir));
-            data.packed.push(pack_block(block, face_dir));
-            data.packed.push(pack_block(block, face_dir));
-            data.packed.push(pack_block(block, face_dir));
+            data.packed.push(pack_block(block, FaceDir::PosY));
+            data.packed.push(pack_block(block, FaceDir::PosY));
+            data.packed.push(pack_block(block, FaceDir::PosY));
+            data.packed.push(pack_block(block, FaceDir::PosY));
 
             data.normals.push([0., 1., 0.]);
             data.normals.push([0., 1., 0.]);
@@ -404,7 +377,6 @@ enum FaceDir {
     NegY,
     PosZ,
     NegZ,
-    Slice,
 }
 
 impl FaceDir {
@@ -416,7 +388,6 @@ impl FaceDir {
             FaceDir::NegY => 3,
             FaceDir::PosZ => 4,
             FaceDir::NegZ => 5,
-            FaceDir::Slice => 6,
         }
     }
 }

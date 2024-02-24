@@ -30,15 +30,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         vec4<f32>(vertex.position, 1.0)
     );
 
-    // if (out.position_world.y > f32(terrain_slice_y)) {
-    //     out.clip_position = vec4(0.0, 0.0, 2.0, 1.0);
-    // } else {
     out.clip_position = mesh_position_local_to_clip(
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-    // }
-
 
     return out;
 }
@@ -53,52 +48,51 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let ox = f32(block_type % texture_count);
     let oy = f32(block_type / texture_count);
 
+    // let is_sliced_out = ceil(mesh.position_world.y) > f32(terrain_slice_y);
+    let is_sliced_out = floor(mesh.position_world.y) >= f32(terrain_slice_y);
+
+    if (is_sliced_out) {
+        discard;
+    }
+
     var shade: f32;
 
     switch block_face {
         case 0u: { // PosX
             uv = vec2(ox + mesh.position.y % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.1;
+            shade = 0.5;
         }
         case 1u: { // NegX
             uv = vec2(ox + mesh.position.y % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.4;
+            shade = 0.5;
         }
         case 2u: { // PosY
-            let block_y = u32(mesh.position.y / 1.0);
-            let frag_x = mesh.position.x % 1.0;
-            let frag_z = mesh.position.z % 1.0;
-            uv = vec2(ox + frag_x, oy + frag_z);
+            uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.z % 1.0);
             shade = 0.0;
         }
         case 3u: { // NegY
             uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.8;
+            shade = 0.9;
         }
         case 4u: { // PosZ
             uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.y % 1.0);
-            shade = 0.2;
+            shade = 0.8;
         }
         case 5u: { // NegZ
             uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.y % 1.0);
-            shade = 0.5;
+            shade = 0.25;
         }
-        case 6u, default: { // Slice
-            let frag_x = mesh.position.x % 1.0;
-            let frag_z = mesh.position.z % 1.0;
-            uv = vec2(frag_x, frag_z);
-            shade = 0.0;
+        default: { // ?
+            uv = vec2(mesh.position.x % 1.0, mesh.position.z % 1.0);
+            shade = 1.0;
         }
     }
 
     uv = uv / f32(texture_count);
     var outc = vec4(1.0 - shade) * textureSample(texture, texture_sampler, uv);
 
-    if (mesh.position_world.y > f32(terrain_slice_y)) {
-        discard;
-    } else {
-        outc[3] = 1.0;
-    }
+    outc[3] = 1.0;
+
 
     return outc;
 }

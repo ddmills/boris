@@ -1,7 +1,6 @@
 use bevy::{
     asset::{Asset, AssetServer, Assets, Handle},
     ecs::{
-        entity::Entity,
         event::{Event, EventReader, EventWriter},
         system::{Commands, Res, ResMut, Resource},
     },
@@ -18,7 +17,6 @@ use bevy::{
         },
         texture::{Image, ImageLoaderSettings, ImageSampler},
     },
-    transform::components::Transform,
 };
 
 use crate::block::world::terrain::Terrain;
@@ -160,10 +158,10 @@ fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
             let fy = slice_y as f32;
             let fz = z as f32;
 
-            data.positions.push([fx, fy + 0.01, fz]);
-            data.positions.push([fx + 1., fy + 0.01, fz]);
-            data.positions.push([fx + 1., fy + 0.01, fz + 1.]);
-            data.positions.push([fx, fy + 0.01, fz + 1.]);
+            data.positions.push([fx, fy, fz]);
+            data.positions.push([fx + 1., fy, fz]);
+            data.positions.push([fx + 1., fy, fz + 1.]);
+            data.positions.push([fx, fy, fz + 1.]);
 
             data.normals.push([0., 1., 0.]);
             data.normals.push([0., 1., 0.]);

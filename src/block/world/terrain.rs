@@ -1,6 +1,8 @@
 use bevy::ecs::system::Resource;
 use ndshape::{RuntimeShape, Shape};
 
+use crate::block::meshing::chunk_material::ChunkMaterial;
+
 use super::block_buffer::BlockBuffer;
 
 #[derive(Resource)]

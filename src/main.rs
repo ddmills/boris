@@ -1,3 +1,4 @@
+use bevy::core_pipeline::prepass::DepthPrepass;
 use bevy::pbr::wireframe::{Wireframe, WireframePlugin};
 use bevy::prelude::*;
 use block::meshing::chunk_material::ChunkMaterial;
@@ -24,7 +25,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let cube_mesh = meshes.add(Cuboid::new(0.75, 0.75, 0.75));
+    let cube_mesh: Handle<Mesh> = meshes.add(Cuboid::new(0.75, 0.75, 0.75));
     let cube_material = materials.add(Color::rgb_u8(124, 124, 124));
 
     commands.spawn((

@@ -6,7 +6,7 @@ use bevy::{
     input::mouse::MouseWheel,
 };
 
-use crate::block::world::terrain::{self, Terrain};
+use crate::block::world::terrain::Terrain;
 
 #[derive(Resource)]
 pub struct TerrainSlice {

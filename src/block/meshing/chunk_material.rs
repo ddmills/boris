@@ -1,7 +1,7 @@
 use bevy::{
     asset::{Asset, AssetServer, Assets, Handle},
-    ecs::system::{Commands, Res, ResMut},
-    pbr::{Material, MaterialPipeline, MaterialPipelineKey},
+    ecs::system::{Commands, Res, ResMut, Resource},
+    pbr::{AlphaMode, Material, MaterialPipeline, MaterialPipelineKey},
     reflect::TypePath,
     render::{
         color::Color,
@@ -16,6 +16,11 @@ use bevy::{
 
 const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
     MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
+
+#[derive(Resource)]
+pub struct ChunkMaterialRes {
+    pub handle: Handle<ChunkMaterial>,
+}
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct ChunkMaterial {
@@ -37,6 +42,10 @@ impl Material for ChunkMaterial {
 
     fn fragment_shader() -> ShaderRef {
         "shaders/terrain.wgsl".into()
+    }
+
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Mask(0.5)
     }
 
     fn specialize(

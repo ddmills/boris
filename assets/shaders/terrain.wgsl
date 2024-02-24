@@ -1,4 +1,4 @@
-#import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip}
+#import bevy_pbr::mesh_functions::{get_model_matrix, mesh_position_local_to_clip, mesh_position_local_to_world}
 
 @group(2) @binding(0) var texture: texture_2d<f32>;
 @group(2) @binding(1) var texture_sampler: sampler;
@@ -16,26 +16,35 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) packed_block: u32,
     @location(1) position: vec3<f32>,
+    @location(2) position_world: vec4<f32>,
 };
 
 @vertex 
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
+    
+    out.position = vertex.position;
+    out.packed_block = vertex.packed_block;
+    out.position_world = mesh_position_local_to_world(
+        get_model_matrix(vertex.instance_index),
+        vec4<f32>(vertex.position, 1.0)
+    );
+
+    // if (out.position_world.y > f32(terrain_slice_y)) {
+    //     out.clip_position = vec4(0.0, 0.0, 2.0, 1.0);
+    // } else {
     out.clip_position = mesh_position_local_to_clip(
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-    out.position = vertex.position;
-    out.packed_block = vertex.packed_block;
+    // }
+
+
     return out;
 }
 
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
-    var dirt: u32 = 1u;
-    let text_width = 2;
-    let text_height = 2;
-
     let block_type = mesh.packed_block & 15u;
     let block_face = mesh.packed_block >> 4u & 7u;
 
@@ -83,5 +92,13 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     uv = uv / f32(texture_count);
-    return vec4(1.0 - shade) * textureSample(texture, texture_sampler, uv);
+    var outc = vec4(1.0 - shade) * textureSample(texture, texture_sampler, uv);
+
+    if (mesh.position_world.y > f32(terrain_slice_y)) {
+        discard;
+    } else {
+        outc[3] = 1.0;
+    }
+
+    return outc;
 }

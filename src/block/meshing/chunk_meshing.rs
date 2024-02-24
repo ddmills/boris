@@ -1,10 +1,12 @@
 use std::iter;
 
 use bevy::{
+    math::Vec3A,
     pbr::wireframe::Wireframe,
     prelude::*,
     render::{
         mesh::{Indices, MeshVertexAttribute},
+        primitives::Aabb,
         render_asset::RenderAssetUsages,
         render_resource::VertexFormat,
         texture::{ImageLoaderSettings, ImageSampler},
@@ -18,7 +20,7 @@ use crate::block::{
     world::{block::Block, block_buffer::BlockBuffer, terrain::Terrain},
 };
 
-use super::chunk_material::ChunkMaterial;
+use super::chunk_material::{ChunkMaterial, ChunkMaterialRes};
 
 #[derive(Component)]
 pub struct Chunk {
@@ -54,6 +56,10 @@ pub fn setup_chunk_meshes(
         terrain_slice_y: slice.get_value(),
     });
 
+    commands.insert_resource(ChunkMaterialRes {
+        handle: chunk_material.clone(),
+    });
+
     for chunk_idx in 0..terrain.chunk_count {
         if let Some(block_buffer) = terrain.get_chunk(chunk_idx) {
             let chunk_pos = terrain.shape.delinearize(chunk_idx);
@@ -71,6 +77,10 @@ pub fn setup_chunk_meshes(
             .with_inserted_indices(Indices::U32(mesh_data.indicies));
 
             let mesh_handle = meshes.add(mesh);
+            let x_f32 = x as f32;
+            let y_f32 = y as f32;
+            let z_f32 = z as f32;
+            let size = terrain.chunk_size as f32 / 2.;
 
             commands.spawn((
                 Chunk {
@@ -83,10 +93,13 @@ pub fn setup_chunk_meshes(
                 MaterialMeshBundle {
                     mesh: mesh_handle.clone(),
                     material: chunk_material.clone(),
-                    transform: Transform::from_xyz(x as f32, y as f32, z as f32),
+                    transform: Transform::from_xyz(x_f32, y_f32, z_f32),
                     ..default()
                 },
-                NoFrustumCulling,
+                Aabb {
+                    center: Vec3A::new(size, size, size),
+                    half_extents: Vec3A::new(size, size, size),
+                },
                 // Wireframe,
             ));
         }
@@ -100,7 +113,7 @@ pub fn process_dirty_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     dirty_chunk_query: Query<(Entity, &Chunk), With<DirtyChunk>>,
 ) {
-    let maximum = 30;
+    let maximum = 100;
     let mut cur = 0;
     dirty_chunk_query.iter().for_each(|(entity, chunk)| {
         cur = cur + 1;
@@ -123,8 +136,10 @@ pub fn on_slice_changed(
     mut commands: Commands,
     terrain_slice: Res<TerrainSlice>,
     terrain: Res<Terrain>,
+    chunk_material_res: Res<ChunkMaterialRes>,
     mut ev_slice_changed: EventReader<TerrainSliceChanged>,
     non_dirty_chunk_query: Query<(Entity, &Chunk), Without<DirtyChunk>>,
+    mut terrain_material: ResMut<Assets<ChunkMaterial>>,
 ) {
     if ev_slice_changed.is_empty() {
         return;
@@ -132,15 +147,19 @@ pub fn on_slice_changed(
 
     if let Some(ev) = ev_slice_changed.read().last() {
         let s = terrain_slice.get_value();
-        let chunk_indexes = terrain.get_chunks_in_y(terrain_slice.get_value());
+        let m = terrain_material.get_mut(chunk_material_res.handle.clone());
 
-        let mv = (s) % terrain.chunk_size;
+        m.unwrap().terrain_slice_y = s;
 
-        non_dirty_chunk_query.iter().for_each(|(entity, chunk)| {
-            if chunk_indexes.contains(&chunk.chunk_idx) {
-                commands.entity(entity).insert(DirtyChunk);
-            }
-        });
+        // let chunk_indexes = terrain.get_chunks_in_y(terrain_slice.get_value());
+
+        // let mv = (s) % terrain.chunk_size;
+
+        // non_dirty_chunk_query.iter().for_each(|(entity, chunk)| {
+        //     if chunk_indexes.contains(&chunk.chunk_idx) {
+        //         commands.entity(entity).insert(DirtyChunk);
+        //     }
+        // });
     };
 }
 
@@ -188,15 +207,15 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer, slice: u32) -> ChunkMeshData {
         let fy = y as f32;
         let fz = z as f32;
 
-        if (block_buffer.world_y + y) > slice {
-            continue;
-        }
+        // if (block_buffer.world_y + y) > slice {
+        //     continue;
+        // }
 
         let neighbors = block_buffer.get_immediate_neighbors(x, y, z);
         let is_slice_y = block_buffer.world_y + y == slice;
         let has_neighbor_y = neighbors[0].is_filled();
 
-        if !has_neighbor_y || is_slice_y {
+        if !has_neighbor_y {
             // add face above
             data.positions.push([fx, fy + 1., fz]);
             data.positions.push([fx + 1., fy + 1., fz]);

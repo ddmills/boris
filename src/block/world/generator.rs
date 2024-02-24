@@ -18,7 +18,7 @@ pub struct TerrainGenerator;
 
 impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(12, 4, 12, 32))
+        app.insert_resource(Terrain::new(5, 3, 5, 32))
             .add_event::<TerrainSliceChanged>()
             .add_systems(
                 Startup,
@@ -32,9 +32,6 @@ impl Plugin for TerrainGenerator {
 }
 
 fn setup_terrain(mut terrain: ResMut<Terrain>) {
-    let chunk_size: f32 = terrain.chunk_size as f32;
-    let rad = chunk_size / 2.;
-    let center = Vec3::new(chunk_size / 2., chunk_size / 2., chunk_size / 2.);
     let mut nz = FastNoise::new();
     nz.set_frequency(0.4);
 
@@ -59,22 +56,19 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
                     (pos[1] + chunk_world_y) as f32,
                     (pos[2] + chunk_world_z) as f32,
                 );
-                let v = nz.get_noise3d(pvec.x / 25., pvec.y / 25., pvec.z / 25.);
+                let v = nz.get_noise3d(pvec.x / 18., pvec.y / 18., pvec.z / 18.);
 
                 if v < -0.1 {
                     chunk.set(block_idx, Block::EMPTY);
                 } else if v < 0. {
                     chunk.set(block_idx, Block::GRASS);
-                } else if v < 0.2 {
+                } else if v < 0.4 {
                     chunk.set(block_idx, Block::DIRT);
                 } else if v < 0.7 {
                     chunk.set(block_idx, Block::EMPTY);
                 } else {
                     chunk.set(block_idx, Block::STONE);
                 }
-
-                // if pvec.distance(center) < rad {
-                // }
             }
         }
     }

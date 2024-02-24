@@ -6,9 +6,11 @@ use block::slice::slice::{SliceMaterial, TerrainSlice};
 use block::world::generator::TerrainGenerator;
 use block::world::terrain::Terrain;
 use camera::{CameraPlugin, FlyCamera};
+use debug::fps::FpsPlugin;
 
 mod block;
 mod camera;
+mod debug;
 
 fn main() {
     App::new()
@@ -18,6 +20,7 @@ fn main() {
         .add_plugins(CameraPlugin)
         .add_plugins(TerrainGenerator)
         .add_plugins(WireframePlugin)
+        .add_plugins(FpsPlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, camera_raycasting)

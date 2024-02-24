@@ -29,6 +29,17 @@ impl Block {
             _ => 0,
         }
     }
+
+    pub fn name(&self) -> String {
+        match self {
+            &Self::OOB => String::from("out of bounds"),
+            &Self::EMPTY => String::from("empty"),
+            &Self::DIRT => String::from("dirt"),
+            &Self::GRASS => String::from("grass"),
+            &Self::STONE => String::from("stone"),
+            _ => String::from("unknown"),
+        }
+    }
 }
 
 impl Default for Block {

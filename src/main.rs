@@ -1,9 +1,10 @@
-use bevy::core_pipeline::prepass::DepthPrepass;
+use bevy::input::mouse::MouseButtonInput;
 use bevy::pbr::wireframe::{Wireframe, WireframePlugin};
 use bevy::prelude::*;
 use block::meshing::chunk_material::ChunkMaterial;
-use block::slice::slice::SliceMaterial;
+use block::slice::slice::{SliceMaterial, TerrainSlice};
 use block::world::generator::TerrainGenerator;
+use block::world::terrain::Terrain;
 use camera::{CameraPlugin, FlyCamera};
 
 mod block;
@@ -19,7 +20,37 @@ fn main() {
         .add_plugins(WireframePlugin)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gizmos)
+        .add_systems(Update, camera_raycasting)
         .run();
+}
+
+fn camera_raycasting(
+    mut cameras: Query<&Transform, With<FlyCamera>>,
+    terrain: Res<Terrain>,
+    terrain_slice: Res<TerrainSlice>,
+) {
+    let slice_y = terrain_slice.get_value();
+
+    for transform in cameras.iter_mut() {
+        let dir = transform.forward();
+        let origin = transform.translation;
+        let radius = 20;
+
+        let rc = terrain.raycast(
+            origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, slice_y, radius,
+        );
+
+        if rc.is_hit {
+            println!(
+                "Found block {},{},{}={} in {} attempts",
+                rc.x,
+                rc.y,
+                rc.z,
+                rc.block.name(),
+                rc.attempts
+            );
+        }
+    }
 }
 
 fn setup(

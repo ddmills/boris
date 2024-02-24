@@ -109,10 +109,7 @@ pub fn update_slice_mesh(
 }
 
 #[derive(Event)]
-pub struct TerrainSliceChanged {
-    prev: u32,
-    value: u32,
-}
+pub struct TerrainSliceChanged;
 
 pub fn scroll_events(
     mut scroll_evt: EventReader<MouseWheel>,
@@ -122,14 +119,10 @@ pub fn scroll_events(
     for ev in scroll_evt.read() {
         match ev.unit {
             bevy::input::mouse::MouseScrollUnit::Line => {
-                let cur_slice = terrain_slice.get_value();
                 let scroll = ev.y as i32;
                 let slice = terrain_slice.y as i32;
                 terrain_slice.set_value(slice + scroll);
-                ev_terrain_slice.send(TerrainSliceChanged {
-                    prev: cur_slice,
-                    value: terrain_slice.get_value(),
-                });
+                ev_terrain_slice.send(TerrainSliceChanged);
             }
             bevy::input::mouse::MouseScrollUnit::Pixel => {}
         }

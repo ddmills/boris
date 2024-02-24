@@ -5,7 +5,7 @@ use bevy::{
     pbr::wireframe::Wireframe,
     prelude::*,
     render::{
-        mesh::{Indices, MeshVertexAttribute},
+        mesh::{Indices, MeshVertexAttribute, PrimitiveTopology},
         primitives::Aabb,
         render_asset::RenderAssetUsages,
         render_resource::VertexFormat,
@@ -68,7 +68,7 @@ pub fn setup_chunk_meshes(
             let z = chunk_pos[2] * terrain.chunk_size;
             let mesh_data = build_chunk_mesh(block_buffer, slice.get_value());
             let mesh = Mesh::new(
-                bevy::render::mesh::PrimitiveTopology::TriangleList,
+                PrimitiveTopology::TriangleList,
                 RenderAssetUsages::default(),
             )
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions)
@@ -117,17 +117,19 @@ pub fn process_dirty_chunks(
     let mut cur = 0;
     dirty_chunk_query.iter().for_each(|(entity, chunk)| {
         cur = cur + 1;
-        if (cur > maximum) {
+        if cur > maximum {
             return;
         }
-        let block_buffer = terrain.get_chunk(chunk.chunk_idx).unwrap();
-        let mesh_data = build_chunk_mesh(&block_buffer, terrain_slice.get_value());
+
         if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
+            let block_buffer = terrain.get_chunk(chunk.chunk_idx).unwrap();
+            let mesh_data = build_chunk_mesh(&block_buffer, terrain_slice.get_value());
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
             mesh.insert_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed);
             mesh.insert_indices(Indices::U32(mesh_data.indicies));
         }
+
         commands.entity(entity).remove::<DirtyChunk>();
     });
 }

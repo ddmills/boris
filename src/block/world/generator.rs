@@ -2,7 +2,7 @@ use crate::block::{
     meshing::chunk_meshing::{
         on_slice_changed, process_dirty_chunks, setup_chunk_meshes, update_chunk_mesh,
     },
-    slice::slice::{scroll_events, setup_terrain_slice, TerrainSliceChanged},
+    slice::slice::{scroll_events, setup_terrain_slice, update_slice_mesh, TerrainSliceChanged},
 };
 
 use super::{block::Block, terrain::Terrain};
@@ -18,7 +18,7 @@ pub struct TerrainGenerator;
 
 impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(4, 3, 4, 32))
+        app.insert_resource(Terrain::new(8, 4, 8, 32))
             .add_event::<TerrainSliceChanged>()
             .add_systems(
                 Startup,
@@ -26,7 +26,8 @@ impl Plugin for TerrainGenerator {
             )
             .add_systems(Update, scroll_events)
             .add_systems(Update, process_dirty_chunks)
-            .add_systems(Update, on_slice_changed);
+            .add_systems(Update, on_slice_changed)
+            .add_systems(Update, update_slice_mesh);
     }
 }
 
@@ -35,7 +36,7 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
     let rad = chunk_size / 2.;
     let center = Vec3::new(chunk_size / 2., chunk_size / 2., chunk_size / 2.);
     let mut nz = FastNoise::new();
-    nz.set_frequency(0.825);
+    nz.set_frequency(0.4);
 
     for chunk_idx in 0..terrain.chunk_count {
         let chunk_pos = terrain.shape.delinearize(chunk_idx);
@@ -58,16 +59,18 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
                     (pos[1] + chunk_world_y) as f32,
                     (pos[2] + chunk_world_z) as f32,
                 );
-                let v = nz.get_noise3d(pvec.x / 30., pvec.y / 30., pvec.z / 30.);
+                let v = nz.get_noise3d(pvec.x / 25., pvec.y / 25., pvec.z / 25.);
 
-                if v < 0. {
+                if v < -0.1 {
+                    chunk.set(block_idx, Block::EMPTY);
+                } else if v < 0. {
+                    chunk.set(block_idx, Block::GRASS);
+                } else if v < 0.2 {
                     chunk.set(block_idx, Block::DIRT);
-                } else if v < 0.5 {
-                    chunk.set(block_idx, Block::STONE);
-                } else if v < 1. {
+                } else if v < 0.7 {
                     chunk.set(block_idx, Block::EMPTY);
                 } else {
-                    chunk.set(block_idx, Block::DIRT);
+                    chunk.set(block_idx, Block::STONE);
                 }
 
                 // if pvec.distance(center) < rad {

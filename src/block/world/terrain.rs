@@ -3,7 +3,7 @@ use ndshape::{RuntimeShape, Shape};
 
 use crate::block::meshing::chunk_material::ChunkMaterial;
 
-use super::block_buffer::BlockBuffer;
+use super::{block::Block, block_buffer::BlockBuffer};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -37,12 +37,40 @@ impl Terrain {
         };
     }
 
+    pub fn world_size_x(&self) -> u32 {
+        return self.chunk_count_x * self.chunk_size;
+    }
+
+    pub fn world_size_z(&self) -> u32 {
+        return self.chunk_count_z * self.chunk_size;
+    }
+
     pub fn get_chunk(&self, chunk_idx: u32) -> Option<&BlockBuffer> {
         return self.chunks.get(chunk_idx as usize);
     }
 
     pub fn get_chunk_mut(&mut self, chunk_idx: u32) -> Option<&mut BlockBuffer> {
         return self.chunks.get_mut(chunk_idx as usize);
+    }
+
+    pub fn get_block(&self, x: u32, y: u32, z: u32) -> Block {
+        let chunk_pos = [
+            x / self.chunk_size,
+            y / self.chunk_size,
+            z / self.chunk_size,
+        ];
+        let chunk_idx = self.shape.linearize(chunk_pos);
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            let block_pos = [
+                x % self.chunk_size,
+                y % self.chunk_size,
+                z % self.chunk_size,
+            ];
+            let block_idx = chunk.get_block_idx(block_pos[0], block_pos[1], block_pos[2]);
+            return chunk.get_block(block_idx);
+        }
+
+        return Block::OOB;
     }
 
     pub fn get_chunks_in_y(&self, world_y: u32) -> Vec<u32> {

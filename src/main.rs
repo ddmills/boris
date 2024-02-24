@@ -2,6 +2,7 @@ use bevy::core_pipeline::prepass::DepthPrepass;
 use bevy::pbr::wireframe::{Wireframe, WireframePlugin};
 use bevy::prelude::*;
 use block::meshing::chunk_material::ChunkMaterial;
+use block::slice::slice::SliceMaterial;
 use block::world::generator::TerrainGenerator;
 use camera::{CameraPlugin, FlyCamera};
 
@@ -12,6 +13,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(MaterialPlugin::<ChunkMaterial>::default())
+        .add_plugins(MaterialPlugin::<SliceMaterial>::default())
         .add_plugins(CameraPlugin)
         .add_plugins(TerrainGenerator)
         .add_plugins(WireframePlugin)

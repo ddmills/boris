@@ -1,15 +1,24 @@
 use crate::block::{
-    meshing::chunk_meshing::{
-        on_slice_changed, process_dirty_chunks, setup_chunk_meshes, update_chunk_mesh,
-    },
+    meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes},
     slice::slice::{scroll_events, setup_terrain_slice, update_slice_mesh, TerrainSliceChanged},
 };
 
-use super::{block::Block, terrain::Terrain};
+use super::{
+    block::Block,
+    chunk::{Chunk, DirtyChunk},
+    terrain::{Terrain, TerrainModifiedEvent},
+};
 use bevy::{
     app::{Plugin, Startup, Update},
-    ecs::{schedule::IntoSystemConfigs, system::ResMut},
+    ecs::{
+        entity::Entity,
+        event::EventReader,
+        query::Without,
+        schedule::IntoSystemConfigs,
+        system::{Commands, Query, Res, ResMut},
+    },
     math::Vec3,
+    transform::commands,
 };
 use bracket_noise::prelude::FastNoise;
 use ndshape::AbstractShape;
@@ -20,6 +29,7 @@ impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.insert_resource(Terrain::new(5, 3, 5, 32))
             .add_event::<TerrainSliceChanged>()
+            .add_event::<TerrainModifiedEvent>()
             .add_systems(
                 Startup,
                 (setup_terrain, setup_terrain_slice, setup_chunk_meshes).chain(),
@@ -27,7 +37,8 @@ impl Plugin for TerrainGenerator {
             .add_systems(Update, scroll_events)
             .add_systems(Update, process_dirty_chunks)
             .add_systems(Update, on_slice_changed)
-            .add_systems(Update, update_slice_mesh);
+            .add_systems(Update, update_slice_mesh)
+            .add_systems(Update, on_terrain_modified);
     }
 }
 
@@ -69,6 +80,27 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
                 } else {
                     chunk.set(block_idx, Block::STONE);
                 }
+            }
+        }
+    }
+}
+
+fn on_terrain_modified(
+    mut commands: Commands,
+    mut ev_terrain_mod: EventReader<TerrainModifiedEvent>,
+    terrain: Res<Terrain>,
+    chunks: Query<(Entity, &Chunk), Without<DirtyChunk>>,
+) {
+    if ev_terrain_mod.is_empty() {
+        return;
+    }
+
+    for ev in ev_terrain_mod.read() {
+        let [chunk_idx, block_idx] = terrain.get_block_indexes(ev.x, ev.y, ev.z);
+
+        for (entity, chunk) in chunks.iter() {
+            if chunk.chunk_idx == chunk_idx {
+                commands.entity(entity).insert(DirtyChunk);
             }
         }
     }

@@ -1,5 +1,7 @@
-use bevy::ecs::system::Resource;
+use bevy::ecs::{event::Event, system::Resource};
 use ndshape::{RuntimeShape, Shape};
+
+use crate::block::block_face::BlockFace;
 
 use super::{block::Block, block_buffer::BlockBuffer};
 
@@ -11,6 +13,7 @@ pub struct Terrain {
     pub chunk_size: u32,
     pub chunk_count: u32,
     pub shape: RuntimeShape<u32, 3>,
+    pub chunk_shape: RuntimeShape<u32, 3>,
     pub chunks: Vec<BlockBuffer>,
 }
 
@@ -21,6 +24,15 @@ pub struct RayResult {
     pub y: u32,
     pub z: u32,
     pub attempts: u32,
+    pub face: BlockFace,
+}
+
+#[derive(Event)]
+pub struct TerrainModifiedEvent {
+    pub x: u32,
+    pub y: u32,
+    pub z: u32,
+    pub value: Block,
 }
 
 impl Terrain {
@@ -39,6 +51,7 @@ impl Terrain {
             chunk_count_z: chunk_count_z,
             chunk_size: chunk_size,
             chunk_count: shape.size(),
+            chunk_shape: chunk_shape.clone(),
             chunks: vec![BlockBuffer::new(chunk_shape); shape.size() as usize],
             shape: shape,
         };
@@ -56,6 +69,15 @@ impl Terrain {
         return self.chunk_count_z * self.chunk_size;
     }
 
+    pub fn is_oob(&self, x: i32, y: i32, z: i32) -> bool {
+        x < 0
+            || y < 0
+            || z < 0
+            || x >= self.world_size_x() as i32
+            || y >= self.world_size_y() as i32
+            || z >= self.world_size_z() as i32
+    }
+
     pub fn get_chunk(&self, chunk_idx: u32) -> Option<&BlockBuffer> {
         return self.chunks.get(chunk_idx as usize);
     }
@@ -64,38 +86,39 @@ impl Terrain {
         return self.chunks.get_mut(chunk_idx as usize);
     }
 
-    pub fn get_block(&self, x: u32, y: u32, z: u32) -> Block {
+    pub fn get_block_indexes(&self, x: u32, y: u32, z: u32) -> [u32; 2] {
         let chunk_pos = [
             x / self.chunk_size,
             y / self.chunk_size,
             z / self.chunk_size,
         ];
+        let block_pos = [
+            x % self.chunk_size,
+            y % self.chunk_size,
+            z % self.chunk_size,
+        ];
         let chunk_idx = self.shape.linearize(chunk_pos);
+        let block_idx = self.chunk_shape.linearize(block_pos);
+
+        return [chunk_idx, block_idx];
+    }
+
+    pub fn set_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.set(block_idx, value);
+        }
+    }
+
+    pub fn get_block(&self, x: u32, y: u32, z: u32) -> Block {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
         if let Some(chunk) = self.get_chunk(chunk_idx) {
-            let block_pos = [
-                x % self.chunk_size,
-                y % self.chunk_size,
-                z % self.chunk_size,
-            ];
-            let block_idx = chunk.get_block_idx(block_pos[0], block_pos[1], block_pos[2]);
             return chunk.get_block(block_idx);
         }
 
         return Block::OOB;
-    }
-
-    pub fn get_chunks_in_y(&self, world_y: u32) -> Vec<u32> {
-        let chunk_y = world_y / self.chunk_size;
-        let mut chunk_idxes: Vec<u32> = vec![];
-
-        for chunk_x in 0..self.chunk_count_x {
-            for chunk_z in 0..self.chunk_count_z {
-                let chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z]);
-                chunk_idxes.push(chunk_idx);
-            }
-        }
-
-        return chunk_idxes;
     }
 
     pub fn raycast(
@@ -125,6 +148,8 @@ impl Terrain {
         let t_delta_y = step_y as f32 / direction_y;
         let t_delta_z = step_z as f32 / direction_z;
 
+        let mut face = BlockFace::PosY;
+
         if direction_x == 0. && direction_y == 0. && direction_z == 0. {
             return RayResult {
                 is_hit: false,
@@ -133,6 +158,7 @@ impl Terrain {
                 y: 0,
                 z: 0,
                 attempts: 0,
+                face: face,
             };
         }
 
@@ -161,6 +187,7 @@ impl Terrain {
                         y: y as u32,
                         z: z as u32,
                         attempts: attempts,
+                        face: face,
                     };
                 }
             }
@@ -172,12 +199,22 @@ impl Terrain {
                     }
                     x = x + step_x;
                     t_max_x = t_max_x + t_delta_x;
+                    face = if step_x > 0 {
+                        BlockFace::NegX
+                    } else {
+                        BlockFace::PosX
+                    };
                 } else {
                     if t_max_x > r {
                         break;
                     }
                     z = z + step_z;
                     t_max_z = t_max_z + t_delta_z;
+                    face = if step_z > 0 {
+                        BlockFace::NegZ
+                    } else {
+                        BlockFace::PosZ
+                    };
                 }
             } else {
                 if t_max_y < t_max_z {
@@ -186,12 +223,22 @@ impl Terrain {
                     }
                     y = y + step_y;
                     t_max_y = t_max_y + t_delta_y;
+                    face = if step_y > 0 {
+                        BlockFace::NegY
+                    } else {
+                        BlockFace::PosY
+                    };
                 } else {
                     if t_max_z > r {
                         break;
                     }
                     z = z + step_z;
                     t_max_z = t_max_z + t_delta_z;
+                    face = if step_z > 0 {
+                        BlockFace::NegZ
+                    } else {
+                        BlockFace::PosZ
+                    };
                 }
             }
         }
@@ -203,6 +250,7 @@ impl Terrain {
             y: 0,
             z: 0,
             attempts: attempts,
+            face: BlockFace::PosY,
         };
     }
 }

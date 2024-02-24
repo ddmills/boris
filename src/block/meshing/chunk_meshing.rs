@@ -1,8 +1,5 @@
-use std::iter;
-
 use bevy::{
     math::Vec3A,
-    pbr::wireframe::Wireframe,
     prelude::*,
     render::{
         mesh::{Indices, MeshVertexAttribute, PrimitiveTopology},
@@ -10,29 +7,22 @@ use bevy::{
         render_asset::RenderAssetUsages,
         render_resource::VertexFormat,
         texture::{ImageLoaderSettings, ImageSampler},
-        view::NoFrustumCulling,
     },
 };
 use ndshape::AbstractShape;
 
 use crate::block::{
+    block_face::BlockFace,
     slice::slice::{TerrainSlice, TerrainSliceChanged},
-    world::{block::Block, block_buffer::BlockBuffer, terrain::Terrain},
+    world::{
+        block::Block,
+        block_buffer::BlockBuffer,
+        chunk::{Chunk, DirtyChunk},
+        terrain::Terrain,
+    },
 };
 
 use super::chunk_material::{ChunkMaterial, ChunkMaterialRes};
-
-#[derive(Component)]
-pub struct Chunk {
-    pub chunk_idx: u32,
-    pub world_x: u32,
-    pub world_y: u32,
-    pub world_z: u32,
-    pub mesh_handle: Handle<Mesh>,
-}
-
-#[derive(Component)]
-pub struct DirtyChunk;
 
 pub const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
     MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
@@ -143,12 +133,11 @@ pub fn on_slice_changed(
         return;
     }
 
-    if let Some(ev) = ev_slice_changed.read().last() {
-        let s = terrain_slice.get_value();
-        let m = terrain_material.get_mut(chunk_material_res.handle.clone());
+    ev_slice_changed.clear();
 
-        m.unwrap().terrain_slice_y = s;
-    };
+    if let Some(material) = terrain_material.get_mut(chunk_material_res.handle.clone()) {
+        material.terrain_slice_y = terrain_slice.get_value();
+    }
 }
 
 pub fn update_chunk_mesh(
@@ -203,10 +192,10 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             data.positions.push([fx + 1., fy + 1., fz + 1.]);
             data.positions.push([fx, fy + 1., fz + 1.]);
 
-            data.packed.push(pack_block(block, FaceDir::PosY));
-            data.packed.push(pack_block(block, FaceDir::PosY));
-            data.packed.push(pack_block(block, FaceDir::PosY));
-            data.packed.push(pack_block(block, FaceDir::PosY));
+            data.packed.push(pack_block(block, BlockFace::PosY));
+            data.packed.push(pack_block(block, BlockFace::PosY));
+            data.packed.push(pack_block(block, BlockFace::PosY));
+            data.packed.push(pack_block(block, BlockFace::PosY));
 
             data.normals.push([0., 1., 0.]);
             data.normals.push([0., 1., 0.]);
@@ -230,10 +219,10 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             data.positions.push([fx + 1., fy + 1., fz]);
             data.positions.push([fx + 1., fy, fz]);
 
-            data.packed.push(pack_block(block, FaceDir::NegZ));
-            data.packed.push(pack_block(block, FaceDir::NegZ));
-            data.packed.push(pack_block(block, FaceDir::NegZ));
-            data.packed.push(pack_block(block, FaceDir::NegZ));
+            data.packed.push(pack_block(block, BlockFace::NegZ));
+            data.packed.push(pack_block(block, BlockFace::NegZ));
+            data.packed.push(pack_block(block, BlockFace::NegZ));
+            data.packed.push(pack_block(block, BlockFace::NegZ));
 
             data.normals.push([0., 0., -1.]);
             data.normals.push([0., 0., -1.]);
@@ -257,10 +246,10 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             data.positions.push([fx + 1., fy + 1., fz + 1.]);
             data.positions.push([fx + 1., fy + 1., fz]);
 
-            data.packed.push(pack_block(block, FaceDir::PosX));
-            data.packed.push(pack_block(block, FaceDir::PosX));
-            data.packed.push(pack_block(block, FaceDir::PosX));
-            data.packed.push(pack_block(block, FaceDir::PosX));
+            data.packed.push(pack_block(block, BlockFace::PosX));
+            data.packed.push(pack_block(block, BlockFace::PosX));
+            data.packed.push(pack_block(block, BlockFace::PosX));
+            data.packed.push(pack_block(block, BlockFace::PosX));
 
             data.normals.push([1., 0., 0.]);
             data.normals.push([1., 0., 0.]);
@@ -284,10 +273,10 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             data.positions.push([fx + 1., fy + 1., fz + 1.]);
             data.positions.push([fx + 1., fy, fz + 1.]);
 
-            data.packed.push(pack_block(block, FaceDir::PosZ));
-            data.packed.push(pack_block(block, FaceDir::PosZ));
-            data.packed.push(pack_block(block, FaceDir::PosZ));
-            data.packed.push(pack_block(block, FaceDir::PosZ));
+            data.packed.push(pack_block(block, BlockFace::PosZ));
+            data.packed.push(pack_block(block, BlockFace::PosZ));
+            data.packed.push(pack_block(block, BlockFace::PosZ));
+            data.packed.push(pack_block(block, BlockFace::PosZ));
 
             data.normals.push([0., 0., 1.]);
             data.normals.push([0., 0., 1.]);
@@ -311,10 +300,10 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             data.positions.push([fx, fy + 1., fz + 1.]);
             data.positions.push([fx, fy + 1., fz]);
 
-            data.packed.push(pack_block(block, FaceDir::NegX));
-            data.packed.push(pack_block(block, FaceDir::NegX));
-            data.packed.push(pack_block(block, FaceDir::NegX));
-            data.packed.push(pack_block(block, FaceDir::NegX));
+            data.packed.push(pack_block(block, BlockFace::NegX));
+            data.packed.push(pack_block(block, BlockFace::NegX));
+            data.packed.push(pack_block(block, BlockFace::NegX));
+            data.packed.push(pack_block(block, BlockFace::NegX));
 
             data.normals.push([-1., 0., 0.]);
             data.normals.push([-1., 0., 0.]);
@@ -338,10 +327,10 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             data.positions.push([fx + 1., fy, fz + 1.]);
             data.positions.push([fx, fy, fz + 1.]);
 
-            data.packed.push(pack_block(block, FaceDir::NegY));
-            data.packed.push(pack_block(block, FaceDir::NegY));
-            data.packed.push(pack_block(block, FaceDir::NegY));
-            data.packed.push(pack_block(block, FaceDir::NegY));
+            data.packed.push(pack_block(block, BlockFace::NegY));
+            data.packed.push(pack_block(block, BlockFace::NegY));
+            data.packed.push(pack_block(block, BlockFace::NegY));
+            data.packed.push(pack_block(block, BlockFace::NegY));
 
             data.normals.push([0., -1., 0.]);
             data.normals.push([0., -1., 0.]);
@@ -362,32 +351,9 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
     return data;
 }
 
-fn pack_block(block: Block, dir: FaceDir) -> u32 {
+fn pack_block(block: Block, dir: BlockFace) -> u32 {
     let t_id = block.texture_idx(); // 0-15
     let f_id = dir.bit(); // 0-7
 
     return (t_id & 15) | ((f_id & 7) << 4);
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum FaceDir {
-    PosX,
-    NegX,
-    PosY,
-    NegY,
-    PosZ,
-    NegZ,
-}
-
-impl FaceDir {
-    pub fn bit(&self) -> u32 {
-        match self {
-            FaceDir::PosX => 0,
-            FaceDir::NegX => 1,
-            FaceDir::PosY => 2,
-            FaceDir::NegY => 3,
-            FaceDir::PosZ => 4,
-            FaceDir::NegZ => 5,
-        }
-    }
 }

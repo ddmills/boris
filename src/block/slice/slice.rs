@@ -153,9 +153,15 @@ fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
 
     for x in 0..terrain.world_size_x() {
         for z in 0..terrain.world_size_z() {
-            let block = terrain.get_block(x, slice_y - 1, z);
+            let block = terrain.get_block(x, slice_y, z);
 
             if !block.is_filled() {
+                continue;
+            }
+
+            let below = terrain.get_block(x, slice_y - 1, z);
+
+            if !below.is_filled() {
                 continue;
             }
 

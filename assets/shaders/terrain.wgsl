@@ -74,8 +74,10 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let ox = f32(block_type % texture_count);
     let oy = f32(block_type / texture_count);
 
-    // let is_sliced_out = ceil(mesh.position_world.y) > f32(terrain_slice_y);
-    let is_sliced_out = floor(mesh.position_world.y) >= f32(terrain_slice_y);
+    let ceil_mp_y = ceil(mesh.position_world.y);
+    let terrain_slice_y_f32 = f32(terrain_slice_y);
+
+    let is_sliced_out = (ceil_mp_y > terrain_slice_y_f32) || (block_face == 3u && ceil_mp_y >= terrain_slice_y_f32);
 
     if (is_sliced_out) {
         discard;

@@ -16,7 +16,7 @@ use crate::block::{
     slice::slice::{TerrainSlice, TerrainSliceChanged},
     world::{
         block::Block,
-        block_buffer::{BlockBuffer, Neighbor},
+        block_buffer::Neighbor,
         chunk::{Chunk, DirtyChunk},
         terrain::Terrain,
     },
@@ -51,48 +51,46 @@ pub fn setup_chunk_meshes(
     });
 
     for chunk_idx in 0..terrain.chunk_count {
-        if let Some(block_buffer) = terrain.get_chunk(chunk_idx) {
-            let chunk_pos = terrain.shape.delinearize(chunk_idx);
-            let x = chunk_pos[0] * terrain.chunk_size;
-            let y = chunk_pos[1] * terrain.chunk_size;
-            let z = chunk_pos[2] * terrain.chunk_size;
-            let mesh_data = build_chunk_mesh(block_buffer);
-            let mesh = Mesh::new(
-                PrimitiveTopology::TriangleList,
-                RenderAssetUsages::default(),
-            )
-            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions)
-            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals)
-            .with_inserted_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed)
-            .with_inserted_indices(Indices::U32(mesh_data.indicies));
+        let chunk_pos = terrain.shape.delinearize(chunk_idx);
+        let x = chunk_pos[0] * terrain.chunk_size;
+        let y = chunk_pos[1] * terrain.chunk_size;
+        let z = chunk_pos[2] * terrain.chunk_size;
+        let mesh_data = build_chunk_mesh(&terrain, chunk_idx);
+        let mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals)
+        .with_inserted_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed)
+        .with_inserted_indices(Indices::U32(mesh_data.indicies));
 
-            let mesh_handle = meshes.add(mesh);
-            let x_f32 = x as f32;
-            let y_f32 = y as f32;
-            let z_f32 = z as f32;
-            let size = terrain.chunk_size as f32 / 2.;
+        let mesh_handle = meshes.add(mesh);
+        let x_f32 = x as f32;
+        let y_f32 = y as f32;
+        let z_f32 = z as f32;
+        let size = terrain.chunk_size as f32 / 2.;
 
-            commands.spawn((
-                Chunk {
-                    chunk_idx: chunk_idx,
-                    mesh_handle: mesh_handle.clone(),
-                    world_x: x,
-                    world_y: y,
-                    world_z: z,
-                },
-                MaterialMeshBundle {
-                    mesh: mesh_handle.clone(),
-                    material: chunk_material.clone(),
-                    transform: Transform::from_xyz(x_f32, y_f32, z_f32),
-                    ..default()
-                },
-                Aabb {
-                    center: Vec3A::new(size, size, size),
-                    half_extents: Vec3A::new(size, size, size),
-                },
-                // Wireframe,
-            ));
-        }
+        commands.spawn((
+            Chunk {
+                chunk_idx: chunk_idx,
+                mesh_handle: mesh_handle.clone(),
+                world_x: x,
+                world_y: y,
+                world_z: z,
+            },
+            MaterialMeshBundle {
+                mesh: mesh_handle.clone(),
+                material: chunk_material.clone(),
+                transform: Transform::from_xyz(x_f32, y_f32, z_f32),
+                ..default()
+            },
+            Aabb {
+                center: Vec3A::new(size, size, size),
+                half_extents: Vec3A::new(size, size, size),
+            },
+            // Wireframe,
+        ));
     }
 }
 
@@ -111,8 +109,7 @@ pub fn process_dirty_chunks(
         }
 
         if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
-            let block_buffer = terrain.get_chunk(chunk.chunk_idx).unwrap();
-            let mesh_data = build_chunk_mesh(&block_buffer);
+            let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
             mesh.insert_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed);
@@ -140,12 +137,8 @@ pub fn on_slice_changed(
     }
 }
 
-pub fn update_chunk_mesh(
-    chunk: &Chunk,
-    block_buffer: &BlockBuffer,
-    mut meshes: ResMut<Assets<Mesh>>,
-) {
-    let mesh_data = build_chunk_mesh(&block_buffer);
+pub fn update_chunk_mesh(terrain: Terrain, chunk: &Chunk, mut meshes: ResMut<Assets<Mesh>>) {
+    let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
     if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
@@ -163,381 +156,387 @@ struct ChunkMeshData {
     idx: u32,
 }
 
-fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
+fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
     let mut data = ChunkMeshData::default();
     data.positions = vec![];
     data.normals = vec![];
     data.indicies = vec![];
     data.packed = vec![];
     let mut idx = 0;
+    let chunk_offset = terrain.get_chunk_offset(chunk_idx);
 
-    for block_idx in 0..block_buffer.block_count {
-        let block = block_buffer.get_block(block_idx);
+    for x in 0..terrain.chunk_size {
+        for y in 0..terrain.chunk_size {
+            for z in 0..terrain.chunk_size {
+                let wx = chunk_offset[0] + x;
+                let wy = chunk_offset[1] + y;
+                let wz = chunk_offset[2] + z;
+                let block = terrain.get_block(wx, wy, wz);
 
-        if !block.is_filled() {
-            continue;
-        }
+                if !block.is_filled() {
+                    continue;
+                }
 
-        let [x, y, z] = block_buffer.get_block_xyz(block_idx);
+                let fx = x as f32;
+                let fy = y as f32;
+                let fz = z as f32;
 
-        let fx = x as f32;
-        let fy = y as f32;
-        let fz = z as f32;
+                let neighbors = terrain.get_neighbors(wx, wy, wz);
 
-        let neighbors = block_buffer.get_neighbors(x, y, z);
+                if !neighbors[Neighbor::ABOVE.idx()].is_filled() {
+                    // add face above
+                    data.positions.push([fx, fy + 1., fz + 1.]); // behind left
+                    let f1_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+                    );
 
-        if !neighbors[Neighbor::ABOVE.idx()].is_filled() {
-            // add face above
-            data.positions.push([fx, fy + 1., fz + 1.]); // behind left
-            let f1_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_LEFT.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
-            );
+                    data.positions.push([fx, fy + 1., fz]); // forward left
+                    let f2_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                        neighbors[Neighbor::ABOVE_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+                    );
 
-            data.positions.push([fx, fy + 1., fz]); // forward left
-            let f2_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                neighbors[Neighbor::ABOVE_LEFT.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
-            );
+                    data.positions.push([fx + 1., fy + 1., fz]); // forward right
+                    let f3_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+                    );
 
-            data.positions.push([fx + 1., fy + 1., fz]); // forward right
-            let f3_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
-            );
+                    data.positions.push([fx + 1., fy + 1., fz + 1.]); // behind right
+                    let f4_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+                    );
 
-            data.positions.push([fx + 1., fy + 1., fz + 1.]); // behind right
-            let f4_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
-            );
+                    if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    } else {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 2);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    }
 
-            if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            } else {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 2);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
+                    data.packed.push(pack_block(block, BlockFace::PosY, f1_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosY, f2_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosY, f3_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosY, f4_ao));
+
+                    data.normals.push([0., 1., 0.]);
+                    data.normals.push([0., 1., 0.]);
+                    data.normals.push([0., 1., 0.]);
+                    data.normals.push([0., 1., 0.]);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[Neighbor::FORWARD.idx()].is_filled() {
+                    // add face in front
+                    data.positions.push([fx + 1., fy, fz]); // bottom right
+                    let f1_ao = vert_ao(
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy + 1., fz]); // above right
+                    let f2_ao = vert_ao(
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx, fy + 1., fz]); // above left
+                    let f3_ao = vert_ao(
+                        neighbors[Neighbor::FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx, fy, fz]); // bottom left
+                    let f4_ao = vert_ao(
+                        neighbors[Neighbor::FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+                    );
+
+                    if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    } else {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 2);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    }
+
+                    data.packed.push(pack_block(block, BlockFace::NegZ, f1_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegZ, f2_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegZ, f3_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegZ, f4_ao));
+
+                    data.normals.push([0., 0., -1.]);
+                    data.normals.push([0., 0., -1.]);
+                    data.normals.push([0., 0., -1.]);
+                    data.normals.push([0., 0., -1.]);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[Neighbor::RIGHT.idx()].is_filled() {
+                    // add face right
+                    data.positions.push([fx + 1., fy, fz + 1.]); // bottom back
+                    let f1_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_RIGHT.idx()],
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy + 1., fz + 1.]); // above back
+                    let f2_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy + 1., fz]); // above forward
+                    let f3_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy, fz]); // bottom forward
+                    let f4_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_RIGHT.idx()],
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+                    );
+
+                    if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    } else {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 2);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    }
+
+                    data.packed.push(pack_block(block, BlockFace::PosX, f1_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosX, f2_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosX, f3_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosX, f4_ao));
+
+                    data.normals.push([1., 0., 0.]);
+                    data.normals.push([1., 0., 0.]);
+                    data.normals.push([1., 0., 0.]);
+                    data.normals.push([1., 0., 0.]);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[Neighbor::BEHIND.idx()].is_filled() {
+                    // add face behind
+                    data.positions.push([fx, fy, fz + 1.]); // bottom left
+                    let f1_ao = vert_ao(
+                        neighbors[Neighbor::BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx, fy + 1., fz + 1.]); // above left
+                    let f2_ao = vert_ao(
+                        neighbors[Neighbor::BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy + 1., fz + 1.]); // above right
+                    let f3_ao = vert_ao(
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy, fz + 1.]); // bottom right
+                    let f4_ao = vert_ao(
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+                    );
+
+                    if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    } else {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 2);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    }
+
+                    data.packed.push(pack_block(block, BlockFace::PosZ, f1_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosZ, f2_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosZ, f3_ao));
+                    data.packed.push(pack_block(block, BlockFace::PosZ, f4_ao));
+
+                    data.normals.push([0., 0., 1.]);
+                    data.normals.push([0., 0., 1.]);
+                    data.normals.push([0., 0., 1.]);
+                    data.normals.push([0., 0., 1.]);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[Neighbor::LEFT.idx()].is_filled() {
+                    // add face left
+                    data.positions.push([fx, fy, fz]); // below forward
+                    let f1_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_LEFT.idx()],
+                        neighbors[Neighbor::FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx, fy + 1., fz]); // above forward
+                    let f2_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_LEFT.idx()],
+                        neighbors[Neighbor::FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx, fy + 1., fz + 1.]); // above behind
+                    let f3_ao = vert_ao(
+                        neighbors[Neighbor::ABOVE_LEFT.idx()],
+                        neighbors[Neighbor::BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx, fy, fz + 1.]); // below behind
+                    let f4_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_LEFT.idx()],
+                        neighbors[Neighbor::BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+                    );
+
+                    if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    } else {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 2);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    }
+
+                    data.packed.push(pack_block(block, BlockFace::NegX, f1_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegX, f2_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegX, f3_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegX, f4_ao));
+
+                    data.normals.push([-1., 0., 0.]);
+                    data.normals.push([-1., 0., 0.]);
+                    data.normals.push([-1., 0., 0.]);
+                    data.normals.push([-1., 0., 0.]);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[Neighbor::BELOW.idx()].is_filled() {
+                    // add face below
+                    data.positions.push([fx + 1., fy, fz + 1.]); // behind right
+                    let f1_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx + 1., fy, fz]); // forward right
+                    let f2_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_FORWARD.idx()],
+                        neighbors[Neighbor::BELOW_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+                    );
+
+                    data.positions.push([fx, fy, fz]); // forward left
+                    let f3_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_FORWARD.idx()],
+                        neighbors[Neighbor::BELOW_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+                    );
+
+                    data.positions.push([fx, fy, fz + 1.]); // behind left
+                    let f4_ao = vert_ao(
+                        neighbors[Neighbor::BELOW_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND.idx()],
+                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+                    );
+
+                    if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    } else {
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 2);
+                        data.indicies.push(idx + 1);
+                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx + 3);
+                        data.indicies.push(idx + 2);
+                    }
+
+                    data.packed.push(pack_block(block, BlockFace::NegY, f1_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegY, f2_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegY, f3_ao));
+                    data.packed.push(pack_block(block, BlockFace::NegY, f4_ao));
+
+                    data.normals.push([0., -1., 0.]);
+                    data.normals.push([0., -1., 0.]);
+                    data.normals.push([0., -1., 0.]);
+                    data.normals.push([0., -1., 0.]);
+
+                    idx = idx + 4;
+                }
             }
-
-            data.packed.push(pack_block(block, BlockFace::PosY, f1_ao));
-            data.packed.push(pack_block(block, BlockFace::PosY, f2_ao));
-            data.packed.push(pack_block(block, BlockFace::PosY, f3_ao));
-            data.packed.push(pack_block(block, BlockFace::PosY, f4_ao));
-
-            data.normals.push([0., 1., 0.]);
-            data.normals.push([0., 1., 0.]);
-            data.normals.push([0., 1., 0.]);
-            data.normals.push([0., 1., 0.]);
-
-            idx = idx + 4;
-        }
-
-        if !neighbors[Neighbor::FORWARD.idx()].is_filled() {
-            // add face in front
-            data.positions.push([fx + 1., fy, fz]); // bottom right
-            let f1_ao = vert_ao(
-                neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                neighbors[Neighbor::BELOW_FORWARD.idx()],
-                neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy + 1., fz]); // above right
-            let f2_ao = vert_ao(
-                neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
-            );
-
-            data.positions.push([fx, fy + 1., fz]); // above left
-            let f3_ao = vert_ao(
-                neighbors[Neighbor::FORWARD_LEFT.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
-            );
-
-            data.positions.push([fx, fy, fz]); // bottom left
-            let f4_ao = vert_ao(
-                neighbors[Neighbor::FORWARD_LEFT.idx()],
-                neighbors[Neighbor::BELOW_FORWARD.idx()],
-                neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
-            );
-
-            if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            } else {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 2);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            }
-
-            data.packed.push(pack_block(block, BlockFace::NegZ, f1_ao));
-            data.packed.push(pack_block(block, BlockFace::NegZ, f2_ao));
-            data.packed.push(pack_block(block, BlockFace::NegZ, f3_ao));
-            data.packed.push(pack_block(block, BlockFace::NegZ, f4_ao));
-
-            data.normals.push([0., 0., -1.]);
-            data.normals.push([0., 0., -1.]);
-            data.normals.push([0., 0., -1.]);
-            data.normals.push([0., 0., -1.]);
-
-            idx = idx + 4;
-        }
-
-        if !neighbors[Neighbor::RIGHT.idx()].is_filled() {
-            // add face right
-            data.positions.push([fx + 1., fy, fz + 1.]); // bottom back
-            let f1_ao = vert_ao(
-                neighbors[Neighbor::BELOW_RIGHT.idx()],
-                neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy + 1., fz + 1.]); // above back
-            let f2_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy + 1., fz]); // above forward
-            let f3_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy, fz]); // bottom forward
-            let f4_ao = vert_ao(
-                neighbors[Neighbor::BELOW_RIGHT.idx()],
-                neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
-            );
-
-            if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            } else {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 2);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            }
-
-            data.packed.push(pack_block(block, BlockFace::PosX, f1_ao));
-            data.packed.push(pack_block(block, BlockFace::PosX, f2_ao));
-            data.packed.push(pack_block(block, BlockFace::PosX, f3_ao));
-            data.packed.push(pack_block(block, BlockFace::PosX, f4_ao));
-
-            data.normals.push([1., 0., 0.]);
-            data.normals.push([1., 0., 0.]);
-            data.normals.push([1., 0., 0.]);
-            data.normals.push([1., 0., 0.]);
-
-            idx = idx + 4;
-        }
-
-        if !neighbors[Neighbor::BEHIND.idx()].is_filled() {
-            // add face behind
-            data.positions.push([fx, fy, fz + 1.]); // bottom left
-            let f1_ao = vert_ao(
-                neighbors[Neighbor::BEHIND_LEFT.idx()],
-                neighbors[Neighbor::BELOW_BEHIND.idx()],
-                neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
-            );
-
-            data.positions.push([fx, fy + 1., fz + 1.]); // above left
-            let f2_ao = vert_ao(
-                neighbors[Neighbor::BEHIND_LEFT.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy + 1., fz + 1.]); // above right
-            let f3_ao = vert_ao(
-                neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy, fz + 1.]); // bottom right
-            let f4_ao = vert_ao(
-                neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                neighbors[Neighbor::BELOW_BEHIND.idx()],
-                neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
-            );
-
-            if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            } else {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 2);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            }
-
-            data.packed.push(pack_block(block, BlockFace::PosZ, f1_ao));
-            data.packed.push(pack_block(block, BlockFace::PosZ, f2_ao));
-            data.packed.push(pack_block(block, BlockFace::PosZ, f3_ao));
-            data.packed.push(pack_block(block, BlockFace::PosZ, f4_ao));
-
-            data.normals.push([0., 0., 1.]);
-            data.normals.push([0., 0., 1.]);
-            data.normals.push([0., 0., 1.]);
-            data.normals.push([0., 0., 1.]);
-
-            idx = idx + 4;
-        }
-
-        if !neighbors[Neighbor::LEFT.idx()].is_filled() {
-            // add face left
-            data.positions.push([fx, fy, fz]); // below forward
-            let f1_ao = vert_ao(
-                neighbors[Neighbor::BELOW_LEFT.idx()],
-                neighbors[Neighbor::FORWARD_LEFT.idx()],
-                neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
-            );
-
-            data.positions.push([fx, fy + 1., fz]); // above forward
-            let f2_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_LEFT.idx()],
-                neighbors[Neighbor::FORWARD_LEFT.idx()],
-                neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
-            );
-
-            data.positions.push([fx, fy + 1., fz + 1.]); // above behind
-            let f3_ao = vert_ao(
-                neighbors[Neighbor::ABOVE_LEFT.idx()],
-                neighbors[Neighbor::BEHIND_LEFT.idx()],
-                neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
-            );
-
-            data.positions.push([fx, fy, fz + 1.]); // below behind
-            let f4_ao = vert_ao(
-                neighbors[Neighbor::BELOW_LEFT.idx()],
-                neighbors[Neighbor::BEHIND_LEFT.idx()],
-                neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
-            );
-
-            if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            } else {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 2);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            }
-
-            data.packed.push(pack_block(block, BlockFace::NegX, f1_ao));
-            data.packed.push(pack_block(block, BlockFace::NegX, f2_ao));
-            data.packed.push(pack_block(block, BlockFace::NegX, f3_ao));
-            data.packed.push(pack_block(block, BlockFace::NegX, f4_ao));
-
-            data.normals.push([-1., 0., 0.]);
-            data.normals.push([-1., 0., 0.]);
-            data.normals.push([-1., 0., 0.]);
-            data.normals.push([-1., 0., 0.]);
-
-            idx = idx + 4;
-        }
-
-        if !neighbors[Neighbor::BELOW.idx()].is_filled() {
-            // add face below
-            data.positions.push([fx + 1., fy, fz + 1.]); // behind right
-            let f1_ao = vert_ao(
-                neighbors[Neighbor::BELOW_RIGHT.idx()],
-                neighbors[Neighbor::BELOW_BEHIND.idx()],
-                neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
-            );
-
-            data.positions.push([fx + 1., fy, fz]); // forward right
-            let f2_ao = vert_ao(
-                neighbors[Neighbor::BELOW_FORWARD.idx()],
-                neighbors[Neighbor::BELOW_RIGHT.idx()],
-                neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
-            );
-
-            data.positions.push([fx, fy, fz]); // forward left
-            let f3_ao = vert_ao(
-                neighbors[Neighbor::BELOW_FORWARD.idx()],
-                neighbors[Neighbor::BELOW_LEFT.idx()],
-                neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
-            );
-
-            data.positions.push([fx, fy, fz + 1.]); // behind left
-            let f4_ao = vert_ao(
-                neighbors[Neighbor::BELOW_LEFT.idx()],
-                neighbors[Neighbor::BELOW_BEHIND.idx()],
-                neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
-            );
-
-            if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            } else {
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 2);
-                data.indicies.push(idx + 1);
-                data.indicies.push(idx + 0);
-                data.indicies.push(idx + 3);
-                data.indicies.push(idx + 2);
-            }
-
-            data.packed.push(pack_block(block, BlockFace::NegY, f1_ao));
-            data.packed.push(pack_block(block, BlockFace::NegY, f2_ao));
-            data.packed.push(pack_block(block, BlockFace::NegY, f3_ao));
-            data.packed.push(pack_block(block, BlockFace::NegY, f4_ao));
-
-            data.normals.push([0., -1., 0.]);
-            data.normals.push([0., -1., 0.]);
-            data.normals.push([0., -1., 0.]);
-            data.normals.push([0., -1., 0.]);
-
-            idx = idx + 4;
         }
     }
 

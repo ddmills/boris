@@ -86,6 +86,16 @@ impl Terrain {
         return self.chunks.get_mut(chunk_idx as usize);
     }
 
+    pub fn get_chunk_offset(&self, chunk_idx: u32) -> [u32; 3] {
+        let pos = self.shape.delinearize(chunk_idx);
+
+        return [
+            pos[0] * self.chunk_size,
+            pos[1] * self.chunk_size,
+            pos[2] * self.chunk_size,
+        ];
+    }
+
     pub fn get_block_indexes(&self, x: u32, y: u32, z: u32) -> [u32; 2] {
         let chunk_pos = [
             x / self.chunk_size,
@@ -119,6 +129,59 @@ impl Terrain {
         }
 
         return Block::OOB;
+    }
+
+    pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
+        if self.is_oob(x, y, z) {
+            return Block::OOB;
+        }
+
+        return self.get_block(x as u32, y as u32, z as u32);
+    }
+
+    pub fn get_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 26] {
+        let x_i32 = x as i32;
+        let y_i32 = y as i32;
+        let z_i32 = z as i32;
+
+        let above = y_i32 + 1;
+        let below = y_i32 - 1;
+        let left = x_i32 - 1;
+        let right = x_i32 + 1;
+        let forward = z_i32 - 1;
+        let behind = z_i32 + 1;
+
+        return [
+            // ABOVE
+            self.get_block_i32(left, above, forward), // above, forward, left -- 0
+            self.get_block_i32(x_i32, above, forward), // above, forward, middle -- 1
+            self.get_block_i32(right, above, forward), // above, forward, right -- 2
+            self.get_block_i32(left, above, z_i32),   // above, left -- 3
+            self.get_block_i32(x_i32, above, z_i32),  // above -- 4
+            self.get_block_i32(right, above, z_i32),  // above, right -- 5
+            self.get_block_i32(left, above, behind),  // above, behind, left -- 6
+            self.get_block_i32(x_i32, above, behind), // above, behind, middle -- 7
+            self.get_block_i32(right, above, behind), // above, behind, right -- 8
+            // MIDDLE
+            self.get_block_i32(left, y_i32, forward), // middle, forward, left -- 9
+            self.get_block_i32(x_i32, y_i32, forward), // middle, forward, middle -- 10
+            self.get_block_i32(right, y_i32, forward), // middle, forward, right -- 11
+            self.get_block_i32(left, y_i32, z_i32),   // middle, left -- 12
+            self.get_block_i32(right, y_i32, z_i32),  // middle, right -- 13
+            self.get_block_i32(left, y_i32, behind),  // middle, behind, left -- 14
+            self.get_block_i32(x_i32, y_i32, behind), // middle, behind, middle -- 15
+            self.get_block_i32(right, y_i32, behind), // middle, behind, right -- 16
+            // BELOW
+            self.get_block_i32(left, below, forward), // below, forward, left -- 17
+            self.get_block_i32(x_i32, below, forward), // below, forward, middle -- 18
+            self.get_block_i32(right, below, forward), // below, forward, right -- 19
+            self.get_block_i32(left, below, z_i32),   // below, left -- 20
+            self.get_block_i32(x_i32, below, z_i32),  // below -- 21
+            self.get_block_i32(right, below, z_i32),  // below, right -- 22
+            self.get_block_i32(left, below, behind),  // below, behind, left -- 23
+            self.get_block_i32(x_i32, below, behind), // below, behind, middle -- 24
+            self.get_block_i32(right, below, behind), // below, behind, right -- 25
+        ];
     }
 
     pub fn raycast(

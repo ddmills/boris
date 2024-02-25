@@ -16,6 +16,7 @@ use bevy::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
         texture::{Image, ImageLoaderSettings, ImageSampler},
+        view::NoFrustumCulling,
     },
 };
 
@@ -57,8 +58,9 @@ pub fn setup_terrain_slice(
         color: Color::WHITE,
     });
 
+    let initial_slice: u32 = terrain.world_size_y();
     let max = terrain.chunk_size * terrain.chunk_count_y;
-    let mesh_data = build_slice_mesh(terrain.as_ref(), 16);
+    let mesh_data = build_slice_mesh(terrain.as_ref(), initial_slice);
 
     let mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
@@ -70,14 +72,17 @@ pub fn setup_terrain_slice(
 
     let mesh_handle = meshes.add(mesh);
 
-    commands.spawn(MaterialMeshBundle {
-        mesh: mesh_handle.clone(),
-        material: slice_material,
-        ..default()
-    });
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: mesh_handle.clone(),
+            material: slice_material,
+            ..default()
+        },
+        NoFrustumCulling,
+    ));
 
     commands.insert_resource(TerrainSlice {
-        y: 16,
+        y: initial_slice,
         max: max,
         min: 0,
         is_enabled: true,

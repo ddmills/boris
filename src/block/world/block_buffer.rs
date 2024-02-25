@@ -86,4 +86,84 @@ impl BlockBuffer {
             self.get_block_by_xyz(x_i32, y_i32 - 1, z_i32), // below
         ];
     }
+
+    pub fn get_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 26] {
+        let x_i32 = x as i32;
+        let y_i32 = y as i32;
+        let z_i32 = z as i32;
+
+        let above = y_i32 + 1;
+        let below = y_i32 - 1;
+        let left = x_i32 - 1;
+        let right = x_i32 + 1;
+        let forward = z_i32 - 1;
+        let behind = z_i32 + 1;
+
+        return [
+            // ABOVE
+            self.get_block_by_xyz(left, above, forward), // above, forward, left -- 0
+            self.get_block_by_xyz(x_i32, above, forward), // above, forward, middle -- 1
+            self.get_block_by_xyz(right, above, forward), // above, forward, right -- 2
+            self.get_block_by_xyz(left, above, z_i32),   // above, left -- 3
+            self.get_block_by_xyz(x_i32, above, z_i32),  // above -- 4
+            self.get_block_by_xyz(right, above, z_i32),  // above, right -- 5
+            self.get_block_by_xyz(left, above, behind),  // above, behind, left -- 6
+            self.get_block_by_xyz(x_i32, above, behind), // above, behind, middle -- 7
+            self.get_block_by_xyz(right, above, behind), // above, behind, right -- 8
+            // MIDDLE
+            self.get_block_by_xyz(left, y_i32, forward), // middle, forward, left -- 9
+            self.get_block_by_xyz(x_i32, y_i32, forward), // middle, forward, middle -- 10
+            self.get_block_by_xyz(right, y_i32, forward), // middle, forward, right -- 11
+            self.get_block_by_xyz(left, y_i32, z_i32),   // middle, left -- 12
+            self.get_block_by_xyz(right, y_i32, z_i32),  // middle, right -- 13
+            self.get_block_by_xyz(left, y_i32, behind),  // middle, behind, left -- 14
+            self.get_block_by_xyz(x_i32, y_i32, behind), // middle, behind, middle -- 15
+            self.get_block_by_xyz(right, y_i32, behind), // middle, behind, right -- 16
+            // BELOW
+            self.get_block_by_xyz(left, below, forward), // below, forward, left -- 17
+            self.get_block_by_xyz(x_i32, below, forward), // below, forward, middle -- 18
+            self.get_block_by_xyz(right, below, forward), // below, forward, right -- 19
+            self.get_block_by_xyz(left, below, z_i32),   // below, left -- 20
+            self.get_block_by_xyz(x_i32, below, z_i32),  // below -- 21
+            self.get_block_by_xyz(right, below, z_i32),  // below, right -- 22
+            self.get_block_by_xyz(left, below, behind),  // below, behind, left -- 23
+            self.get_block_by_xyz(x_i32, below, behind), // below, behind, middle -- 24
+            self.get_block_by_xyz(right, below, behind), // below, behind, right -- 25
+        ];
+    }
+}
+
+pub struct Neighbor(pub u8);
+
+impl Neighbor {
+    pub const ABOVE_FORWARD_LEFT: Self = Self(0);
+    pub const ABOVE_FORWARD: Self = Self(1);
+    pub const ABOVE_FORWARD_RIGHT: Self = Self(2);
+    pub const ABOVE_LEFT: Self = Self(3);
+    pub const ABOVE: Self = Self(4);
+    pub const ABOVE_RIGHT: Self = Self(5);
+    pub const ABOVE_BEHIND_LEFT: Self = Self(6);
+    pub const ABOVE_BEHIND: Self = Self(7);
+    pub const ABOVE_BEHIND_RIGHT: Self = Self(8);
+    pub const FORWARD_LEFT: Self = Self(9);
+    pub const FORWARD: Self = Self(10);
+    pub const FORWARD_RIGHT: Self = Self(11);
+    pub const LEFT: Self = Self(12);
+    pub const RIGHT: Self = Self(13);
+    pub const BEHIND_LEFT: Self = Self(14);
+    pub const BEHIND: Self = Self(15);
+    pub const BEHIND_RIGHT: Self = Self(16);
+    pub const BELOW_FORWARD_LEFT: Self = Self(17);
+    pub const BELOW_FORWARD: Self = Self(18);
+    pub const BELOW_FORWARD_RIGHT: Self = Self(19);
+    pub const BELOW_LEFT: Self = Self(20);
+    pub const BELOW: Self = Self(21);
+    pub const BELOW_RIGHT: Self = Self(22);
+    pub const BELOW_BEHIND_LEFT: Self = Self(23);
+    pub const BELOW_BEHIND: Self = Self(24);
+    pub const BELOW_BEHIND_RIGHT: Self = Self(25);
+
+    pub fn idx(&self) -> usize {
+        return self.0 as usize;
+    }
 }

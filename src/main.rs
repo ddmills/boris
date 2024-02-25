@@ -10,8 +10,6 @@ use block::world::terrain::{Terrain, TerrainModifiedEvent};
 use camera::{CameraPlugin, FlyCamera};
 use debug::fps::FpsPlugin;
 
-use crate::block::block_face::BlockFace;
-
 mod block;
 mod camera;
 mod debug;
@@ -19,8 +17,14 @@ mod debug;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(MaterialPlugin::<ChunkMaterial>::default())
-        .add_plugins(MaterialPlugin::<SliceMaterial>::default())
+        .add_plugins(MaterialPlugin::<ChunkMaterial> {
+            prepass_enabled: false,
+            ..default()
+        })
+        .add_plugins(MaterialPlugin::<SliceMaterial> {
+            prepass_enabled: false,
+            ..default()
+        })
         .add_plugins(CameraPlugin)
         .add_plugins(TerrainGenerator)
         .add_plugins(WireframePlugin)

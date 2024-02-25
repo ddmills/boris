@@ -18,7 +18,6 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
     },
     math::Vec3,
-    transform::commands,
 };
 use bracket_noise::prelude::FastNoise;
 use ndshape::AbstractShape;

@@ -16,13 +16,13 @@ use crate::block::{
     slice::slice::{TerrainSlice, TerrainSliceChanged},
     world::{
         block::Block,
-        block_buffer::BlockBuffer,
+        block_buffer::{BlockBuffer, Neighbor},
         chunk::{Chunk, DirtyChunk},
         terrain::Terrain,
     },
 };
 
-use super::chunk_material::{ChunkMaterial, ChunkMaterialRes};
+use super::chunk_material::{pack_block, ChunkMaterial, ChunkMaterialRes, VertexAo};
 
 pub const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
     MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
@@ -183,19 +183,42 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
         let fy = y as f32;
         let fz = z as f32;
 
-        let neighbors = block_buffer.get_immediate_neighbors(x, y, z);
+        let neighbors = block_buffer.get_neighbors(x, y, z);
 
-        if !neighbors[0].is_filled() {
+        if !neighbors[Neighbor::ABOVE.idx()].is_filled() {
             // add face above
             data.positions.push([fx, fy + 1., fz]);
-            data.positions.push([fx + 1., fy + 1., fz]);
-            data.positions.push([fx + 1., fy + 1., fz + 1.]);
-            data.positions.push([fx, fy + 1., fz + 1.]);
+            let f1_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                neighbors[Neighbor::ABOVE_LEFT.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+            );
 
-            data.packed.push(pack_block(block, BlockFace::PosY));
-            data.packed.push(pack_block(block, BlockFace::PosY));
-            data.packed.push(pack_block(block, BlockFace::PosY));
-            data.packed.push(pack_block(block, BlockFace::PosY));
+            data.positions.push([fx + 1., fy + 1., fz]);
+            let f2_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy + 1., fz + 1.]);
+            let f3_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+            );
+
+            data.positions.push([fx, fy + 1., fz + 1.]);
+            let f4_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_LEFT.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+            );
+
+            data.packed.push(pack_block(block, BlockFace::PosY, f1_ao));
+            data.packed.push(pack_block(block, BlockFace::PosY, f2_ao));
+            data.packed.push(pack_block(block, BlockFace::PosY, f3_ao));
+            data.packed.push(pack_block(block, BlockFace::PosY, f4_ao));
 
             data.normals.push([0., 1., 0.]);
             data.normals.push([0., 1., 0.]);
@@ -212,17 +235,40 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             idx = idx + 4;
         }
 
-        if !neighbors[1].is_filled() {
+        if !neighbors[Neighbor::FORWARD.idx()].is_filled() {
             // add face in front
             data.positions.push([fx, fy, fz]);
-            data.positions.push([fx, fy + 1., fz]);
-            data.positions.push([fx + 1., fy + 1., fz]);
-            data.positions.push([fx + 1., fy, fz]);
+            let f1_ao = vert_ao(
+                neighbors[Neighbor::FORWARD_LEFT.idx()],
+                neighbors[Neighbor::BELOW_FORWARD.idx()],
+                neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+            );
 
-            data.packed.push(pack_block(block, BlockFace::NegZ));
-            data.packed.push(pack_block(block, BlockFace::NegZ));
-            data.packed.push(pack_block(block, BlockFace::NegZ));
-            data.packed.push(pack_block(block, BlockFace::NegZ));
+            data.positions.push([fx, fy + 1., fz]);
+            let f2_ao = vert_ao(
+                neighbors[Neighbor::FORWARD_LEFT.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy + 1., fz]);
+            let f3_ao = vert_ao(
+                neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy, fz]);
+            let f4_ao = vert_ao(
+                neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                neighbors[Neighbor::BELOW_FORWARD.idx()],
+                neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+            );
+
+            data.packed.push(pack_block(block, BlockFace::NegZ, f1_ao));
+            data.packed.push(pack_block(block, BlockFace::NegZ, f2_ao));
+            data.packed.push(pack_block(block, BlockFace::NegZ, f3_ao));
+            data.packed.push(pack_block(block, BlockFace::NegZ, f4_ao));
 
             data.normals.push([0., 0., -1.]);
             data.normals.push([0., 0., -1.]);
@@ -239,17 +285,40 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             idx = idx + 4;
         }
 
-        if !neighbors[2].is_filled() {
+        if !neighbors[Neighbor::RIGHT.idx()].is_filled() {
             // add face right
             data.positions.push([fx + 1., fy, fz]);
-            data.positions.push([fx + 1., fy, fz + 1.]);
-            data.positions.push([fx + 1., fy + 1., fz + 1.]);
-            data.positions.push([fx + 1., fy + 1., fz]);
+            let f1_ao = vert_ao(
+                neighbors[Neighbor::BELOW_RIGHT.idx()],
+                neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+            );
 
-            data.packed.push(pack_block(block, BlockFace::PosX));
-            data.packed.push(pack_block(block, BlockFace::PosX));
-            data.packed.push(pack_block(block, BlockFace::PosX));
-            data.packed.push(pack_block(block, BlockFace::PosX));
+            data.positions.push([fx + 1., fy, fz + 1.]);
+            let f2_ao = vert_ao(
+                neighbors[Neighbor::BELOW_RIGHT.idx()],
+                neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy + 1., fz + 1.]);
+            let f3_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy + 1., fz]);
+            let f4_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_RIGHT.idx()],
+                neighbors[Neighbor::FORWARD_RIGHT.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+            );
+
+            data.packed.push(pack_block(block, BlockFace::PosX, f1_ao));
+            data.packed.push(pack_block(block, BlockFace::PosX, f2_ao));
+            data.packed.push(pack_block(block, BlockFace::PosX, f3_ao));
+            data.packed.push(pack_block(block, BlockFace::PosX, f4_ao));
 
             data.normals.push([1., 0., 0.]);
             data.normals.push([1., 0., 0.]);
@@ -266,17 +335,40 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             idx = idx + 4;
         }
 
-        if !neighbors[3].is_filled() {
+        if !neighbors[Neighbor::BEHIND.idx()].is_filled() {
             // add face behind
             data.positions.push([fx, fy, fz + 1.]);
-            data.positions.push([fx, fy + 1., fz + 1.]);
-            data.positions.push([fx + 1., fy + 1., fz + 1.]);
-            data.positions.push([fx + 1., fy, fz + 1.]);
+            let f1_ao = vert_ao(
+                neighbors[Neighbor::BEHIND_LEFT.idx()],
+                neighbors[Neighbor::BELOW_BEHIND.idx()],
+                neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+            );
 
-            data.packed.push(pack_block(block, BlockFace::PosZ));
-            data.packed.push(pack_block(block, BlockFace::PosZ));
-            data.packed.push(pack_block(block, BlockFace::PosZ));
-            data.packed.push(pack_block(block, BlockFace::PosZ));
+            data.positions.push([fx, fy + 1., fz + 1.]);
+            let f2_ao = vert_ao(
+                neighbors[Neighbor::BEHIND_LEFT.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy + 1., fz + 1.]);
+            let f3_ao = vert_ao(
+                neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy, fz + 1.]);
+            let f4_ao = vert_ao(
+                neighbors[Neighbor::BEHIND_RIGHT.idx()],
+                neighbors[Neighbor::BELOW_BEHIND.idx()],
+                neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+            );
+
+            data.packed.push(pack_block(block, BlockFace::PosZ, f1_ao));
+            data.packed.push(pack_block(block, BlockFace::PosZ, f2_ao));
+            data.packed.push(pack_block(block, BlockFace::PosZ, f3_ao));
+            data.packed.push(pack_block(block, BlockFace::PosZ, f4_ao));
 
             data.normals.push([0., 0., 1.]);
             data.normals.push([0., 0., 1.]);
@@ -293,17 +385,40 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             idx = idx + 4;
         }
 
-        if !neighbors[4].is_filled() {
+        if !neighbors[Neighbor::LEFT.idx()].is_filled() {
             // add face left
             data.positions.push([fx, fy, fz]);
-            data.positions.push([fx, fy, fz + 1.]);
-            data.positions.push([fx, fy + 1., fz + 1.]);
-            data.positions.push([fx, fy + 1., fz]);
+            let f1_ao = vert_ao(
+                neighbors[Neighbor::BELOW_LEFT.idx()],
+                neighbors[Neighbor::FORWARD_LEFT.idx()],
+                neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+            );
 
-            data.packed.push(pack_block(block, BlockFace::NegX));
-            data.packed.push(pack_block(block, BlockFace::NegX));
-            data.packed.push(pack_block(block, BlockFace::NegX));
-            data.packed.push(pack_block(block, BlockFace::NegX));
+            data.positions.push([fx, fy, fz + 1.]);
+            let f2_ao = vert_ao(
+                neighbors[Neighbor::BELOW_LEFT.idx()],
+                neighbors[Neighbor::BEHIND_LEFT.idx()],
+                neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+            );
+
+            data.positions.push([fx, fy + 1., fz + 1.]);
+            let f3_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_LEFT.idx()],
+                neighbors[Neighbor::BEHIND_LEFT.idx()],
+                neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+            );
+
+            data.positions.push([fx, fy + 1., fz]);
+            let f4_ao = vert_ao(
+                neighbors[Neighbor::ABOVE_LEFT.idx()],
+                neighbors[Neighbor::FORWARD_LEFT.idx()],
+                neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+            );
+
+            data.packed.push(pack_block(block, BlockFace::NegX, f1_ao));
+            data.packed.push(pack_block(block, BlockFace::NegX, f2_ao));
+            data.packed.push(pack_block(block, BlockFace::NegX, f3_ao));
+            data.packed.push(pack_block(block, BlockFace::NegX, f4_ao));
 
             data.normals.push([-1., 0., 0.]);
             data.normals.push([-1., 0., 0.]);
@@ -320,17 +435,40 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
             idx = idx + 4;
         }
 
-        if !neighbors[5].is_filled() {
+        if !neighbors[Neighbor::BELOW.idx()].is_filled() {
             // add face below
             data.positions.push([fx, fy, fz]);
-            data.positions.push([fx + 1., fy, fz]);
-            data.positions.push([fx + 1., fy, fz + 1.]);
-            data.positions.push([fx, fy, fz + 1.]);
+            let f1_ao = vert_ao(
+                neighbors[Neighbor::BELOW_FORWARD.idx()],
+                neighbors[Neighbor::BELOW_LEFT.idx()],
+                neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+            );
 
-            data.packed.push(pack_block(block, BlockFace::NegY));
-            data.packed.push(pack_block(block, BlockFace::NegY));
-            data.packed.push(pack_block(block, BlockFace::NegY));
-            data.packed.push(pack_block(block, BlockFace::NegY));
+            data.positions.push([fx + 1., fy, fz]);
+            let f2_ao = vert_ao(
+                neighbors[Neighbor::BELOW_FORWARD.idx()],
+                neighbors[Neighbor::BELOW_RIGHT.idx()],
+                neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+            );
+
+            data.positions.push([fx + 1., fy, fz + 1.]);
+            let f3_ao = vert_ao(
+                neighbors[Neighbor::BELOW_RIGHT.idx()],
+                neighbors[Neighbor::BELOW_BEHIND.idx()],
+                neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+            );
+
+            data.positions.push([fx, fy, fz + 1.]);
+            let f4_ao = vert_ao(
+                neighbors[Neighbor::BELOW_LEFT.idx()],
+                neighbors[Neighbor::BELOW_BEHIND.idx()],
+                neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+            );
+
+            data.packed.push(pack_block(block, BlockFace::NegY, f1_ao));
+            data.packed.push(pack_block(block, BlockFace::NegY, f2_ao));
+            data.packed.push(pack_block(block, BlockFace::NegY, f3_ao));
+            data.packed.push(pack_block(block, BlockFace::NegY, f4_ao));
 
             data.normals.push([0., -1., 0.]);
             data.normals.push([0., -1., 0.]);
@@ -351,9 +489,25 @@ fn build_chunk_mesh(block_buffer: &BlockBuffer) -> ChunkMeshData {
     return data;
 }
 
-fn pack_block(block: Block, dir: BlockFace) -> u32 {
-    let t_id = block.texture_idx(); // 0-15
-    let f_id = dir.bit(); // 0-7
+fn vert_ao(side1: Block, side2: Block, corner: Block) -> VertexAo {
+    let s1f = side1.is_filled();
+    let s2f = side2.is_filled();
+    let cf = corner.is_filled();
 
-    return (t_id & 15) | ((f_id & 7) << 4);
+    if s1f && s2f {
+        return VertexAo::TouchThree;
+    }
+
+    let mut vao = 0;
+    if s1f {
+        vao = vao + 1;
+    }
+    if s2f {
+        vao = vao + 1;
+    }
+    if cf {
+        vao = vao + 1;
+    }
+
+    return VertexAo::from_bit(vao);
 }

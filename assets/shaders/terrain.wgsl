@@ -17,6 +17,8 @@ struct VertexOutput {
     @location(0) packed_block: u32,
     @location(1) position: vec3<f32>,
     @location(2) position_world: vec4<f32>,
+    @location(4) vertex_index: u32,
+    @location(5) ao: f32,
 };
 
 @vertex 
@@ -35,6 +37,28 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         vec4<f32>(vertex.position, 1.0),
     );
 
+    out.vertex_index = vertex.instance_index;
+
+    let vertex_ao = vertex.packed_block >> 7u & 3u;
+
+    switch vertex_ao {
+        case 0u: {
+            out.ao = 1.0;
+        }
+        case 1u: {
+            out.ao = 0.85;
+        }
+        case 2u: {
+            out.ao = 0.7;
+        }
+        case 3u: {
+            out.ao = 0.55;
+        }
+        default: {
+            out.ao = 0.0;
+        }
+    }
+
     return out;
 }
 
@@ -42,6 +66,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let block_type = mesh.packed_block & 15u;
     let block_face = mesh.packed_block >> 4u & 7u;
+    let vertex_ao = mesh.packed_block >> 7u & 3u;
+    let vert = mesh.vertex_index % 4;
 
     var uv: vec2<f32>;
 
@@ -55,44 +81,45 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    var shade: f32;
+    var light: f32;
+    let position_local = mesh.position_world % 1.0;
 
     switch block_face {
         case 0u: { // PosX
-            uv = vec2(ox + mesh.position.y % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.5;
+            uv = vec2(ox + position_local.y, oy + position_local.z);
+            light = 0.5;
         }
         case 1u: { // NegX
-            uv = vec2(ox + mesh.position.y % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.5;
+            uv = vec2(ox + position_local.y, oy + position_local.z);
+            light = 0.5;
         }
         case 2u: { // PosY
-            uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.0;
+            uv = vec2(ox + position_local.x, oy + position_local.z);
+            light = 1.0;
         }
         case 3u: { // NegY
-            uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.z % 1.0);
-            shade = 0.9;
+            uv = vec2(ox + position_local.x, oy + position_local.z);
+            light = 1.0;
         }
         case 4u: { // PosZ
-            uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.y % 1.0);
-            shade = 0.8;
+            uv = vec2(ox + position_local.x, oy + position_local.y);
+            light = 0.2;
         }
         case 5u: { // NegZ
-            uv = vec2(ox + mesh.position.x % 1.0, oy + mesh.position.y % 1.0);
-            shade = 0.25;
+            uv = vec2(ox + position_local.x, oy + position_local.y);
+            light = 0.2;
         }
         default: { // ?
-            uv = vec2(mesh.position.x % 1.0, mesh.position.z % 1.0);
-            shade = 1.0;
+            uv = vec2(position_local.x, position_local.z);
+            light = 1.0;
         }
     }
 
     uv = uv / f32(texture_count);
-    var outc = vec4(1.0 - shade) * textureSample(texture, texture_sampler, uv);
+    let tex = textureSample(texture, texture_sampler, uv);
+    var outc = light * tex * mesh.ao;
 
     outc[3] = 1.0;
-
 
     return outc;
 }

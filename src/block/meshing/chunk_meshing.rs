@@ -40,12 +40,12 @@ pub fn setup_chunk_meshes(
 ) {
     let settings = |s: &mut ImageLoaderSettings| s.sampler = ImageSampler::nearest();
     let terrain_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/terrain.png", settings);
+        asset_server.load_with_settings("textures/terrain_16.png", settings);
 
     let chunk_material = materials.add(ChunkMaterial {
         color: Color::YELLOW_GREEN,
         texture: terrain_texture,
-        texture_count: 4,
+        texture_count: 8,
         terrain_slice_y: slice.get_value(),
     });
 

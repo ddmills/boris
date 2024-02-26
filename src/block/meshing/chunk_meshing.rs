@@ -104,7 +104,7 @@ pub fn process_dirty_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     chunks: Query<(&Chunk)>,
 ) {
-    let maximum = 100;
+    let maximum = 1;
     let mut cur = 0;
 
     chunks.iter().for_each(|chunk| {

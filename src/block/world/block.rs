@@ -1,4 +1,10 @@
 #[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
+pub struct BlockDetail {
+    pub block: Block,
+    pub light: u8,
+}
+
+#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
 pub struct Block(pub u8);
 
 impl Block {
@@ -7,6 +13,7 @@ impl Block {
     pub const DIRT: Self = Self(2);
     pub const STONE: Self = Self(3);
     pub const GRASS: Self = Self(4);
+    pub const LAMP: Self = Self(5);
 }
 
 impl Block {
@@ -17,6 +24,26 @@ impl Block {
             &Self::STONE => true,
             &Self::DIRT => true,
             &Self::GRASS => true,
+            &Self::LAMP => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        match self {
+            &Self::OOB => true,
+            &Self::EMPTY => false,
+            &Self::STONE => true,
+            &Self::DIRT => true,
+            &Self::GRASS => true,
+            &Self::LAMP => true,
+            _ => true,
+        }
+    }
+
+    pub fn is_light_source(&self) -> bool {
+        match self {
+            &Self::LAMP => true,
             _ => false,
         }
     }
@@ -26,6 +53,7 @@ impl Block {
             &Self::DIRT => 1,
             &Self::GRASS => 2,
             &Self::STONE => 3,
+            &Self::LAMP => 5,
             _ => 0,
         }
     }
@@ -37,6 +65,7 @@ impl Block {
             &Self::DIRT => String::from("dirt"),
             &Self::GRASS => String::from("grass"),
             &Self::STONE => String::from("stone"),
+            &Self::LAMP => String::from("lamp"),
             _ => String::from("unknown"),
         }
     }

@@ -16,6 +16,8 @@ use bevy::{
 
 use crate::block::{block_face::BlockFace, world::block::Block};
 
+use super::chunk_meshing::ATTRIBUTE_BLOCK_LIGHT;
+
 const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
     MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
 
@@ -59,6 +61,7 @@ impl Material for ChunkMaterial {
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             ATTRIBUTE_PACKED_BLOCK.at_shader_location(1),
+            ATTRIBUTE_BLOCK_LIGHT.at_shader_location(2),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())

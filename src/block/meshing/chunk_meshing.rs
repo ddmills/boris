@@ -24,8 +24,10 @@ use crate::block::{
 
 use super::chunk_material::{pack_block, ChunkMaterial, ChunkMaterialRes, VertexAo};
 
-pub const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
-    MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
+pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
+    MeshVertexAttribute::new("BlockPacked", 9985136798, VertexFormat::Uint32);
+pub const ATTRIBUTE_BLOCK_LIGHT: MeshVertexAttribute =
+    MeshVertexAttribute::new("BlockLight", 98218357661, VertexFormat::Uint32);
 
 pub fn setup_chunk_meshes(
     mut commands: Commands,
@@ -62,7 +64,8 @@ pub fn setup_chunk_meshes(
         )
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions)
         .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals)
-        .with_inserted_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed)
+        .with_inserted_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_data.packed)
+        .with_inserted_attribute(ATTRIBUTE_BLOCK_LIGHT, mesh_data.light)
         .with_inserted_indices(Indices::U32(mesh_data.indicies));
 
         let mesh_handle = meshes.add(mesh);
@@ -112,7 +115,8 @@ pub fn process_dirty_chunks(
             let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
-            mesh.insert_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed);
+            mesh.insert_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_data.packed);
+            mesh.insert_attribute(ATTRIBUTE_BLOCK_LIGHT, mesh_data.light);
             mesh.insert_indices(Indices::U32(mesh_data.indicies));
         }
 
@@ -137,23 +141,13 @@ pub fn on_slice_changed(
     }
 }
 
-pub fn update_chunk_mesh(terrain: Terrain, chunk: &Chunk, mut meshes: ResMut<Assets<Mesh>>) {
-    let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
-    if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
-        mesh.insert_attribute(ATTRIBUTE_PACKED_BLOCK, mesh_data.packed);
-        mesh.insert_indices(Indices::U32(mesh_data.indicies));
-    }
-}
-
 #[derive(Default)]
 struct ChunkMeshData {
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub indicies: Vec<u32>,
     pub packed: Vec<u32>,
-    idx: u32,
+    pub light: Vec<u32>,
 }
 
 fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
@@ -162,6 +156,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
     data.normals = vec![];
     data.indicies = vec![];
     data.packed = vec![];
+    data.light = vec![];
     let mut idx = 0;
     let chunk_offset = terrain.get_chunk_offset(chunk_idx);
 
@@ -181,36 +176,36 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                 let fy = y as f32;
                 let fz = z as f32;
 
-                let neighbors = terrain.get_neighbors(wx, wy, wz);
+                let neighbors = terrain.get_neighbors_detail(wx, wy, wz);
 
-                if !neighbors[Neighbor::ABOVE.idx()].is_filled() {
+                if !neighbors[Neighbor::ABOVE.idx()].block.is_filled() {
                     // add face above
                     data.positions.push([fx, fy + 1., fz + 1.]); // behind left
                     let f1_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_LEFT.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_LEFT.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy + 1., fz]); // forward left
                     let f2_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                        neighbors[Neighbor::ABOVE_LEFT.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()].block,
+                        neighbors[Neighbor::ABOVE_LEFT.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy + 1., fz]); // forward right
                     let f3_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()].block,
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy + 1., fz + 1.]); // behind right
                     let f4_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()].block,
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
@@ -234,6 +229,15 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::PosY, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::PosY, f4_ao));
 
+                    data.light
+                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
+
                     data.normals.push([0., 1., 0.]);
                     data.normals.push([0., 1., 0.]);
                     data.normals.push([0., 1., 0.]);
@@ -242,34 +246,34 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx = idx + 4;
                 }
 
-                if !neighbors[Neighbor::FORWARD.idx()].is_filled() {
+                if !neighbors[Neighbor::FORWARD.idx()].block.is_filled() {
                     // add face in front
                     data.positions.push([fx + 1., fy, fz]); // bottom right
                     let f1_ao = vert_ao(
-                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy + 1., fz]); // above right
                     let f2_ao = vert_ao(
-                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx, fy + 1., fz]); // above left
                     let f3_ao = vert_ao(
-                        neighbors[Neighbor::FORWARD_LEFT.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::FORWARD_LEFT.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy, fz]); // bottom left
                     let f4_ao = vert_ao(
-                        neighbors[Neighbor::FORWARD_LEFT.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::FORWARD_LEFT.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()].block,
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
@@ -293,6 +297,15 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::NegZ, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::NegZ, f4_ao));
 
+                    data.light
+                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
+
                     data.normals.push([0., 0., -1.]);
                     data.normals.push([0., 0., -1.]);
                     data.normals.push([0., 0., -1.]);
@@ -301,34 +314,34 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx = idx + 4;
                 }
 
-                if !neighbors[Neighbor::RIGHT.idx()].is_filled() {
+                if !neighbors[Neighbor::RIGHT.idx()].block.is_filled() {
                     // add face right
                     data.positions.push([fx + 1., fy, fz + 1.]); // bottom back
                     let f1_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_RIGHT.idx()],
-                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_RIGHT.idx()].block,
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy + 1., fz + 1.]); // above back
                     let f2_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()].block,
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy + 1., fz]); // above forward
                     let f3_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_RIGHT.idx()],
-                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::ABOVE_RIGHT.idx()].block,
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy, fz]); // bottom forward
                     let f4_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_RIGHT.idx()],
-                        neighbors[Neighbor::FORWARD_RIGHT.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_RIGHT.idx()].block,
+                        neighbors[Neighbor::FORWARD_RIGHT.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()].block,
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
@@ -352,6 +365,15 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::PosX, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::PosX, f4_ao));
 
+                    data.light
+                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
+
                     data.normals.push([1., 0., 0.]);
                     data.normals.push([1., 0., 0.]);
                     data.normals.push([1., 0., 0.]);
@@ -360,34 +382,34 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx = idx + 4;
                 }
 
-                if !neighbors[Neighbor::BEHIND.idx()].is_filled() {
+                if !neighbors[Neighbor::BEHIND.idx()].block.is_filled() {
                     // add face behind
                     data.positions.push([fx, fy, fz + 1.]); // bottom left
                     let f1_ao = vert_ao(
-                        neighbors[Neighbor::BEHIND_LEFT.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::BEHIND_LEFT.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy + 1., fz + 1.]); // above left
                     let f2_ao = vert_ao(
-                        neighbors[Neighbor::BEHIND_LEFT.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::BEHIND_LEFT.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy + 1., fz + 1.]); // above right
                     let f3_ao = vert_ao(
-                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy, fz + 1.]); // bottom right
                     let f4_ao = vert_ao(
-                        neighbors[Neighbor::BEHIND_RIGHT.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::BEHIND_RIGHT.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()].block,
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
@@ -411,6 +433,15 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::PosZ, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::PosZ, f4_ao));
 
+                    data.light
+                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
+
                     data.normals.push([0., 0., 1.]);
                     data.normals.push([0., 0., 1.]);
                     data.normals.push([0., 0., 1.]);
@@ -419,34 +450,34 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx = idx + 4;
                 }
 
-                if !neighbors[Neighbor::LEFT.idx()].is_filled() {
+                if !neighbors[Neighbor::LEFT.idx()].block.is_filled() {
                     // add face left
                     data.positions.push([fx, fy, fz]); // below forward
                     let f1_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_LEFT.idx()],
-                        neighbors[Neighbor::FORWARD_LEFT.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_LEFT.idx()].block,
+                        neighbors[Neighbor::FORWARD_LEFT.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy + 1., fz]); // above forward
                     let f2_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_LEFT.idx()],
-                        neighbors[Neighbor::FORWARD_LEFT.idx()],
-                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_LEFT.idx()].block,
+                        neighbors[Neighbor::FORWARD_LEFT.idx()].block,
+                        neighbors[Neighbor::ABOVE_FORWARD_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy + 1., fz + 1.]); // above behind
                     let f3_ao = vert_ao(
-                        neighbors[Neighbor::ABOVE_LEFT.idx()],
-                        neighbors[Neighbor::BEHIND_LEFT.idx()],
-                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::ABOVE_LEFT.idx()].block,
+                        neighbors[Neighbor::BEHIND_LEFT.idx()].block,
+                        neighbors[Neighbor::ABOVE_BEHIND_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy, fz + 1.]); // below behind
                     let f4_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_LEFT.idx()],
-                        neighbors[Neighbor::BEHIND_LEFT.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_LEFT.idx()].block,
+                        neighbors[Neighbor::BEHIND_LEFT.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()].block,
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
@@ -470,6 +501,15 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::NegX, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::NegX, f4_ao));
 
+                    data.light
+                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
+
                     data.normals.push([-1., 0., 0.]);
                     data.normals.push([-1., 0., 0.]);
                     data.normals.push([-1., 0., 0.]);
@@ -478,34 +518,34 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx = idx + 4;
                 }
 
-                if !neighbors[Neighbor::BELOW.idx()].is_filled() {
+                if !neighbors[Neighbor::BELOW.idx()].block.is_filled() {
                     // add face below
                     data.positions.push([fx + 1., fy, fz + 1.]); // behind right
                     let f1_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_RIGHT.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_RIGHT.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx + 1., fy, fz]); // forward right
                     let f2_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_FORWARD.idx()],
-                        neighbors[Neighbor::BELOW_RIGHT.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD.idx()].block,
+                        neighbors[Neighbor::BELOW_RIGHT.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD_RIGHT.idx()].block,
                     );
 
                     data.positions.push([fx, fy, fz]); // forward left
                     let f3_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_FORWARD.idx()],
-                        neighbors[Neighbor::BELOW_LEFT.idx()],
-                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_FORWARD.idx()].block,
+                        neighbors[Neighbor::BELOW_LEFT.idx()].block,
+                        neighbors[Neighbor::BELOW_FORWARD_LEFT.idx()].block,
                     );
 
                     data.positions.push([fx, fy, fz + 1.]); // behind left
                     let f4_ao = vert_ao(
-                        neighbors[Neighbor::BELOW_LEFT.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND.idx()],
-                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()],
+                        neighbors[Neighbor::BELOW_LEFT.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND.idx()].block,
+                        neighbors[Neighbor::BELOW_BEHIND_LEFT.idx()].block,
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
@@ -528,6 +568,15 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::NegY, f2_ao));
                     data.packed.push(pack_block(block, BlockFace::NegY, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::NegY, f4_ao));
+
+                    data.light
+                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
+                    data.light
+                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
 
                     data.normals.push([0., -1., 0.]);
                     data.normals.push([0., -1., 0.]);

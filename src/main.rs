@@ -10,6 +10,8 @@ use block::world::terrain::{Terrain, TerrainModifiedEvent};
 use camera::{CameraPlugin, FlyCamera};
 use debug::fps::FpsPlugin;
 
+use crate::block::light::update_light;
+
 mod block;
 mod camera;
 mod debug;
@@ -91,7 +93,12 @@ fn camera_raycasting(
                         let clamped_x = new_x as u32;
                         let clamped_y = new_y as u32;
                         let clamped_z = new_z as u32;
-                        terrain.set_block(clamped_x, clamped_y, clamped_z, Block::STONE);
+                        terrain.set_block(clamped_x, clamped_y, clamped_z, Block::LAMP);
+                        terrain.set_torchlight(clamped_x, clamped_y, clamped_z, 16);
+                        let [chunk_idx, block_idx] =
+                            terrain.get_block_indexes(clamped_x, clamped_y, clamped_z);
+                        update_light(terrain.as_mut(), chunk_idx, block_idx);
+
                         ev_terrain_mod.send(TerrainModifiedEvent {
                             x: clamped_x,
                             y: clamped_y,

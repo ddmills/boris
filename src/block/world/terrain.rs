@@ -1,9 +1,15 @@
-use bevy::ecs::{event::Event, system::Resource};
+use bevy::{
+    ecs::{event::Event, system::Resource},
+    prelude::Deref,
+};
 use ndshape::{RuntimeShape, Shape};
 
 use crate::block::block_face::BlockFace;
 
-use super::{block::Block, block_buffer::BlockBuffer};
+use super::{
+    block::{Block, BlockDetail},
+    block_buffer::BlockBuffer,
+};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -113,6 +119,17 @@ impl Terrain {
         return [chunk_idx, block_idx];
     }
 
+    pub fn get_block_world_position(&self, chunk_idx: u32, block_idx: u32) -> [u32; 3] {
+        let chunk_offset = self.get_chunk_offset(chunk_idx);
+        let block_local = self.chunk_shape.delinearize(block_idx);
+
+        return [
+            chunk_offset[0] + block_local[0],
+            chunk_offset[1] + block_local[1],
+            chunk_offset[2] + block_local[2],
+        ];
+    }
+
     pub fn set_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
@@ -124,11 +141,84 @@ impl Terrain {
     pub fn get_block(&self, x: u32, y: u32, z: u32) -> Block {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
+        return self.get_block_by_idx(chunk_idx, block_idx);
+    }
+
+    pub fn get_block_detail(&self, x: u32, y: u32, z: u32) -> BlockDetail {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        return self.get_block_detail_by_idx(chunk_idx, block_idx);
+    }
+
+    pub fn get_block_detail_by_idx(&self, chunk_idx: u32, block_idx: u32) -> BlockDetail {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            let block = chunk.get_block(block_idx);
+            let light = chunk.get_torchlight(block_idx);
+            return BlockDetail { block, light };
+        }
+
+        return BlockDetail {
+            block: Block::OOB,
+            light: 0,
+        };
+    }
+
+    pub fn get_block_by_idx(&self, chunk_idx: u32, block_idx: u32) -> Block {
         if let Some(chunk) = self.get_chunk(chunk_idx) {
             return chunk.get_block(block_idx);
         }
 
         return Block::OOB;
+    }
+
+    // pub fn set_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
+    //     let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+    //     if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+    //         chunk.set_sunlight(block_idx, value);
+    //     }
+    // }
+
+    pub fn set_torchlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.set_torchlight(block_idx, value);
+        }
+    }
+
+    // pub fn get_sunlight_xyz(&self, x: u32, y: u32, z: u32) -> u8 {
+    //     let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+    //     if let Some(chunk) = self.get_chunk(chunk_idx) {
+    //         return chunk.get_sunlight(block_idx);
+    //     }
+
+    //     return 0;
+    // }
+
+    pub fn get_torchlight_xyz(&self, x: u32, y: u32, z: u32) -> u8 {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        return self.get_torchlight(chunk_idx, block_idx);
+    }
+
+    pub fn get_torchlight_i32(&self, x: i32, y: i32, z: i32) -> u8 {
+        if !self.is_oob(x, y, z) {
+            return 0;
+        }
+
+        let [chunk_idx, block_idx] = self.get_block_indexes(x as u32, y as u32, z as u32);
+
+        return self.get_torchlight(chunk_idx, block_idx);
+    }
+
+    pub fn get_torchlight(&self, chunk_idx: u32, block_idx: u32) -> u8 {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_torchlight(block_idx);
+        }
+
+        return 0;
     }
 
     pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
@@ -137,6 +227,33 @@ impl Terrain {
         }
 
         return self.get_block(x as u32, y as u32, z as u32);
+    }
+
+    pub fn get_block_detail_i32(&self, x: i32, y: i32, z: i32) -> BlockDetail {
+        if self.is_oob(x, y, z) {
+            return BlockDetail {
+                block: Block::OOB,
+                light: 0,
+            };
+        }
+
+        return self.get_block_detail(x as u32, y as u32, z as u32);
+    }
+
+    pub fn get_immediate_neighbors_by_idx(&self, chunk_idx: u32, block_idx: u32) -> [Block; 6] {
+        let [x, y, z] = self.get_block_world_position(chunk_idx, block_idx);
+        let x_i32 = x as i32;
+        let y_i32 = y as i32;
+        let z_i32 = z as i32;
+
+        return [
+            self.get_block_i32(x_i32, y_i32 + 1, z_i32), // above
+            self.get_block_i32(x_i32, y_i32, z_i32 - 1), // front
+            self.get_block_i32(x_i32 + 1, y_i32, z_i32), // right
+            self.get_block_i32(x_i32, y_i32, z_i32 + 1), // behind
+            self.get_block_i32(x_i32 - 1, y_i32, z_i32), // left
+            self.get_block_i32(x_i32, y_i32 - 1, z_i32), // below
+        ];
     }
 
     pub fn get_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 26] {
@@ -181,6 +298,51 @@ impl Terrain {
             self.get_block_i32(left, below, behind),  // below, behind, left -- 23
             self.get_block_i32(x_i32, below, behind), // below, behind, middle -- 24
             self.get_block_i32(right, below, behind), // below, behind, right -- 25
+        ];
+    }
+
+    pub fn get_neighbors_detail(&self, x: u32, y: u32, z: u32) -> [BlockDetail; 26] {
+        let x_i32 = x as i32;
+        let y_i32 = y as i32;
+        let z_i32 = z as i32;
+
+        let above = y_i32 + 1;
+        let below = y_i32 - 1;
+        let left = x_i32 - 1;
+        let right = x_i32 + 1;
+        let forward = z_i32 - 1;
+        let behind = z_i32 + 1;
+
+        return [
+            // ABOVE
+            self.get_block_detail_i32(left, above, forward), // above, forward, left -- 0
+            self.get_block_detail_i32(x_i32, above, forward), // above, forward, middle -- 1
+            self.get_block_detail_i32(right, above, forward), // above, forward, right -- 2
+            self.get_block_detail_i32(left, above, z_i32),   // above, left -- 3
+            self.get_block_detail_i32(x_i32, above, z_i32),  // above -- 4
+            self.get_block_detail_i32(right, above, z_i32),  // above, right -- 5
+            self.get_block_detail_i32(left, above, behind),  // above, behind, left -- 6
+            self.get_block_detail_i32(x_i32, above, behind), // above, behind, middle -- 7
+            self.get_block_detail_i32(right, above, behind), // above, behind, right -- 8
+            // MIDDLE
+            self.get_block_detail_i32(left, y_i32, forward), // middle, forward, left -- 9
+            self.get_block_detail_i32(x_i32, y_i32, forward), // middle, forward, middle -- 10
+            self.get_block_detail_i32(right, y_i32, forward), // middle, forward, right -- 11
+            self.get_block_detail_i32(left, y_i32, z_i32),   // middle, left -- 12
+            self.get_block_detail_i32(right, y_i32, z_i32),  // middle, right -- 13
+            self.get_block_detail_i32(left, y_i32, behind),  // middle, behind, left -- 14
+            self.get_block_detail_i32(x_i32, y_i32, behind), // middle, behind, middle -- 15
+            self.get_block_detail_i32(right, y_i32, behind), // middle, behind, right -- 16
+            // BELOW
+            self.get_block_detail_i32(left, below, forward), // below, forward, left -- 17
+            self.get_block_detail_i32(x_i32, below, forward), // below, forward, middle -- 18
+            self.get_block_detail_i32(right, below, forward), // below, forward, right -- 19
+            self.get_block_detail_i32(left, below, z_i32),   // below, left -- 20
+            self.get_block_detail_i32(x_i32, below, z_i32),  // below -- 21
+            self.get_block_detail_i32(right, below, z_i32),  // below, right -- 22
+            self.get_block_detail_i32(left, below, behind),  // below, behind, left -- 23
+            self.get_block_detail_i32(x_i32, below, behind), // below, behind, middle -- 24
+            self.get_block_detail_i32(right, below, behind), // below, behind, right -- 25
         ];
     }
 

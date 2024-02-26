@@ -6,6 +6,7 @@ use super::block::Block;
 pub struct BlockBuffer {
     pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
+    pub light: Box<[u8]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -18,6 +19,7 @@ impl BlockBuffer {
     pub fn new(shape: RuntimeShape<u32, 3>) -> Self {
         Self {
             blocks: vec![Block::EMPTY; shape.size() as usize].into_boxed_slice(),
+            light: vec![0; shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape: shape,
             chunk_idx: 0,
@@ -46,6 +48,32 @@ impl BlockBuffer {
         }
 
         return Block::OOB;
+    }
+
+    // pub fn get_sunlight(&self, block_idx: u32) -> u8 {
+    //     if let Some(light) = self.light.get(block_idx as usize) {
+    //         return light >> 4 & 0xf;
+    //     }
+
+    //     return 0;
+    // }
+
+    pub fn get_torchlight(&self, block_idx: u32) -> u8 {
+        if let Some(light) = self.light.get(block_idx as usize) {
+            return *light;
+        }
+
+        return 0;
+    }
+
+    // #[inline]
+    // pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
+    //     self.light[block_idx as usize] = self.get_torchlight(block_idx) | (value << 4);
+    // }
+
+    #[inline]
+    pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
+        self.light[block_idx as usize] = value;
     }
 
     pub fn is_oob(&self, x: i32, y: i32, z: i32) -> bool {

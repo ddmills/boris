@@ -10,6 +10,7 @@ struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
     @location(1) packed_block: u32,
+    @location(2) light: u32,
 }
 
 struct VertexOutput {
@@ -19,6 +20,7 @@ struct VertexOutput {
     @location(2) position_world: vec4<f32>,
     @location(4) vertex_index: u32,
     @location(5) ao: f32,
+    @location(6) light: f32,
 };
 
 @vertex 
@@ -58,6 +60,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
             out.ao = 0.0;
         }
     }
+
+    out.light = f32(vertex.light) / 16.0 + 0.1;
 
     return out;
 }
@@ -119,7 +123,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     uv = uv / f32(texture_count);
     let tex = textureSample(texture, texture_sampler, uv);
-    var outc = light * tex * mesh.ao;
+    var outc = light * tex * mesh.ao * (mesh.light * vec4(1.0, 0.91, 0.56, 1.0));
 
     outc[3] = 1.0;
 

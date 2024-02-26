@@ -33,11 +33,9 @@ struct LightNode {
     value: u8,
 }
 
-pub fn light_system(
-    mut terrain: ResMut<Terrain>,
-    mut lights: ResMut<Lights>,
-    mut ev_terrain_mod: EventWriter<TerrainModifiedEvent>,
-) {
+pub fn light_system(mut terrain: ResMut<Terrain>, mut lights: ResMut<Lights>) {
+    let mut count = 0;
+
     while !lights.queue.is_empty() {
         let node = lights.queue.remove(0);
         let block = terrain.get_block_detail(node.x, node.y, node.z);
@@ -46,16 +44,12 @@ pub fn light_system(
             continue;
         }
 
-        if node.value != block.light {
-            terrain.set_torchlight(node.x, node.y, node.z, node.value);
-            ev_terrain_mod.send(TerrainModifiedEvent {
-                x: node.x,
-                y: node.y,
-                z: node.z,
-            });
-        } else {
+        if block.light >= node.value {
             continue;
         }
+
+        terrain.set_torchlight(node.x, node.y, node.z, node.value);
+        count = count + 1;
 
         let world_x = node.x as i32;
         let world_y = node.y as i32;
@@ -86,5 +80,9 @@ pub fn light_system(
                 });
             }
         }
+    }
+
+    if (count > 0) {
+        println!("checked {} blocks!", count);
     }
 }

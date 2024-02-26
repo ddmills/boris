@@ -2,6 +2,7 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::input::ButtonState;
 use bevy::pbr::wireframe::{Wireframe, WireframePlugin};
 use bevy::prelude::*;
+use block::light::Lights;
 use block::meshing::chunk_material::ChunkMaterial;
 use block::slice::slice::{SliceMaterial, TerrainSlice};
 use block::world::block::Block;
@@ -10,14 +11,13 @@ use block::world::terrain::{Terrain, TerrainModifiedEvent};
 use camera::{CameraPlugin, FlyCamera};
 use debug::fps::FpsPlugin;
 
-use crate::block::light::update_light;
-
 mod block;
 mod camera;
 mod debug;
 
 fn main() {
     App::new()
+        .insert_resource(Lights::new())
         .add_plugins(DefaultPlugins)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -40,6 +40,7 @@ fn main() {
 fn camera_raycasting(
     mut cameras: Query<&Transform, With<FlyCamera>>,
     mut terrain: ResMut<Terrain>,
+    mut lights: ResMut<Lights>,
     terrain_slice: Res<TerrainSlice>,
     mut click_evt: EventReader<MouseButtonInput>,
     mut ev_terrain_mod: EventWriter<TerrainModifiedEvent>,
@@ -69,12 +70,6 @@ fn camera_raycasting(
                     println!("remove block {},{},{}", rc.x, rc.y, rc.z);
                     // terrain.set_block(rc.x, rc.y, rc.z, Block::GRASS);
                     terrain.set_block(rc.x, rc.y, rc.z, Block::EMPTY);
-                    ev_terrain_mod.send(TerrainModifiedEvent {
-                        x: rc.x,
-                        y: rc.y,
-                        z: rc.z,
-                        value: Block::EMPTY,
-                    });
                 }
                 MouseButton::Left => {
                     println!(
@@ -94,16 +89,12 @@ fn camera_raycasting(
                         let clamped_y = new_y as u32;
                         let clamped_z = new_z as u32;
                         terrain.set_block(clamped_x, clamped_y, clamped_z, Block::LAMP);
-                        terrain.set_torchlight(clamped_x, clamped_y, clamped_z, 16);
-                        let [chunk_idx, block_idx] =
-                            terrain.get_block_indexes(clamped_x, clamped_y, clamped_z);
-                        update_light(terrain.as_mut(), chunk_idx, block_idx);
+                        lights.add_light(clamped_x, clamped_y, clamped_z, 16);
 
                         ev_terrain_mod.send(TerrainModifiedEvent {
                             x: clamped_x,
                             y: clamped_y,
                             z: clamped_z,
-                            value: Block::EMPTY,
                         });
                     }
                 }

@@ -13,6 +13,7 @@ pub struct BlockBuffer {
     pub world_x: u32,
     pub world_y: u32,
     pub world_z: u32,
+    pub is_dirty: bool,
 }
 
 impl BlockBuffer {
@@ -27,11 +28,13 @@ impl BlockBuffer {
             world_x: 0,
             world_y: 0,
             world_z: 0,
+            is_dirty: true,
         }
     }
 
     pub fn set(&mut self, block_idx: u32, value: Block) {
         self.blocks[block_idx as usize] = value;
+        self.is_dirty = true;
     }
 
     pub fn get_block_idx(&self, x: u32, y: u32, z: u32) -> u32 {
@@ -74,6 +77,7 @@ impl BlockBuffer {
     #[inline]
     pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
         self.light[block_idx as usize] = value;
+        self.is_dirty = true;
     }
 
     pub fn is_oob(&self, x: i32, y: i32, z: i32) -> bool {

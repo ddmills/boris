@@ -12,6 +12,7 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::block::{
+    self,
     block_face::BlockFace,
     slice::slice::{TerrainSlice, TerrainSliceChanged},
     world::{
@@ -99,20 +100,27 @@ pub fn setup_chunk_meshes(
 
 pub fn process_dirty_chunks(
     mut commands: Commands,
-    terrain: Res<Terrain>,
+    mut terrain: ResMut<Terrain>,
     mut meshes: ResMut<Assets<Mesh>>,
-    dirty_chunk_query: Query<(Entity, &Chunk), With<DirtyChunk>>,
+    chunks: Query<(&Chunk)>,
 ) {
     let maximum = 100;
     let mut cur = 0;
-    dirty_chunk_query.iter().for_each(|(entity, chunk)| {
+
+    chunks.iter().for_each(|chunk| {
+        let is_dirty = terrain.get_chunk_dirty(chunk.chunk_idx);
+
+        if !is_dirty {
+            return;
+        }
+
         cur = cur + 1;
         if cur > maximum {
             return;
         }
 
         if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
-            let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
+            let mesh_data = build_chunk_mesh(terrain.as_ref(), chunk.chunk_idx);
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
             mesh.insert_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_data.packed);
@@ -120,8 +128,26 @@ pub fn process_dirty_chunks(
             mesh.insert_indices(Indices::U32(mesh_data.indicies));
         }
 
-        commands.entity(entity).remove::<DirtyChunk>();
+        terrain.set_chunk_dirty(chunk.chunk_idx, false);
     });
+
+    // dirty_chunk_query.iter().for_each(|(entity, chunk)| {
+    //     cur = cur + 1;
+    //     if cur > maximum {
+    //         return;
+    //     }
+
+    //     if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
+    //         let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
+    //         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
+    //         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
+    //         mesh.insert_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_data.packed);
+    //         mesh.insert_attribute(ATTRIBUTE_BLOCK_LIGHT, mesh_data.light);
+    //         mesh.insert_indices(Indices::U32(mesh_data.indicies));
+    //     }
+
+    //     commands.entity(entity).remove::<DirtyChunk>();
+    // });
 }
 
 pub fn on_slice_changed(

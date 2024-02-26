@@ -38,7 +38,6 @@ pub struct TerrainModifiedEvent {
     pub x: u32,
     pub y: u32,
     pub z: u32,
-    pub value: Block,
 }
 
 impl Terrain {
@@ -86,6 +85,19 @@ impl Terrain {
 
     pub fn get_chunk(&self, chunk_idx: u32) -> Option<&BlockBuffer> {
         return self.chunks.get(chunk_idx as usize);
+    }
+
+    pub fn get_chunk_dirty(&self, chunk_idx: u32) -> bool {
+        if let Some(chunk) = self.chunks.get(chunk_idx as usize) {
+            return chunk.is_dirty;
+        }
+        return false;
+    }
+
+    pub fn set_chunk_dirty(&mut self, chunk_idx: u32, value: bool) {
+        if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
+            chunk.is_dirty = value;
+        }
     }
 
     pub fn get_chunk_mut(&mut self, chunk_idx: u32) -> Option<&mut BlockBuffer> {

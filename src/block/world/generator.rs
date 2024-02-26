@@ -1,4 +1,5 @@
 use crate::block::{
+    light::light_system,
     meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes},
     slice::slice::{scroll_events, setup_terrain_slice, update_slice_mesh, TerrainSliceChanged},
 };
@@ -37,7 +38,8 @@ impl Plugin for TerrainGenerator {
             .add_systems(Update, process_dirty_chunks)
             .add_systems(Update, on_slice_changed)
             .add_systems(Update, update_slice_mesh)
-            .add_systems(Update, on_terrain_modified);
+            .add_systems(Update, on_terrain_modified)
+            .add_systems(Update, light_system);
     }
 }
 
@@ -94,13 +96,13 @@ fn on_terrain_modified(
         return;
     }
 
-    for ev in ev_terrain_mod.read() {
-        let [chunk_idx, block_idx] = terrain.get_block_indexes(ev.x, ev.y, ev.z);
+    // for ev in ev_terrain_mod.read() {
+    //     let [chunk_idx, block_idx] = terrain.get_block_indexes(ev.x, ev.y, ev.z);
 
-        for (entity, chunk) in chunks.iter() {
-            if chunk.chunk_idx == chunk_idx {
-                commands.entity(entity).insert(DirtyChunk);
-            }
-        }
-    }
+    //     for (entity, chunk) in chunks.iter() {
+    //         if chunk.chunk_idx == chunk_idx {
+    //             commands.entity(entity).insert(DirtyChunk);
+    //         }
+    //     }
+    // }
 }

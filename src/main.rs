@@ -85,6 +85,13 @@ fn camera_raycasting(
                         let clamped_x = new_x as u32;
                         let clamped_y = new_y as u32;
                         let clamped_z = new_z as u32;
+
+                        let sun = terrain.get_sunlight_xyz(clamped_x, clamped_y, clamped_z);
+                        println!(
+                            "sunlight at {},{},{} = {}",
+                            clamped_x, clamped_y, clamped_z, sun
+                        );
+
                         terrain.set_block(clamped_x, clamped_y, clamped_z, Block::LAMP);
                         terrain.add_light(clamped_x, clamped_y, clamped_z, 15);
 

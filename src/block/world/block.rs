@@ -2,6 +2,7 @@
 pub struct BlockDetail {
     pub block: Block,
     pub light: u8,
+    pub sunlight: u8,
 }
 
 #[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]

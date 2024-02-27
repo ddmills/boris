@@ -23,7 +23,8 @@ pub struct Terrain {
     pub chunks: Vec<BlockBuffer>,
     pub lights_queue_add: Vec<LightNode>,
     pub lights_queue_remove: Vec<LightNode>,
-    pub sunlight_queue: Vec<LightNode>,
+    pub sunlight_queue_add: Vec<LightNode>,
+    pub sunlight_queue_remove: Vec<LightNode>,
 }
 
 pub struct RayResult {
@@ -64,8 +65,20 @@ impl Terrain {
             shape: shape,
             lights_queue_add: vec![],
             lights_queue_remove: vec![],
-            sunlight_queue: vec![],
+            sunlight_queue_add: vec![],
+            sunlight_queue_remove: vec![],
         };
+    }
+
+    pub fn init_chunk(&mut self, chunk_idx: u32) {
+        let chunk_pos = self.shape.delinearize(chunk_idx);
+        let chunk = self.chunks.get_mut(chunk_idx as usize).unwrap();
+
+        chunk.chunk_idx = chunk_idx;
+        chunk.world_x = self.chunk_size * chunk_pos[0];
+        chunk.world_y = self.chunk_size * chunk_pos[1];
+        chunk.world_z = self.chunk_size * chunk_pos[2];
+        chunk.chunk_size = self.chunk_size;
     }
 
     pub fn world_size_x(&self) -> u32 {
@@ -154,6 +167,7 @@ impl Terrain {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             chunk.set(block_idx, value);
             self.remove_light(x, y, z);
+            self.remove_sunlight(x, y, z);
         }
     }
 
@@ -173,12 +187,18 @@ impl Terrain {
         if let Some(chunk) = self.get_chunk(chunk_idx) {
             let block = chunk.get_block(block_idx);
             let light = chunk.get_torchlight(block_idx);
-            return BlockDetail { block, light };
+            let sunlight = chunk.get_sunlight(block_idx);
+            return BlockDetail {
+                block,
+                light,
+                sunlight,
+            };
         }
 
         return BlockDetail {
             block: Block::OOB,
             light: 0,
+            sunlight: 0,
         };
     }
 
@@ -189,14 +209,6 @@ impl Terrain {
 
         return Block::OOB;
     }
-
-    // pub fn set_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
-    //     let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
-
-    //     if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-    //         chunk.set_sunlight(block_idx, value);
-    //     }
-    // }
 
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.set_torchlight(x, y, z, value);
@@ -209,6 +221,26 @@ impl Terrain {
         self.lights_queue_remove.push(LightNode { x, y, z, value });
     }
 
+    pub fn add_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
+        self.set_sunlight(x, y, z, value);
+        self.sunlight_queue_add.push(LightNode { x, y, z, value });
+    }
+
+    pub fn remove_sunlight(&mut self, x: u32, y: u32, z: u32) {
+        let value = self.get_sunlight_xyz(x, y, z);
+        self.set_sunlight(x, y, z, 0);
+        self.sunlight_queue_remove
+            .push(LightNode { x, y, z, value });
+    }
+
+    pub fn set_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.set_sunlight(block_idx, value);
+        }
+    }
+
     pub fn set_torchlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
@@ -217,15 +249,19 @@ impl Terrain {
         }
     }
 
-    // pub fn get_sunlight_xyz(&self, x: u32, y: u32, z: u32) -> u8 {
-    //     let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+    pub fn get_sunlight(&self, chunk_idx: u32, block_idx: u32) -> u8 {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_sunlight(block_idx);
+        }
 
-    //     if let Some(chunk) = self.get_chunk(chunk_idx) {
-    //         return chunk.get_sunlight(block_idx);
-    //     }
+        return 0;
+    }
 
-    //     return 0;
-    // }
+    pub fn get_sunlight_xyz(&self, x: u32, y: u32, z: u32) -> u8 {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        return self.get_sunlight(chunk_idx, block_idx);
+    }
 
     pub fn get_torchlight_xyz(&self, x: u32, y: u32, z: u32) -> u8 {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
@@ -264,6 +300,7 @@ impl Terrain {
             return BlockDetail {
                 block: Block::OOB,
                 light: 0,
+                sunlight: 0,
             };
         }
 

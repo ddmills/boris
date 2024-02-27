@@ -255,14 +255,13 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::PosY, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::PosY, f4_ao));
 
-                    data.light
-                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::ABOVE.idx()].light as u32);
+                    let n = neighbors[Neighbor::ABOVE.idx()];
+                    let light = ((n.light & 0xf) | ((n.sunlight << 4) & 0xf0)) as u32;
+
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
 
                     data.normals.push([0., 1., 0.]);
                     data.normals.push([0., 1., 0.]);
@@ -323,14 +322,13 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::NegZ, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::NegZ, f4_ao));
 
-                    data.light
-                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::FORWARD.idx()].light as u32);
+                    let n = neighbors[Neighbor::FORWARD.idx()];
+                    let light = ((n.light & 0xf) | ((n.sunlight << 4) & 0xf0)) as u32;
+
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
 
                     data.normals.push([0., 0., -1.]);
                     data.normals.push([0., 0., -1.]);
@@ -391,14 +389,13 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::PosX, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::PosX, f4_ao));
 
-                    data.light
-                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::RIGHT.idx()].light as u32);
+                    let n = neighbors[Neighbor::RIGHT.idx()];
+                    let light = ((n.light & 0xf) | ((n.sunlight << 4) & 0xf0)) as u32;
+
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
 
                     data.normals.push([1., 0., 0.]);
                     data.normals.push([1., 0., 0.]);
@@ -459,14 +456,13 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::PosZ, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::PosZ, f4_ao));
 
-                    data.light
-                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::BEHIND.idx()].light as u32);
+                    let n = neighbors[Neighbor::BEHIND.idx()];
+                    let light = ((n.light & 0xf) | ((n.sunlight << 4) & 0xf0)) as u32;
+
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
 
                     data.normals.push([0., 0., 1.]);
                     data.normals.push([0., 0., 1.]);
@@ -527,14 +523,13 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::NegX, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::NegX, f4_ao));
 
-                    data.light
-                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::LEFT.idx()].light as u32);
+                    let n = neighbors[Neighbor::LEFT.idx()];
+                    let light = ((n.light & 0xf) | ((n.sunlight << 4) & 0xf0)) as u32;
+
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
 
                     data.normals.push([-1., 0., 0.]);
                     data.normals.push([-1., 0., 0.]);
@@ -595,14 +590,13 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.packed.push(pack_block(block, BlockFace::NegY, f3_ao));
                     data.packed.push(pack_block(block, BlockFace::NegY, f4_ao));
 
-                    data.light
-                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
-                    data.light
-                        .push(neighbors[Neighbor::BELOW.idx()].light as u32);
+                    let n = neighbors[Neighbor::BELOW.idx()];
+                    let light = ((n.light & 0xf) | ((n.sunlight << 4) & 0xf0)) as u32;
+
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
+                    data.light.push(light);
 
                     data.normals.push([0., -1., 0.]);
                     data.normals.push([0., -1., 0.]);

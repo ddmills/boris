@@ -23,6 +23,7 @@ pub struct Terrain {
     pub chunks: Vec<BlockBuffer>,
     pub lights_queue_add: Vec<LightNode>,
     pub lights_queue_remove: Vec<LightNode>,
+    pub sunlight_queue: Vec<LightNode>,
 }
 
 pub struct RayResult {
@@ -63,6 +64,7 @@ impl Terrain {
             shape: shape,
             lights_queue_add: vec![],
             lights_queue_remove: vec![],
+            sunlight_queue: vec![],
         };
     }
 
@@ -151,11 +153,7 @@ impl Terrain {
 
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             chunk.set(block_idx, value);
-            if !value.is_light_source() {
-                // self.set_torchlight(x, y, z, 0);
-                // self.lights_queue_add.push(LightNode { x, y, z, value: 0 });
-                self.remove_light(x, y, z)
-            }
+            self.remove_light(x, y, z);
         }
     }
 

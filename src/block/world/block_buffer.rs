@@ -53,30 +53,31 @@ impl BlockBuffer {
         return Block::OOB;
     }
 
-    // pub fn get_sunlight(&self, block_idx: u32) -> u8 {
-    //     if let Some(light) = self.light.get(block_idx as usize) {
-    //         return light >> 4 & 0xf;
-    //     }
-
-    //     return 0;
-    // }
-
-    pub fn get_torchlight(&self, block_idx: u32) -> u8 {
+    pub fn get_sunlight(&self, block_idx: u32) -> u8 {
         if let Some(light) = self.light.get(block_idx as usize) {
-            return *light;
+            return light >> 4 & 0xf;
         }
 
         return 0;
     }
 
-    // #[inline]
-    // pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
-    //     self.light[block_idx as usize] = self.get_torchlight(block_idx) | (value << 4);
-    // }
+    pub fn get_torchlight(&self, block_idx: u32) -> u8 {
+        if let Some(light) = self.light.get(block_idx as usize) {
+            return light & 0xf;
+        }
+
+        return 0;
+    }
+
+    #[inline]
+    pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
+        self.light[block_idx as usize] =
+            self.light[block_idx as usize] & 0xf | ((value << 4) & 0xf0);
+    }
 
     #[inline]
     pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
-        self.light[block_idx as usize] = value;
+        self.light[block_idx as usize] = (self.light[block_idx as usize] & 0xf0) | (value & 0xf);
         self.is_dirty = true;
     }
 

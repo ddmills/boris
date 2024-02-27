@@ -67,9 +67,6 @@ fn camera_raycasting(
                     println!("remove block {},{},{}", rc.x, rc.y, rc.z);
                     // terrain.set_block(rc.x, rc.y, rc.z, Block::GRASS);
                     terrain.set_block(rc.x, rc.y, rc.z, Block::EMPTY);
-                    if rc.block.is_light_source() {
-                        terrain.remove_light(rc.x, rc.y, rc.z);
-                    }
                 }
                 MouseButton::Left => {
                     println!(
@@ -89,7 +86,7 @@ fn camera_raycasting(
                         let clamped_y = new_y as u32;
                         let clamped_z = new_z as u32;
                         terrain.set_block(clamped_x, clamped_y, clamped_z, Block::LAMP);
-                        terrain.add_light(clamped_x, clamped_y, clamped_z, 16);
+                        terrain.add_light(clamped_x, clamped_y, clamped_z, 15);
 
                         ev_terrain_mod.send(TerrainModifiedEvent {
                             x: clamped_x,

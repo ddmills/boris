@@ -61,7 +61,8 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         }
     }
 
-    out.light = f32(vertex.light) / 16.0 + 0.1;
+    let torch = vertex.light & 0xf;
+    out.light = f32(torch) / 16.0 + 0.1;
 
     return out;
 }

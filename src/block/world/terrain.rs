@@ -4,7 +4,7 @@ use bevy::{
 };
 use ndshape::{RuntimeShape, Shape};
 
-use crate::block::block_face::BlockFace;
+use crate::block::{block_face::BlockFace, light::LightNode};
 
 use super::{
     block::{Block, BlockDetail},
@@ -21,6 +21,8 @@ pub struct Terrain {
     pub shape: RuntimeShape<u32, 3>,
     pub chunk_shape: RuntimeShape<u32, 3>,
     pub chunks: Vec<BlockBuffer>,
+    pub lights_queue_add: Vec<LightNode>,
+    pub lights_queue_remove: Vec<LightNode>,
 }
 
 pub struct RayResult {
@@ -59,6 +61,8 @@ impl Terrain {
             chunk_shape: chunk_shape.clone(),
             chunks: vec![BlockBuffer::new(chunk_shape); shape.size() as usize],
             shape: shape,
+            lights_queue_add: vec![],
+            lights_queue_remove: vec![],
         };
     }
 
@@ -147,6 +151,11 @@ impl Terrain {
 
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             chunk.set(block_idx, value);
+            if !value.is_light_source() {
+                // self.set_torchlight(x, y, z, 0);
+                // self.lights_queue_add.push(LightNode { x, y, z, value: 0 });
+                self.remove_light(x, y, z)
+            }
         }
     }
 
@@ -190,6 +199,17 @@ impl Terrain {
     //         chunk.set_sunlight(block_idx, value);
     //     }
     // }
+
+    pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
+        self.set_torchlight(x, y, z, value);
+        self.lights_queue_add.push(LightNode { x, y, z, value });
+    }
+
+    pub fn remove_light(&mut self, x: u32, y: u32, z: u32) {
+        let value = self.get_torchlight_xyz(x, y, z);
+        self.set_torchlight(x, y, z, 0);
+        self.lights_queue_remove.push(LightNode { x, y, z, value });
+    }
 
     pub fn set_torchlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);

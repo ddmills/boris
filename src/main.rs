@@ -12,6 +12,7 @@ use debug::fps::FpsPlugin;
 
 mod block;
 mod camera;
+mod common;
 mod debug;
 
 fn main() {

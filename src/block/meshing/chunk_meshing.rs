@@ -12,15 +12,9 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::block::{
-    self,
     block_face::BlockFace,
     slice::slice::{TerrainSlice, TerrainSliceChanged},
-    world::{
-        block::Block,
-        block_buffer::Neighbor,
-        chunk::{Chunk, DirtyChunk},
-        terrain::Terrain,
-    },
+    world::{block::Block, block_buffer::Neighbor, chunk::Chunk, terrain::Terrain},
 };
 
 use super::chunk_material::{pack_block, ChunkMaterial, ChunkMaterialRes, VertexAo};
@@ -58,7 +52,8 @@ pub fn setup_chunk_meshes(
         let x = chunk_pos[0] * terrain.chunk_size;
         let y = chunk_pos[1] * terrain.chunk_size;
         let z = chunk_pos[2] * terrain.chunk_size;
-        let mesh_data = build_chunk_mesh(&terrain, chunk_idx);
+        let mesh_data = ChunkMeshData::default();
+        // let mesh_data = build_chunk_mesh(&terrain, chunk_idx);
         let mesh = Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::default(),
@@ -99,10 +94,9 @@ pub fn setup_chunk_meshes(
 }
 
 pub fn process_dirty_chunks(
-    mut commands: Commands,
     mut terrain: ResMut<Terrain>,
     mut meshes: ResMut<Assets<Mesh>>,
-    chunks: Query<(&Chunk)>,
+    chunks: Query<&Chunk>,
 ) {
     let maximum = 1;
     let mut cur = 0;
@@ -118,6 +112,7 @@ pub fn process_dirty_chunks(
         if cur > maximum {
             return;
         }
+        println!("meshing chunk {}", chunk.chunk_idx);
 
         if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
             let mesh_data = build_chunk_mesh(terrain.as_ref(), chunk.chunk_idx);
@@ -130,24 +125,6 @@ pub fn process_dirty_chunks(
 
         terrain.set_chunk_dirty(chunk.chunk_idx, false);
     });
-
-    // dirty_chunk_query.iter().for_each(|(entity, chunk)| {
-    //     cur = cur + 1;
-    //     if cur > maximum {
-    //         return;
-    //     }
-
-    //     if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
-    //         let mesh_data = build_chunk_mesh(&terrain, chunk.chunk_idx);
-    //         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions);
-    //         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals);
-    //         mesh.insert_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_data.packed);
-    //         mesh.insert_attribute(ATTRIBUTE_BLOCK_LIGHT, mesh_data.light);
-    //         mesh.insert_indices(Indices::U32(mesh_data.indicies));
-    //     }
-
-    //     commands.entity(entity).remove::<DirtyChunk>();
-    // });
 }
 
 pub fn on_slice_changed(

@@ -1,26 +1,26 @@
-use crate::block::{
-    light::light_system,
-    meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes},
-    slice::slice::{scroll_events, setup_terrain_slice, update_slice_mesh, TerrainSliceChanged},
-};
+use std::cmp::min;
 
 use super::{
     block::Block,
     terrain::{Terrain, TerrainModifiedEvent},
 };
+use crate::block::{
+    light::light_system,
+    meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes},
+    slice::slice::{scroll_events, setup_terrain_slice, update_slice_mesh, TerrainSliceChanged},
+};
+use crate::common::noise::noise::FractalNoise;
 use bevy::{
     app::{Plugin, Startup, Update},
     ecs::{schedule::IntoSystemConfigs, system::ResMut},
     math::Vec3,
 };
-use bracket_noise::prelude::FastNoise;
-use ndshape::AbstractShape;
 
 pub struct TerrainGenerator;
 
 impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(4, 3, 4, 32))
+        app.insert_resource(Terrain::new(12, 6, 12, 16))
             .add_event::<TerrainSliceChanged>()
             .add_event::<TerrainModifiedEvent>()
             .add_systems(
@@ -36,48 +36,67 @@ impl Plugin for TerrainGenerator {
 }
 
 fn setup_terrain(mut terrain: ResMut<Terrain>) {
-    let mut nz = FastNoise::new();
-    nz.set_frequency(0.4);
+    let seed = 200;
+    let mut height = FractalNoise::new(seed, 0.01, 7);
+    let mut caves = FractalNoise::new(seed + 1, 0.02, 4);
+
+    let top = terrain.world_size_y() - 1;
+    let mountain_height = min(top - 4, 32);
+    let dirt_depth = 3;
 
     for chunk_idx in 0..terrain.chunk_count {
         terrain.init_chunk(chunk_idx);
+    }
 
-        let chunk = terrain.get_chunk_mut(chunk_idx).unwrap();
+    println!("generating world..");
 
-        for block_idx in 0..chunk.block_count {
-            let pos_local = chunk.shape.delinearize(block_idx);
-            let pos_world = [
-                pos_local[0] + chunk.world_x,
-                pos_local[1] + chunk.world_y,
-                pos_local[2] + chunk.world_z,
-            ];
+    for x in 0..terrain.world_size_x() {
+        for y in 0..terrain.world_size_y() {
+            for z in 0..terrain.world_size_z() {
+                let x_f32 = x as f32;
+                let y_f32 = y as f32;
+                let z_f32 = z as f32;
+                let h = height.get_2d(x_f32, z_f32);
 
-            let pvec = Vec3::new(
-                pos_world[0] as f32,
-                pos_world[1] as f32,
-                pos_world[2] as f32,
-            );
+                let surface = top - (((h.clamp(0.1, 0.6)) * (mountain_height) as f32) as u32); // 0 to 28
 
-            let v = nz.get_noise3d(pvec.x / 18., pvec.y / 18., pvec.z / 18.);
+                if y > surface {
+                    terrain.init_block(x, y, z, Block::EMPTY);
+                    if y == surface + 1 {
+                        terrain.add_sunlight(x, y, z, 15);
+                    } else {
+                        terrain.set_sunlight(x, y, z, 15);
+                    }
+                } else {
+                    if y <= 3 {
+                        terrain.init_block(x, y, z, Block::LAVA);
+                        terrain.add_light(x, y, z, 8);
+                        continue;
+                    }
 
-            if v < -0.1 {
-                chunk.set(block_idx, Block::EMPTY);
-            } else if v < 0. {
-                chunk.set(block_idx, Block::GRASS);
-            } else if v < 0.4 {
-                chunk.set(block_idx, Block::DIRT);
-            } else if v < 0.7 {
-                chunk.set(block_idx, Block::EMPTY);
-            } else {
-                chunk.set(block_idx, Block::STONE);
+                    let c = caves.get_3d(x_f32, y_f32, z_f32);
+
+                    if c < 0.36 {
+                        terrain.init_block(x, y, z, Block::EMPTY);
+                    } else {
+                        if y == surface {
+                            terrain.init_block(x, y, z, Block::GRASS);
+                        } else if y > surface - dirt_depth {
+                            terrain.init_block(x, y, z, Block::DIRT);
+                        } else {
+                            terrain.init_block(x, y, z, Block::STONE);
+                        }
+                    }
+                }
             }
         }
     }
 
-    let top = terrain.world_size_y() - 1;
-    for x in 0..terrain.world_size_x() {
-        for z in 0..terrain.world_size_z() {
-            terrain.add_sunlight(x, top, z, 15);
-        }
-    }
+    println!("..done generating world");
+
+    // for x in 0..terrain.world_size_x() {
+    //     for z in 0..terrain.world_size_z() {
+    //         terrain.add_sunlight(x, top, z, 15);
+    //     }
+    // }
 }

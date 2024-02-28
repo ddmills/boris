@@ -15,6 +15,7 @@ impl Block {
     pub const STONE: Self = Self(3);
     pub const GRASS: Self = Self(4);
     pub const LAMP: Self = Self(5);
+    pub const LAVA: Self = Self(6);
 }
 
 impl Block {
@@ -26,6 +27,7 @@ impl Block {
             &Self::DIRT => true,
             &Self::GRASS => true,
             &Self::LAMP => true,
+            &Self::LAVA => true,
             _ => false,
         }
     }
@@ -38,6 +40,7 @@ impl Block {
             &Self::DIRT => true,
             &Self::GRASS => true,
             &Self::LAMP => true,
+            &Self::LAVA => true,
             _ => true,
         }
     }
@@ -45,6 +48,7 @@ impl Block {
     pub fn is_light_source(&self) -> bool {
         match self {
             &Self::LAMP => true,
+            &Self::LAVA => true,
             _ => false,
         }
     }
@@ -55,6 +59,7 @@ impl Block {
             &Self::GRASS => 2,
             &Self::STONE => 3,
             &Self::LAMP => 5,
+            &Self::LAVA => 6,
             _ => 0,
         }
     }
@@ -67,6 +72,7 @@ impl Block {
             &Self::GRASS => String::from("grass"),
             &Self::STONE => String::from("stone"),
             &Self::LAMP => String::from("lamp"),
+            &Self::LAVA => String::from("lava"),
             _ => String::from("unknown"),
         }
     }

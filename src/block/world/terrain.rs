@@ -150,17 +150,6 @@ impl Terrain {
         return [chunk_idx, block_idx];
     }
 
-    pub fn get_block_world_position(&self, chunk_idx: u32, block_idx: u32) -> [u32; 3] {
-        let chunk_offset = self.get_chunk_offset(chunk_idx);
-        let block_local = self.chunk_shape.delinearize(block_idx);
-
-        return [
-            chunk_offset[0] + block_local[0],
-            chunk_offset[1] + block_local[1],
-            chunk_offset[2] + block_local[2],
-        ];
-    }
-
     pub fn set_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
@@ -168,6 +157,14 @@ impl Terrain {
             chunk.set(block_idx, value);
             self.remove_light(x, y, z);
             self.remove_sunlight(x, y, z);
+        }
+    }
+
+    pub fn init_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.set(block_idx, value);
         }
     }
 
@@ -305,22 +302,6 @@ impl Terrain {
         }
 
         return self.get_block_detail(x as u32, y as u32, z as u32);
-    }
-
-    pub fn get_immediate_neighbors_by_idx(&self, chunk_idx: u32, block_idx: u32) -> [Block; 6] {
-        let [x, y, z] = self.get_block_world_position(chunk_idx, block_idx);
-        let x_i32 = x as i32;
-        let y_i32 = y as i32;
-        let z_i32 = z as i32;
-
-        return [
-            self.get_block_i32(x_i32, y_i32 + 1, z_i32), // above
-            self.get_block_i32(x_i32, y_i32, z_i32 - 1), // front
-            self.get_block_i32(x_i32 + 1, y_i32, z_i32), // right
-            self.get_block_i32(x_i32, y_i32, z_i32 + 1), // behind
-            self.get_block_i32(x_i32 - 1, y_i32, z_i32), // left
-            self.get_block_i32(x_i32, y_i32 - 1, z_i32), // below
-        ];
     }
 
     pub fn get_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 26] {

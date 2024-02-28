@@ -13,6 +13,8 @@ pub struct LightNode {
 }
 
 pub fn light_system(mut terrain: ResMut<Terrain>) {
+    let max_sunlight_passes = 1000;
+    let mut sunlight_passes = 0;
     while !terrain.lights_queue_remove.is_empty() {
         let node = terrain.lights_queue_remove.remove(0);
 
@@ -149,6 +151,11 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
     }
 
     while !terrain.sunlight_queue_add.is_empty() {
+        sunlight_passes = sunlight_passes + 1;
+        if sunlight_passes > max_sunlight_passes {
+            break;
+        }
+
         let node = terrain.sunlight_queue_add.remove(0);
 
         let block_detail = terrain.get_block_detail(node.x, node.y, node.z);

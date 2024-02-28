@@ -73,6 +73,7 @@ impl BlockBuffer {
     pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
         self.light[block_idx as usize] =
             self.light[block_idx as usize] & 0xf | ((value << 4) & 0xf0);
+        self.is_dirty = true;
     }
 
     #[inline]

@@ -1,11 +1,16 @@
 use bevy::input::mouse::MouseButtonInput;
 use bevy::input::ButtonState;
-use bevy::pbr::wireframe::{Wireframe, WireframePlugin};
+use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
+use block::light::light_system;
 use block::meshing::chunk_material::ChunkMaterial;
-use block::slice::slice::{SliceMaterial, TerrainSlice};
+use block::meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes};
+use block::slice::slice::{
+    scroll_events, setup_terrain_slice, update_slice_mesh, SliceMaterial, TerrainSlice,
+    TerrainSliceChanged,
+};
 use block::world::block::Block;
-use block::world::generator::TerrainGenerator;
+use block::world::generator::setup_terrain;
 use block::world::terrain::{Terrain, TerrainModifiedEvent};
 use camera::{CameraPlugin, FlyCamera};
 use debug::fps::FpsPlugin;
@@ -17,6 +22,9 @@ mod debug;
 
 fn main() {
     App::new()
+        .insert_resource(Terrain::new(6, 6, 6, 16))
+        .add_event::<TerrainSliceChanged>()
+        .add_event::<TerrainModifiedEvent>()
         .add_plugins(DefaultPlugins)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -27,12 +35,25 @@ fn main() {
             ..default()
         })
         .add_plugins(CameraPlugin)
-        .add_plugins(TerrainGenerator)
         .add_plugins(WireframePlugin)
         .add_plugins(FpsPlugin)
-        .add_systems(Startup, setup)
+        .add_systems(
+            Startup,
+            (
+                setup,
+                setup_terrain,
+                setup_terrain_slice,
+                setup_chunk_meshes,
+            )
+                .chain(),
+        )
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, camera_raycasting)
+        .add_systems(Update, scroll_events)
+        .add_systems(Update, process_dirty_chunks)
+        .add_systems(Update, on_slice_changed)
+        .add_systems(Update, update_slice_mesh)
+        .add_systems(Update, light_system)
         .run();
 }
 
@@ -108,24 +129,7 @@ fn camera_raycasting(
     }
 }
 
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let cube_mesh: Handle<Mesh> = meshes.add(Cuboid::new(0.75, 0.75, 0.75));
-    let cube_material = materials.add(Color::rgb_u8(124, 124, 124));
-
-    commands.spawn((
-        MaterialMeshBundle {
-            mesh: cube_mesh.clone(),
-            material: cube_material.clone(),
-            transform: Transform::from_xyz(0., 0., 0.),
-            ..default()
-        },
-        Wireframe,
-    ));
-
+fn setup(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
             transform: Transform::from_xyz(-10., 10., -10.)

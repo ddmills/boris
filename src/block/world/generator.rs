@@ -1,40 +1,10 @@
 use std::cmp::min;
 
-use super::{
-    block::Block,
-    terrain::{Terrain, TerrainModifiedEvent},
-};
-use crate::block::{
-    light::light_system,
-    meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes},
-    slice::slice::{scroll_events, setup_terrain_slice, update_slice_mesh, TerrainSliceChanged},
-};
+use super::{block::Block, terrain::Terrain};
 use crate::common::noise::noise::FractalNoise;
-use bevy::{
-    app::{Plugin, Startup, Update},
-    ecs::{schedule::IntoSystemConfigs, system::ResMut},
-};
+use bevy::ecs::system::ResMut;
 
-pub struct TerrainGenerator;
-
-impl Plugin for TerrainGenerator {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(6, 6, 6, 16))
-            .add_event::<TerrainSliceChanged>()
-            .add_event::<TerrainModifiedEvent>()
-            .add_systems(
-                Startup,
-                (setup_terrain, setup_terrain_slice, setup_chunk_meshes).chain(),
-            )
-            .add_systems(Update, scroll_events)
-            .add_systems(Update, process_dirty_chunks)
-            .add_systems(Update, on_slice_changed)
-            .add_systems(Update, update_slice_mesh)
-            .add_systems(Update, light_system);
-    }
-}
-
-fn setup_terrain(mut terrain: ResMut<Terrain>) {
+pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
     let seed = 321;
     let mut height = FractalNoise::new(seed, 0.01, 7);
     let mut caves = FractalNoise::new(seed + 1, 0.02, 4);

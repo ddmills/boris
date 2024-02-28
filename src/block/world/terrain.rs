@@ -160,6 +160,44 @@ impl Terrain {
                 self.remove_light(x, y, z);
             }
         }
+
+        let local_x = x % self.chunk_size;
+        let local_y = y % self.chunk_size;
+        let local_z = z % self.chunk_size;
+        let chunk_x = x / self.chunk_size;
+        let chunk_y = y / self.chunk_size;
+        let chunk_z = z / self.chunk_size;
+
+        // what chunks does this block touch?
+        if local_x == 0 && x > 0 {
+            // update chunk left
+            let left_chunk_idx = self.shape.linearize([chunk_x - 1, chunk_y, chunk_z]);
+            self.set_chunk_dirty(left_chunk_idx, true);
+        } else if local_x == self.chunk_size - 1 && x < self.world_size_x() - 1 {
+            // update chunk right
+            let right_chunk_idx = self.shape.linearize([chunk_x + 1, chunk_y, chunk_z]);
+            self.set_chunk_dirty(right_chunk_idx, true);
+        }
+
+        if local_y == 0 && y > 0 {
+            // update chunk below
+            let below_chunk_idx = self.shape.linearize([chunk_x, chunk_y - 1, chunk_z]);
+            self.set_chunk_dirty(below_chunk_idx, true);
+        } else if local_y == self.chunk_size - 1 && y < self.world_size_y() - 1 {
+            // update chunk above
+            let above_chunk_idx = self.shape.linearize([chunk_x, chunk_y + 1, chunk_z]);
+            self.set_chunk_dirty(above_chunk_idx, true);
+        }
+
+        if local_z == 0 && z > 0 {
+            // update chunk forward
+            let forward_chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z - 1]);
+            self.set_chunk_dirty(forward_chunk_idx, true);
+        } else if local_z == self.chunk_size - 1 && z < self.world_size_z() - 1 {
+            // update chunk behind
+            let behind_chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z + 1]);
+            self.set_chunk_dirty(behind_chunk_idx, true);
+        }
     }
 
     pub fn init_block(&mut self, x: u32, y: u32, z: u32, value: Block) {

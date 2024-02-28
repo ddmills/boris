@@ -9,7 +9,7 @@ use bevy::{
     hierarchy::BuildChildren,
     prelude::default,
     render::color::Color,
-    text::{Text, TextSection, TextStyle},
+    text::{Text, TextStyle},
     ui::{
         node_bundles::{NodeBundle, TextBundle},
         BackgroundColor, PositionType, Style, UiRect, Val, ZIndex,

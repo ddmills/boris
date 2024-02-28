@@ -32,17 +32,9 @@ impl BlockBuffer {
         }
     }
 
-    pub fn set(&mut self, block_idx: u32, value: Block) {
+    pub fn set_block(&mut self, block_idx: u32, value: Block) {
         self.blocks[block_idx as usize] = value;
         self.is_dirty = true;
-    }
-
-    pub fn get_block_idx(&self, x: u32, y: u32, z: u32) -> u32 {
-        return self.shape.linearize([x, y, z]);
-    }
-
-    pub fn get_block_xyz(&self, block_idx: u32) -> [u32; 3] {
-        return self.shape.delinearize(block_idx);
     }
 
     pub fn get_block(&self, block_idx: u32) -> Block {
@@ -80,90 +72,6 @@ impl BlockBuffer {
     pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
         self.light[block_idx as usize] = (self.light[block_idx as usize] & 0xf0) | (value & 0xf);
         self.is_dirty = true;
-    }
-
-    pub fn is_oob(&self, x: i32, y: i32, z: i32) -> bool {
-        let chunk_size_i32 = self.chunk_size as i32;
-        return x < 0
-            || y < 0
-            || z < 0
-            || x >= chunk_size_i32
-            || y >= chunk_size_i32
-            || z >= chunk_size_i32;
-    }
-
-    pub fn get_block_by_xyz(&self, x: i32, y: i32, z: i32) -> Block {
-        if self.is_oob(x, y, z) {
-            return Block::OOB;
-        }
-
-        let block_idx = self.get_block_idx(x as u32, y as u32, z as u32);
-
-        if let Some(block) = self.blocks.get(block_idx as usize) {
-            return *block;
-        }
-
-        return Block::OOB;
-    }
-
-    pub fn get_immediate_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 6] {
-        let x_i32 = x as i32;
-        let y_i32 = y as i32;
-        let z_i32 = z as i32;
-
-        return [
-            self.get_block_by_xyz(x_i32, y_i32 + 1, z_i32), // above
-            self.get_block_by_xyz(x_i32, y_i32, z_i32 - 1), // front
-            self.get_block_by_xyz(x_i32 + 1, y_i32, z_i32), // right
-            self.get_block_by_xyz(x_i32, y_i32, z_i32 + 1), // behind
-            self.get_block_by_xyz(x_i32 - 1, y_i32, z_i32), // left
-            self.get_block_by_xyz(x_i32, y_i32 - 1, z_i32), // below
-        ];
-    }
-
-    pub fn get_neighbors(&self, x: u32, y: u32, z: u32) -> [Block; 26] {
-        let x_i32 = x as i32;
-        let y_i32 = y as i32;
-        let z_i32 = z as i32;
-
-        let above = y_i32 + 1;
-        let below = y_i32 - 1;
-        let left = x_i32 - 1;
-        let right = x_i32 + 1;
-        let forward = z_i32 - 1;
-        let behind = z_i32 + 1;
-
-        return [
-            // ABOVE
-            self.get_block_by_xyz(left, above, forward), // above, forward, left -- 0
-            self.get_block_by_xyz(x_i32, above, forward), // above, forward, middle -- 1
-            self.get_block_by_xyz(right, above, forward), // above, forward, right -- 2
-            self.get_block_by_xyz(left, above, z_i32),   // above, left -- 3
-            self.get_block_by_xyz(x_i32, above, z_i32),  // above -- 4
-            self.get_block_by_xyz(right, above, z_i32),  // above, right -- 5
-            self.get_block_by_xyz(left, above, behind),  // above, behind, left -- 6
-            self.get_block_by_xyz(x_i32, above, behind), // above, behind, middle -- 7
-            self.get_block_by_xyz(right, above, behind), // above, behind, right -- 8
-            // MIDDLE
-            self.get_block_by_xyz(left, y_i32, forward), // middle, forward, left -- 9
-            self.get_block_by_xyz(x_i32, y_i32, forward), // middle, forward, middle -- 10
-            self.get_block_by_xyz(right, y_i32, forward), // middle, forward, right -- 11
-            self.get_block_by_xyz(left, y_i32, z_i32),   // middle, left -- 12
-            self.get_block_by_xyz(right, y_i32, z_i32),  // middle, right -- 13
-            self.get_block_by_xyz(left, y_i32, behind),  // middle, behind, left -- 14
-            self.get_block_by_xyz(x_i32, y_i32, behind), // middle, behind, middle -- 15
-            self.get_block_by_xyz(right, y_i32, behind), // middle, behind, right -- 16
-            // BELOW
-            self.get_block_by_xyz(left, below, forward), // below, forward, left -- 17
-            self.get_block_by_xyz(x_i32, below, forward), // below, forward, middle -- 18
-            self.get_block_by_xyz(right, below, forward), // below, forward, right -- 19
-            self.get_block_by_xyz(left, below, z_i32),   // below, left -- 20
-            self.get_block_by_xyz(x_i32, below, z_i32),  // below -- 21
-            self.get_block_by_xyz(right, below, z_i32),  // below, right -- 22
-            self.get_block_by_xyz(left, below, behind),  // below, behind, left -- 23
-            self.get_block_by_xyz(x_i32, below, behind), // below, behind, middle -- 24
-            self.get_block_by_xyz(right, below, behind), // below, behind, right -- 25
-        ];
     }
 }
 

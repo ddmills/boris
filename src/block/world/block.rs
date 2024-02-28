@@ -15,10 +15,14 @@ impl Block {
     pub const STONE: Self = Self(3);
     pub const GRASS: Self = Self(4);
     pub const LAMP: Self = Self(5);
-    pub const LAVA: Self = Self(6);
+    pub const MAGMA: Self = Self(6);
 }
 
 impl Block {
+    pub fn is_oob(&self) -> bool {
+        *self == Self::OOB
+    }
+
     pub fn is_filled(&self) -> bool {
         match self {
             &Self::OOB => false,
@@ -27,7 +31,7 @@ impl Block {
             &Self::DIRT => true,
             &Self::GRASS => true,
             &Self::LAMP => true,
-            &Self::LAVA => true,
+            &Self::MAGMA => true,
             _ => false,
         }
     }
@@ -40,17 +44,21 @@ impl Block {
             &Self::DIRT => true,
             &Self::GRASS => true,
             &Self::LAMP => true,
-            &Self::LAVA => true,
+            &Self::MAGMA => true,
             _ => true,
         }
     }
 
-    pub fn is_light_source(&self) -> bool {
+    pub fn get_light_level(&self) -> u8 {
         match self {
-            &Self::LAMP => true,
-            &Self::LAVA => true,
-            _ => false,
+            &Self::LAMP => 12,
+            &Self::MAGMA => 5,
+            _ => 0,
         }
+    }
+
+    pub fn is_light(&self) -> bool {
+        self.get_light_level() > 0
     }
 
     pub fn texture_idx(&self) -> u32 {
@@ -59,7 +67,7 @@ impl Block {
             &Self::GRASS => 2,
             &Self::STONE => 3,
             &Self::LAMP => 5,
-            &Self::LAVA => 6,
+            &Self::MAGMA => 6,
             _ => 0,
         }
     }
@@ -72,7 +80,7 @@ impl Block {
             &Self::GRASS => String::from("grass"),
             &Self::STONE => String::from("stone"),
             &Self::LAMP => String::from("lamp"),
-            &Self::LAVA => String::from("lava"),
+            &Self::MAGMA => String::from("lava"),
             _ => String::from("unknown"),
         }
     }

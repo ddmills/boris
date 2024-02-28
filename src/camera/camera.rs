@@ -100,7 +100,6 @@ fn apply_camera_translation(
             let local_z = *transform.local_z();
             let forward = *transform.forward();
             let mut is_shift: bool = false;
-            // let forward = -Vec3::new(local_z.x, 0., local_z.z);
             let right = Vec3::new(local_z.z, 0., -local_z.x);
 
             for key in keys.get_pressed() {

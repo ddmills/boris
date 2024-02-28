@@ -8,6 +8,3 @@ pub struct Chunk {
     pub world_z: u32,
     pub mesh_handle: Handle<Mesh>,
 }
-
-#[derive(Component)]
-pub struct DirtyChunk;

@@ -5,7 +5,7 @@ use bevy::{
         system::{Commands, Res, ResMut, Resource},
     },
     input::mouse::MouseWheel,
-    pbr::{Material, MaterialMeshBundle, MaterialPipeline, MaterialPipelineKey, StandardMaterial},
+    pbr::{Material, MaterialMeshBundle, MaterialPipeline, MaterialPipelineKey},
     prelude::default,
     reflect::TypePath,
     render::{

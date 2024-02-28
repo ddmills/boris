@@ -1,16 +1,15 @@
 use bevy::{
-    asset::{Asset, AssetServer, Assets, Handle},
-    ecs::system::{Commands, Res, ResMut, Resource},
-    pbr::{AlphaMode, Material, MaterialPipeline, MaterialPipelineKey},
+    asset::Asset,
+    ecs::system::Resource,
+    pbr::{MaterialPipeline, MaterialPipelineKey},
+    prelude::*,
     reflect::TypePath,
     render::{
-        color::Color,
-        mesh::{Mesh, MeshVertexAttribute, MeshVertexBufferLayout},
+        mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
         render_resource::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
             VertexFormat,
         },
-        texture::Image,
     },
 };
 

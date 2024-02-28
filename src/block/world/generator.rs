@@ -13,14 +13,13 @@ use crate::common::noise::noise::FractalNoise;
 use bevy::{
     app::{Plugin, Startup, Update},
     ecs::{schedule::IntoSystemConfigs, system::ResMut},
-    math::Vec3,
 };
 
 pub struct TerrainGenerator;
 
 impl Plugin for TerrainGenerator {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(Terrain::new(12, 6, 12, 16))
+        app.insert_resource(Terrain::new(6, 6, 6, 16))
             .add_event::<TerrainSliceChanged>()
             .add_event::<TerrainModifiedEvent>()
             .add_systems(
@@ -36,12 +35,13 @@ impl Plugin for TerrainGenerator {
 }
 
 fn setup_terrain(mut terrain: ResMut<Terrain>) {
-    let seed = 200;
+    let seed = 321;
     let mut height = FractalNoise::new(seed, 0.01, 7);
     let mut caves = FractalNoise::new(seed + 1, 0.02, 4);
 
     let top = terrain.world_size_y() - 1;
     let mountain_height = min(top - 4, 32);
+    let magma_level = 2;
     let dirt_depth = 3;
 
     for chunk_idx in 0..terrain.chunk_count {
@@ -60,6 +60,7 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
 
                 let surface = top - (((h.clamp(0.1, 0.6)) * (mountain_height) as f32) as u32); // 0 to 28
 
+                // above ground
                 if y > surface {
                     terrain.init_block(x, y, z, Block::EMPTY);
                     if y == surface + 1 {
@@ -67,25 +68,27 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
                     } else {
                         terrain.set_sunlight(x, y, z, 15);
                     }
+                    continue;
+                }
+
+                // magma
+                if y <= magma_level {
+                    terrain.init_block(x, y, z, Block::MAGMA);
+                    continue;
+                }
+
+                // below ground
+                let c = caves.get_3d(x_f32, y_f32, z_f32);
+
+                if c < 0.36 {
+                    terrain.init_block(x, y, z, Block::EMPTY);
                 } else {
-                    if y <= 3 {
-                        terrain.init_block(x, y, z, Block::LAVA);
-                        terrain.add_light(x, y, z, 8);
-                        continue;
-                    }
-
-                    let c = caves.get_3d(x_f32, y_f32, z_f32);
-
-                    if c < 0.36 {
-                        terrain.init_block(x, y, z, Block::EMPTY);
+                    if y == surface {
+                        terrain.init_block(x, y, z, Block::GRASS);
+                    } else if y > surface - dirt_depth {
+                        terrain.init_block(x, y, z, Block::DIRT);
                     } else {
-                        if y == surface {
-                            terrain.init_block(x, y, z, Block::GRASS);
-                        } else if y > surface - dirt_depth {
-                            terrain.init_block(x, y, z, Block::DIRT);
-                        } else {
-                            terrain.init_block(x, y, z, Block::STONE);
-                        }
+                        terrain.init_block(x, y, z, Block::STONE);
                     }
                 }
             }
@@ -93,10 +96,4 @@ fn setup_terrain(mut terrain: ResMut<Terrain>) {
     }
 
     println!("..done generating world");
-
-    // for x in 0..terrain.world_size_x() {
-    //     for z in 0..terrain.world_size_z() {
-    //         terrain.add_sunlight(x, top, z, 15);
-    //     }
-    // }
 }

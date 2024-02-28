@@ -1,9 +1,6 @@
 use bevy::ecs::system::ResMut;
 
-use super::world::{
-    block::{self, Block},
-    terrain::Terrain,
-};
+use super::world::terrain::Terrain;
 
 pub struct LightNode {
     pub x: u32,
@@ -15,6 +12,7 @@ pub struct LightNode {
 pub fn light_system(mut terrain: ResMut<Terrain>) {
     let max_sunlight_passes = 1000;
     let mut sunlight_passes = 0;
+
     while !terrain.lights_queue_remove.is_empty() {
         let node = terrain.lights_queue_remove.remove(0);
 
@@ -34,8 +32,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
         for [n_x, n_y, n_z] in neighbors {
             let n_detail = terrain.get_block_detail_i32(n_x, n_y, n_z);
 
-            if n_detail.block == Block::OOB {
-                // check oob
+            if n_detail.block.is_oob() {
                 continue;
             }
 
@@ -61,7 +58,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
                     x: n_x_u32,
                     y: n_y_u32,
                     z: n_z_u32,
-                    value: 0,
+                    value: n_detail.light,
                 });
             }
         }

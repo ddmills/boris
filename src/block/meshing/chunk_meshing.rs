@@ -112,7 +112,6 @@ pub fn process_dirty_chunks(
         if cur > maximum {
             return;
         }
-        println!("meshing chunk {}", chunk.chunk_idx);
 
         if let Some(mesh) = meshes.get_mut(chunk.mesh_handle.clone()) {
             let mesh_data = build_chunk_mesh(terrain.as_ref(), chunk.chunk_idx);

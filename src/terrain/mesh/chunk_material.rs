@@ -5,20 +5,14 @@ use bevy::{
     prelude::*,
     reflect::TypePath,
     render::{
-        mesh::{MeshVertexAttribute, MeshVertexBufferLayout},
+        mesh::MeshVertexBufferLayout,
         render_resource::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
-            VertexFormat,
         },
     },
 };
 
-use crate::block::{block_face::BlockFace, world::block::Block};
-
-use super::chunk_meshing::ATTRIBUTE_BLOCK_LIGHT;
-
-const ATTRIBUTE_PACKED_BLOCK: MeshVertexAttribute =
-    MeshVertexAttribute::new("PackedBlock", 9985136798, VertexFormat::Uint32);
+use crate::{Block, BlockFace, ATTRIBUTE_BLOCK_LIGHT, ATTRIBUTE_BLOCK_PACKED};
 
 #[derive(Resource)]
 pub struct ChunkMaterialRes {
@@ -59,7 +53,7 @@ impl Material for ChunkMaterial {
     ) -> Result<(), SpecializedMeshPipelineError> {
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-            ATTRIBUTE_PACKED_BLOCK.at_shader_location(1),
+            ATTRIBUTE_BLOCK_PACKED.at_shader_location(1),
             ATTRIBUTE_BLOCK_LIGHT.at_shader_location(2),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
@@ -67,37 +61,37 @@ impl Material for ChunkMaterial {
     }
 }
 
-pub fn pack_block(block: Block, dir: BlockFace, ao: VertexAo) -> u32 {
+pub fn pack_block(block: Block, dir: BlockFace, ao: VertexCornerCount) -> u32 {
     let t_id = block.texture_idx(); // four bits, 0-15
     let f_id = dir.bit(); // three bits, 0-7
     let ao_id = ao.bit(); // two bits, 0-3
 
-    return (t_id & 15) | ((f_id & 7) << 4) | ((ao_id & 3) << 7);
+    (t_id & 15) | ((f_id & 7) << 4) | ((ao_id & 3) << 7)
 }
 
-pub enum VertexAo {
-    TouchNone,
-    TouchOne,
-    TouchTwo,
-    TouchThree,
+pub enum VertexCornerCount {
+    None,
+    One,
+    Two,
+    Three,
 }
 
-impl VertexAo {
+impl VertexCornerCount {
     pub fn bit(&self) -> u32 {
         match self {
-            VertexAo::TouchNone => 0,
-            VertexAo::TouchOne => 1,
-            VertexAo::TouchTwo => 2,
-            VertexAo::TouchThree => 3,
+            VertexCornerCount::None => 0,
+            VertexCornerCount::One => 1,
+            VertexCornerCount::Two => 2,
+            VertexCornerCount::Three => 3,
         }
     }
 
-    pub fn from_bit(val: u32) -> VertexAo {
+    pub fn from_bit(val: u32) -> VertexCornerCount {
         match val {
-            1 => VertexAo::TouchOne,
-            2 => VertexAo::TouchTwo,
-            3 => VertexAo::TouchThree,
-            _ => VertexAo::TouchNone,
+            1 => VertexCornerCount::One,
+            2 => VertexCornerCount::Two,
+            3 => VertexCornerCount::Three,
+            _ => VertexCornerCount::None,
         }
     }
 }

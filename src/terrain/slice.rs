@@ -20,7 +20,7 @@ use bevy::{
     },
 };
 
-use crate::block::world::terrain::Terrain;
+use crate::Terrain;
 
 #[derive(Resource)]
 pub struct TerrainSlice {
@@ -34,11 +34,15 @@ pub struct TerrainSlice {
 impl TerrainSlice {
     pub fn set_value(&mut self, v: i32) -> u32 {
         self.y = v.clamp(self.min as i32, self.max as i32) as u32;
-        return self.get_value();
+        self.get_value()
     }
 
     pub fn get_value(&self) -> u32 {
-        return if self.is_enabled { self.y } else { self.max };
+        if self.is_enabled {
+            self.y
+        } else {
+            self.max
+        }
     }
 }
 
@@ -83,10 +87,10 @@ pub fn setup_terrain_slice(
 
     commands.insert_resource(TerrainSlice {
         y: initial_slice,
-        max: max,
+        max,
         min: 0,
         is_enabled: true,
-        mesh_handle: mesh_handle,
+        mesh_handle,
     });
 }
 
@@ -141,13 +145,10 @@ struct SliceMeshData {
 
 fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
     let mut data = SliceMeshData::default();
-    data.positions = vec![];
-    data.normals = vec![];
-    data.indicies = vec![];
 
     let mut idx = 0;
 
-    if slice_y <= 0 {
+    if slice_y == 0 {
         return data;
     }
 
@@ -181,16 +182,16 @@ fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
 
             data.indicies.push(idx + 2);
             data.indicies.push(idx + 1);
-            data.indicies.push(idx + 0);
-            data.indicies.push(idx + 0);
+            data.indicies.push(idx);
+            data.indicies.push(idx);
             data.indicies.push(idx + 3);
             data.indicies.push(idx + 2);
 
-            idx = idx + 4;
+            idx += 4;
         }
     }
 
-    return data;
+    data
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]

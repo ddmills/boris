@@ -11,13 +11,10 @@ use bevy::{
 };
 use ndshape::AbstractShape;
 
-use crate::block::{
-    block_face::BlockFace,
-    slice::slice::{TerrainSlice, TerrainSliceChanged},
-    world::{block::Block, block_buffer::Neighbor, chunk::Chunk, terrain::Terrain},
+use crate::{
+    pack_block, Block, BlockFace, Chunk, ChunkMaterial, ChunkMaterialRes, Neighbor, Terrain,
+    TerrainSlice, TerrainSliceChanged, VertexCornerCount,
 };
-
-use super::chunk_material::{pack_block, ChunkMaterial, ChunkMaterialRes, VertexAo};
 
 pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
     MeshVertexAttribute::new("BlockPacked", 9985136798, VertexFormat::Uint32);
@@ -72,7 +69,7 @@ pub fn setup_chunk_meshes(
 
         commands.spawn((
             Chunk {
-                chunk_idx: chunk_idx,
+                chunk_idx,
                 mesh_handle: mesh_handle.clone(),
                 world_x: x,
                 world_y: y,
@@ -108,7 +105,7 @@ pub fn process_dirty_chunks(
             return;
         }
 
-        cur = cur + 1;
+        cur += 1;
         if cur > maximum {
             return;
         }
@@ -154,11 +151,6 @@ struct ChunkMeshData {
 
 fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
     let mut data = ChunkMeshData::default();
-    data.positions = vec![];
-    data.normals = vec![];
-    data.indicies = vec![];
-    data.packed = vec![];
-    data.light = vec![];
     let mut idx = 0;
     let chunk_offset = terrain.get_chunk_offset(chunk_idx);
 
@@ -211,17 +203,17 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     } else {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 2);
                         data.indicies.push(idx + 1);
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     }
@@ -244,7 +236,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.normals.push([0., 1., 0.]);
                     data.normals.push([0., 1., 0.]);
 
-                    idx = idx + 4;
+                    idx += 4;
                 }
 
                 if !neighbors[Neighbor::FORWARD.idx()].block.is_filled() {
@@ -278,17 +270,17 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     } else {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 2);
                         data.indicies.push(idx + 1);
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     }
@@ -311,7 +303,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.normals.push([0., 0., -1.]);
                     data.normals.push([0., 0., -1.]);
 
-                    idx = idx + 4;
+                    idx += 4;
                 }
 
                 if !neighbors[Neighbor::RIGHT.idx()].block.is_filled() {
@@ -345,17 +337,17 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     } else {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 2);
                         data.indicies.push(idx + 1);
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     }
@@ -378,7 +370,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.normals.push([1., 0., 0.]);
                     data.normals.push([1., 0., 0.]);
 
-                    idx = idx + 4;
+                    idx += 4;
                 }
 
                 if !neighbors[Neighbor::BEHIND.idx()].block.is_filled() {
@@ -412,17 +404,17 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     } else {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 2);
                         data.indicies.push(idx + 1);
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     }
@@ -445,7 +437,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.normals.push([0., 0., 1.]);
                     data.normals.push([0., 0., 1.]);
 
-                    idx = idx + 4;
+                    idx += 4;
                 }
 
                 if !neighbors[Neighbor::LEFT.idx()].block.is_filled() {
@@ -479,17 +471,17 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     } else {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 2);
                         data.indicies.push(idx + 1);
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     }
@@ -512,7 +504,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.normals.push([-1., 0., 0.]);
                     data.normals.push([-1., 0., 0.]);
 
-                    idx = idx + 4;
+                    idx += 4;
                 }
 
                 if !neighbors[Neighbor::BELOW.idx()].block.is_filled() {
@@ -546,17 +538,17 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     );
 
                     if f1_ao.bit() + f3_ao.bit() > f2_ao.bit() + f4_ao.bit() {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 1);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     } else {
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 2);
                         data.indicies.push(idx + 1);
-                        data.indicies.push(idx + 0);
+                        data.indicies.push(idx);
                         data.indicies.push(idx + 3);
                         data.indicies.push(idx + 2);
                     }
@@ -579,34 +571,34 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     data.normals.push([0., -1., 0.]);
                     data.normals.push([0., -1., 0.]);
 
-                    idx = idx + 4;
+                    idx += 4;
                 }
             }
         }
     }
 
-    return data;
+    data
 }
 
-fn vert_ao(side1: Block, side2: Block, corner: Block) -> VertexAo {
+fn vert_ao(side1: Block, side2: Block, corner: Block) -> VertexCornerCount {
     let s1f = side1.is_filled();
     let s2f = side2.is_filled();
     let cf = corner.is_filled();
 
     if s1f && s2f {
-        return VertexAo::TouchThree;
+        return VertexCornerCount::Three;
     }
 
     let mut vao = 0;
     if s1f {
-        vao = vao + 1;
+        vao += 1;
     }
     if s2f {
-        vao = vao + 1;
+        vao += 1;
     }
     if cf {
-        vao = vao + 1;
+        vao += 1;
     }
 
-    return VertexAo::from_bit(vao);
+    VertexCornerCount::from_bit(vao)
 }

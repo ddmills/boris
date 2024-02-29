@@ -1,6 +1,6 @@
 use bevy::ecs::system::ResMut;
 
-use super::world::terrain::Terrain;
+use crate::Terrain;
 
 pub struct LightNode {
     pub x: u32,
@@ -152,7 +152,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
     }
 
     while !terrain.sunlight_queue_add.is_empty() {
-        sunlight_passes = sunlight_passes + 1;
+        sunlight_passes += 1;
         if sunlight_passes > max_sunlight_passes {
             break;
         }

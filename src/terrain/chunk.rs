@@ -1,6 +1,16 @@
-use ndshape::{RuntimeShape, Shape};
+use bevy::{asset::Handle, ecs::component::Component, render::mesh::Mesh};
+use ndshape::{AbstractShape, RuntimeShape};
 
-use super::block::Block;
+use crate::Block;
+
+#[derive(Component)]
+pub struct Chunk {
+    pub chunk_idx: u32,
+    pub world_x: u32,
+    pub world_y: u32,
+    pub world_z: u32,
+    pub mesh_handle: Handle<Mesh>,
+}
 
 #[derive(Clone)]
 pub struct BlockBuffer {
@@ -22,7 +32,7 @@ impl BlockBuffer {
             blocks: vec![Block::EMPTY; shape.size() as usize].into_boxed_slice(),
             light: vec![0; shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
-            shape: shape,
+            shape,
             chunk_idx: 0,
             chunk_size: 0,
             world_x: 0,
@@ -42,7 +52,7 @@ impl BlockBuffer {
             return *block;
         }
 
-        return Block::OOB;
+        Block::OOB
     }
 
     pub fn get_sunlight(&self, block_idx: u32) -> u8 {
@@ -50,7 +60,7 @@ impl BlockBuffer {
             return light >> 4 & 0xf;
         }
 
-        return 0;
+        0
     }
 
     pub fn get_torchlight(&self, block_idx: u32) -> u8 {
@@ -58,7 +68,7 @@ impl BlockBuffer {
             return light & 0xf;
         }
 
-        return 0;
+        0
     }
 
     #[inline]
@@ -106,6 +116,6 @@ impl Neighbor {
     pub const BELOW_BEHIND_RIGHT: Self = Self(25);
 
     pub fn idx(&self) -> usize {
-        return self.0 as usize;
+        self.0 as usize
     }
 }

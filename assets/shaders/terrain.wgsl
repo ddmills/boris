@@ -94,11 +94,11 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     switch block_face {
         case 0u: { // PosX
-            uv = vec2(ox + position_local.y, oy + position_local.z);
+            uv = vec2(ox + position_local.z, oy + position_local.y);
             light = 0.5;
         }
         case 1u: { // NegX
-            uv = vec2(ox + position_local.y, oy + position_local.z);
+            uv = vec2(ox + position_local.z, oy + position_local.y);
             light = 0.5;
         }
         case 2u: { // PosY

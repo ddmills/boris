@@ -1,7 +1,6 @@
 use std::cmp::min;
 
-use super::{block::Block, terrain::Terrain};
-use crate::common::noise::noise::FractalNoise;
+use crate::{common::noise::noise::FractalNoise, Block, Terrain};
 use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
@@ -52,14 +51,12 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
 
                 if c < 0.25 {
                     terrain.init_block(x, y, z, Block::EMPTY);
+                } else if y == surface {
+                    terrain.init_block(x, y, z, Block::GRASS);
+                } else if y > surface - dirt_depth {
+                    terrain.init_block(x, y, z, Block::DIRT);
                 } else {
-                    if y == surface {
-                        terrain.init_block(x, y, z, Block::GRASS);
-                    } else if y > surface - dirt_depth {
-                        terrain.init_block(x, y, z, Block::DIRT);
-                    } else {
-                        terrain.init_block(x, y, z, Block::STONE);
-                    }
+                    terrain.init_block(x, y, z, Block::STONE);
                 }
             }
         }

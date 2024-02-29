@@ -2,23 +2,14 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::input::ButtonState;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
-use block::light::light_system;
-use block::meshing::chunk_material::ChunkMaterial;
-use block::meshing::chunk_meshing::{on_slice_changed, process_dirty_chunks, setup_chunk_meshes};
-use block::slice::slice::{
-    scroll_events, setup_terrain_slice, update_slice_mesh, SliceMaterial, TerrainSlice,
-    TerrainSliceChanged,
-};
-use block::world::block::Block;
-use block::world::generator::setup_terrain;
-use block::world::terrain::{Terrain, TerrainModifiedEvent};
 use camera::{CameraPlugin, FlyCamera};
 use debug::fps::FpsPlugin;
+use terrain::*;
 
-mod block;
 mod camera;
 mod common;
 mod debug;
+mod terrain;
 
 fn main() {
     App::new()

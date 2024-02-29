@@ -20,7 +20,7 @@ pub struct FpsPlugin;
 
 impl Plugin for FpsPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins(FrameTimeDiagnosticsPlugin::default())
+        app.add_plugins(FrameTimeDiagnosticsPlugin)
             .add_systems(Startup, setup_fps_counter)
             .add_systems(Update, fps_text_update_system);
     }

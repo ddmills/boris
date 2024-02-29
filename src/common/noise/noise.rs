@@ -16,10 +16,10 @@ impl FractalNoise {
     }
 
     pub fn get_3d(&mut self, x: f32, y: f32, z: f32) -> f32 {
-        return (self.nz.get_noise_3d(x, y, z) + 1.) / 2.;
+        (self.nz.get_noise_3d(x, y, z) + 1.) / 2.
     }
 
     pub fn get_2d(&mut self, x: f32, y: f32) -> f32 {
-        return (self.nz.get_noise_2d(x, y) + 1.) / 2.;
+        (self.nz.get_noise_2d(x, y) + 1.) / 2.
     }
 }

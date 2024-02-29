@@ -52,7 +52,7 @@ impl Block {
     pub fn get_light_level(&self) -> u8 {
         match self {
             &Self::LAMP => 12,
-            &Self::MAGMA => 5,
+            &Self::MAGMA => 6,
             _ => 0,
         }
     }

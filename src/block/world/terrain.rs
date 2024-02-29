@@ -203,12 +203,11 @@ impl Terrain {
     pub fn init_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
-        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-            chunk.set_block(block_idx, value);
+        let chunk = self.get_chunk_mut(chunk_idx).unwrap();
+        chunk.set_block(block_idx, value);
 
-            if value.is_light() {
-                self.add_light(x, y, z, value.get_light_level());
-            }
+        if value.is_light() {
+            self.add_light(x, y, z, value.get_light_level());
         }
     }
 

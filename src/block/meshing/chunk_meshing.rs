@@ -34,7 +34,7 @@ pub fn setup_chunk_meshes(
 ) {
     let settings = |s: &mut ImageLoaderSettings| s.sampler = ImageSampler::nearest();
     let terrain_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/terrain_16.png", settings);
+        asset_server.load_with_settings("textures/comfy.png", settings);
 
     let chunk_material = materials.add(ChunkMaterial {
         color: Color::YELLOW_GREEN,

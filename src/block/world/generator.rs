@@ -5,9 +5,9 @@ use crate::common::noise::noise::FractalNoise;
 use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
-    let seed = 321;
+    let seed = 123;
     let mut height = FractalNoise::new(seed, 0.01, 7);
-    let mut caves = FractalNoise::new(seed + 1, 0.02, 4);
+    let mut caves = FractalNoise::new(seed + 1, 0.015, 4);
 
     let top = terrain.world_size_y() - 1;
     let mountain_height = min(top - 4, 32);
@@ -50,7 +50,7 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
                 // below ground
                 let c = caves.get_3d(x_f32, y_f32, z_f32);
 
-                if c < 0.36 {
+                if c < 0.25 {
                     terrain.init_block(x, y, z, Block::EMPTY);
                 } else {
                     if y == surface {

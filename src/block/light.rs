@@ -41,14 +41,18 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
                 let n_y_u32 = n_y as u32;
                 let n_z_u32 = n_z as u32;
 
-                terrain.set_torchlight(n_x_u32, n_y_u32, n_z_u32, 0);
+                if n_detail.block.is_light() {
+                    terrain.add_light(n_x_u32, n_y_u32, n_z_u32, n_detail.block.get_light_level());
+                } else {
+                    terrain.set_torchlight(n_x_u32, n_y_u32, n_z_u32, 0);
 
-                terrain.lights_queue_remove.push(LightNode {
-                    x: n_x_u32,
-                    y: n_y_u32,
-                    z: n_z_u32,
-                    value: n_detail.light,
-                });
+                    terrain.lights_queue_remove.push(LightNode {
+                        x: n_x_u32,
+                        y: n_y_u32,
+                        z: n_z_u32,
+                        value: n_detail.light,
+                    });
+                }
             } else if n_detail.light >= node.value {
                 let n_x_u32 = n_x as u32;
                 let n_y_u32 = n_y as u32;

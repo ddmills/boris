@@ -22,7 +22,7 @@ mod debug;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(6, 6, 6, 16))
+        .insert_resource(Terrain::new(6, 4, 6, 16))
         .add_event::<TerrainSliceChanged>()
         .add_event::<TerrainModifiedEvent>()
         .add_plugins(DefaultPlugins)
@@ -141,7 +141,7 @@ fn setup(mut commands: Commands) {
 }
 
 fn draw_gizmos(mut gizmos: Gizmos) {
-    gizmos.line(Vec3::ZERO, Vec3::X * 100., Color::RED);
-    gizmos.line(Vec3::ZERO, Vec3::Y * 100., Color::GREEN);
-    gizmos.line(Vec3::ZERO, Vec3::Z * 100., Color::BLUE);
+    gizmos.line(Vec3::ZERO, Vec3::X * 256., Color::RED);
+    gizmos.line(Vec3::ZERO, Vec3::Y * 256., Color::GREEN);
+    gizmos.line(Vec3::ZERO, Vec3::Z * 256., Color::BLUE);
 }

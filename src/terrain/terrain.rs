@@ -422,7 +422,8 @@ impl Terrain {
 
         while (if step_x > 0 { x < wx } else { x >= 0 }
             && if step_y > 0 { y < wy } else { y >= 0 }
-            && if step_z > 0 { z < wz } else { z >= 0 })
+            && if step_z > 0 { z < wz } else { z >= 0 }
+            && attempts < 1000)
         {
             attempts += 1;
             if !(y >= slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {

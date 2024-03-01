@@ -1,153 +1,152 @@
 use bevy::{
-    ecs::event::ManualEventReader,
-    input::mouse::MouseMotion,
+    a11y::Focus,
+    input::mouse::{MouseMotion, MouseWheel},
     prelude::*,
-    window::{CursorGrabMode, PrimaryWindow},
+    window::PrimaryWindow,
 };
 
-pub struct CameraPlugin;
+use crate::TerrainSlice;
 
 #[derive(Component)]
-pub struct FlyCamera;
-
-#[derive(Resource, Default)]
-struct CameraState {
-    reader_motion: ManualEventReader<MouseMotion>,
+pub struct MainCamera {
+    pub focus: Vec3,
+    pub radius: f32,
+    pub upside_down: bool,
 }
 
-#[derive(Resource)]
-struct CameraSettings {
-    sensitivity: f32,
-    speed: f32,
-    shift_multiplier: f32,
-}
-
-impl Default for CameraSettings {
+impl Default for MainCamera {
     fn default() -> Self {
-        Self {
-            sensitivity: 0.00012,
-            speed: 20.,
-            shift_multiplier: 2.,
+        MainCamera {
+            focus: Vec3::ZERO,
+            radius: 5.0,
+            upside_down: false,
         }
     }
 }
 
-impl Plugin for CameraPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<CameraState>()
-            .init_resource::<CameraSettings>()
-            .add_systems(Startup, initial_grab_cursor)
-            .add_systems(Update, apply_camera_translation)
-            .add_systems(Update, apply_camera_rotation)
-            .add_systems(Update, grab_cursor);
-    }
-}
-
-fn grab_cursor(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
+/// Pan the camera with middle mouse click, zoom with scroll wheel, orbit with right mouse click.
+pub fn update_camera(
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut ev_motion: EventReader<MouseMotion>,
+    mut ev_scroll: EventReader<MouseWheel>,
+    input_mouse: Res<ButtonInput<MouseButton>>,
+    input_keys: Res<ButtonInput<KeyCode>>,
+    mut query: Query<(&mut MainCamera, &mut Transform, &Projection)>,
+    terrain_slice: Res<TerrainSlice>,
 ) {
-    if let Ok(mut window) = primary_window.get_single_mut() {
-        if keys.just_pressed(KeyCode::Escape) {
-            toggle_grab_cursor(&mut window)
+    // change input mapping for orbit and panning here
+    let orbit_button = MouseButton::Middle;
+    let pan_button = MouseButton::Right;
+    let window = windows.single();
+    let zoom_mode = input_keys.pressed(KeyCode::ControlLeft);
+
+    let mut pan = Vec2::ZERO;
+    let mut rotation_move = Vec2::ZERO;
+    let mut scroll = 0.0;
+    let mut orbit_button_changed = false;
+
+    if input_mouse.pressed(orbit_button) {
+        for ev in ev_motion.read() {
+            rotation_move += ev.delta;
         }
-    } else {
-        warn!("Primary window not found");
+    } else if input_mouse.pressed(pan_button) {
+        // Pan only if we're not rotating at the moment
+        for ev in ev_motion.read() {
+            pan += ev.delta;
+        }
     }
-}
+    for ev in ev_scroll.read() {
+        scroll += ev.y;
+    }
+    if input_mouse.just_released(orbit_button) || input_mouse.just_pressed(orbit_button) {
+        orbit_button_changed = true;
+    }
 
-fn apply_camera_rotation(
-    settings: Res<CameraSettings>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
-    mut state: ResMut<CameraState>,
-    motion: Res<Events<MouseMotion>>,
-    mut cameras: Query<&mut Transform, With<FlyCamera>>,
-) {
-    if let Ok(window) = primary_window.get_single() {
-        for mut transform in cameras.iter_mut() {
-            let (mut yaw, mut pitch, _) = transform.rotation.to_euler(EulerRot::YXZ);
-            for ev in state.reader_motion.read(&motion) {
-                match window.cursor.grab_mode {
-                    CursorGrabMode::None => (),
-                    _ => {
-                        let window_scale = window.height().min(window.width());
-                        pitch -= (settings.sensitivity * ev.delta.y * window_scale).to_radians();
-                        yaw -= (settings.sensitivity * ev.delta.x * window_scale).to_radians();
-                    }
+    for (mut pan_orbit, mut transform, projection) in query.iter_mut() {
+        if orbit_button_changed {
+            // only check for upside down when orbiting started or ended this frame
+            // if the camera is "upside" down, panning horizontally would be inverted, so invert the input to make it correct
+            let up = transform.rotation * Vec3::Y;
+            pan_orbit.upside_down = up.y <= 0.0;
+        }
+
+        let mut any = false;
+        if rotation_move.length_squared() > 0.0 {
+            any = true;
+            let window = get_primary_window_size(&window);
+            let delta_x = {
+                let delta = rotation_move.x / window.x * std::f32::consts::PI * 2.0;
+                if pan_orbit.upside_down {
+                    -delta
+                } else {
+                    delta
                 }
-            }
-
-            pitch = pitch.clamp(-1.54, 1.54);
-
-            transform.rotation =
-                Quat::from_axis_angle(Vec3::Y, yaw) * Quat::from_axis_angle(Vec3::X, pitch);
-        }
-    } else {
-        warn!("Primary window not found");
-    }
-}
-
-fn apply_camera_translation(
-    keys: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
-    settings: Res<CameraSettings>,
-    mut cameras: Query<&mut Transform, With<FlyCamera>>,
-) {
-    if let Ok(window) = primary_window.get_single() {
-        for mut transform in cameras.iter_mut() {
-            let mut delta = Vec3::ZERO;
-            let local_z = *transform.local_z();
-            let forward = *transform.forward();
-            let mut is_shift: bool = false;
-            let right = Vec3::new(local_z.z, 0., -local_z.x);
-
-            for key in keys.get_pressed() {
-                match window.cursor.grab_mode {
-                    CursorGrabMode::None => (),
-                    _ => match key {
-                        KeyCode::KeyW => delta += forward,
-                        KeyCode::KeyS => delta -= forward,
-                        KeyCode::KeyA => delta -= right,
-                        KeyCode::KeyD => delta += right,
-                        KeyCode::ShiftLeft => is_shift = true,
-                        _ => (),
-                    },
-                }
-            }
-
-            delta = delta.normalize_or_zero();
-
-            let speed = if is_shift {
-                settings.speed * settings.shift_multiplier
-            } else {
-                settings.speed
             };
-
-            transform.translation += delta * time.delta_seconds() * speed;
+            let delta_y = rotation_move.y / window.y * std::f32::consts::PI;
+            let yaw = Quat::from_rotation_y(-delta_x);
+            let pitch = Quat::from_rotation_x(-delta_y);
+            transform.rotation = yaw * transform.rotation; // rotate around global y axis
+            transform.rotation = transform.rotation * pitch; // rotate around local x axis
+        } else if pan.length_squared() > 0.0 {
+            any = true;
+            // make panning distance independent of resolution and FOV,
+            let window = get_primary_window_size(window);
+            if let Projection::Perspective(projection) = projection {
+                pan *= Vec2::new(projection.fov * projection.aspect_ratio, projection.fov) / window;
+            }
+            // translate by local axes
+            let right = transform.rotation * Vec3::X * -pan.x;
+            let forward = transform.rotation * -Vec3::Z * pan.y;
+            let flat = Vec3::new(forward.x, 0., forward.z);
+            // make panning proportional to distance away from focus point
+            let translation = (right + flat) * pan_orbit.radius;
+            pan_orbit.focus += translation;
+        } else if scroll.abs() > 0.0 {
+            if zoom_mode {
+                any = true;
+                pan_orbit.radius -= scroll * pan_orbit.radius * 0.2;
+                // dont allow zoom to reach zero or you get stuck
+                pan_orbit.radius = f32::max(pan_orbit.radius, 0.05);
+            } else {
+                any = true;
+                pan_orbit.focus.y = terrain_slice.y as f32;
+            }
         }
-    } else {
-        warn!("Primary window not found");
+
+        if any {
+            // emulating parent/child to make the yaw/y-axis rotation behave like a turntable
+            // parent = x and y rotation
+            // child = z-offset
+            let rot_matrix = Mat3::from_quat(transform.rotation);
+            transform.translation =
+                pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
+        }
     }
+
+    // consume any remaining events, so they don't pile up if we don't need them
+    // (and also to avoid Bevy warning us about not checking events every frame update)
+    ev_motion.clear();
 }
 
-fn toggle_grab_cursor(window: &mut Window) {
-    match window.cursor.grab_mode {
-        CursorGrabMode::None => {
-            window.cursor.grab_mode = CursorGrabMode::Confined;
-            window.cursor.visible = false;
-        }
-        _ => {
-            window.cursor.grab_mode = CursorGrabMode::None;
-            window.cursor.visible = true;
-        }
-    }
+fn get_primary_window_size(window: &Window) -> Vec2 {
+    Vec2::new(window.width(), window.height())
 }
 
-fn initial_grab_cursor(mut primary_window: Query<&mut Window, With<PrimaryWindow>>) {
-    if let Ok(mut window) = primary_window.get_single_mut() {
-        toggle_grab_cursor(&mut window);
-    } else {
-        warn!("Primary window not found");
-    }
+/// Spawn a camera like this
+pub fn spawn_camera(mut commands: Commands) {
+    let translation = Vec3::new(0., 64., 0.);
+    let radius = translation.length();
+    let focus = Vec3::new(32., 50., 32.);
+
+    commands.spawn((
+        Camera3dBundle {
+            transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        },
+        MainCamera {
+            radius,
+            focus,
+            ..Default::default()
+        },
+    ));
 }

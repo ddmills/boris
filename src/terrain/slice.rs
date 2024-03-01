@@ -24,7 +24,7 @@ use crate::Terrain;
 
 #[derive(Resource)]
 pub struct TerrainSlice {
-    y: u32,
+    pub y: u32,
     min: u32,
     max: u32,
     is_enabled: bool,

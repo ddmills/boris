@@ -2,12 +2,12 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::input::ButtonState;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
-use camera::{CameraPlugin, FlyCamera};
+use controls::{CameraPlugin, FlyCamera};
 use debug::fps::FpsPlugin;
 use terrain::*;
 
-mod camera;
 mod common;
+mod controls;
 mod debug;
 mod terrain;
 

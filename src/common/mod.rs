@@ -1,1 +1,3 @@
-pub mod noise;
+mod noise;
+
+pub use noise::*;

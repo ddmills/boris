@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::{common::noise::noise::FractalNoise, Block, Terrain};
+use crate::{common::FractalNoise, Block, Terrain};
 use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {

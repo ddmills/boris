@@ -80,7 +80,7 @@ impl Block {
             Self::GRASS => String::from("grass"),
             Self::STONE => String::from("stone"),
             Self::LAMP => String::from("lamp"),
-            Self::MAGMA => String::from("lava"),
+            Self::MAGMA => String::from("magma"),
             _ => String::from("unknown"),
         }
     }

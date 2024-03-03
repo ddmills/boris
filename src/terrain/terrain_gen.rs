@@ -42,7 +42,6 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
                     continue;
                 }
 
-                // magma
                 if y <= magma_level {
                     terrain.init_block(x, y, z, Block::MAGMA);
                     continue;

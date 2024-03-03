@@ -5,7 +5,9 @@ use bevy::prelude::*;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
 use terrain::*;
-use ui::{setup_block_toolbar_ui, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui};
+use ui::{
+    setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
+};
 
 mod common;
 mod controls;
@@ -17,7 +19,6 @@ fn main() {
     App::new()
         .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Toolbar {
-            block: Block::STONE,
             tool: Tool::PlaceBlocks(Block::STONE),
         })
         .insert_resource(Ui {
@@ -28,6 +29,7 @@ fn main() {
             hit_pos: [0, 0, 0],
             is_adj_hit: false,
             adj_pos: [0, 0, 0],
+            hit_block: Block::EMPTY,
         })
         .add_event::<TerrainSliceChanged>()
         .add_plugins(DefaultPlugins)
@@ -64,13 +66,13 @@ fn main() {
         .add_systems(Update, light_system)
         .add_systems(Update, update_camera)
         .add_systems(Update, toolbar_select)
+        .add_systems(Update, tool_system)
         .run();
 }
 
 fn testing(
     mut terrain: ResMut<Terrain>,
     mut click_evt: EventReader<MouseButtonInput>,
-    selected_block: Res<Toolbar>,
     raycast: Res<Raycast>,
 ) {
     for ev in click_evt.read() {
@@ -78,42 +80,25 @@ fn testing(
             continue;
         }
 
-        match ev.button {
-            MouseButton::Right => {
-                if !raycast.is_hit {
-                    return;
-                }
-
-                println!(
-                    "remove block {},{},{}",
-                    raycast.hit_pos[0], raycast.hit_pos[1], raycast.hit_pos[2],
-                );
-
-                terrain.set_block(
-                    raycast.hit_pos[0],
-                    raycast.hit_pos[1],
-                    raycast.hit_pos[2],
-                    Block::EMPTY,
-                );
+        if let MouseButton::Right = ev.button {
+            if !raycast.is_hit {
+                return;
             }
-            MouseButton::Left => {
-                if !raycast.is_adj_hit {
-                    return;
-                }
 
-                println!(
-                    "add block {},{},{}",
-                    raycast.adj_pos[0], raycast.adj_pos[1], raycast.adj_pos[2],
-                );
+            println!(
+                "remove block {},{},{} -> {}",
+                raycast.hit_pos[0],
+                raycast.hit_pos[1],
+                raycast.hit_pos[2],
+                raycast.hit_block.name()
+            );
 
-                terrain.set_block(
-                    raycast.adj_pos[0],
-                    raycast.adj_pos[1],
-                    raycast.adj_pos[2],
-                    selected_block.block,
-                );
-            }
-            _ => {}
+            terrain.set_block(
+                raycast.hit_pos[0],
+                raycast.hit_pos[1],
+                raycast.hit_pos[2],
+                Block::EMPTY,
+            );
         }
     }
 }

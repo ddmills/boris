@@ -16,7 +16,6 @@ pub struct BtnToolbarBlock {
 
 #[derive(Resource)]
 pub struct Toolbar {
-    pub block: Block,
     pub tool: Tool,
 }
 
@@ -27,7 +26,6 @@ pub fn toolbar_select(
     for (interaction, btn, mut bkg) in &mut btn_query {
         match *interaction {
             Interaction::Pressed => {
-                toolbar.block = btn.block;
                 toolbar.tool = Tool::PlaceBlocks(btn.block);
                 bkg.0 = BTN_PRESSED;
             }
@@ -38,13 +36,18 @@ pub fn toolbar_select(
                 bkg.0 = BTN_NONE;
             }
         }
-        if btn.block == toolbar.block {
-            bkg.0 = BTN_TOGGLED;
+
+        match toolbar.tool {
+            Tool::PlaceBlocks(block) => {
+                if btn.block == block {
+                    bkg.0 = BTN_TOGGLED;
+                }
+            }
         }
     }
 }
 
-pub fn setup_block_toolbar_ui(mut commands: Commands, toolbar: Res<Toolbar>) {
+pub fn setup_block_toolbar_ui(mut commands: Commands) {
     commands
         .spawn((
             NodeBundle {
@@ -76,11 +79,6 @@ pub fn setup_block_toolbar_ui(mut commands: Commands, toolbar: Res<Toolbar>) {
             ]
             .into_iter()
             .for_each(|block: Block| {
-                let color = if block == toolbar.block {
-                    BTN_PRESSED
-                } else {
-                    BTN_NONE
-                };
                 parent
                     .spawn((
                         ButtonBundle {
@@ -91,7 +89,7 @@ pub fn setup_block_toolbar_ui(mut commands: Commands, toolbar: Res<Toolbar>) {
                                 align_content: AlignContent::Center,
                                 ..default()
                             },
-                            background_color: color.into(),
+                            background_color: BTN_NONE.into(),
                             ..default()
                         },
                         BtnToolbarBlock { block },

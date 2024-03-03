@@ -8,7 +8,7 @@ use bevy::{
     window::{PrimaryWindow, Window},
 };
 
-use crate::{ui::Ui, Terrain, TerrainSlice};
+use crate::{ui::Ui, Block, Terrain, TerrainSlice};
 
 use super::MainCamera;
 
@@ -18,6 +18,8 @@ pub struct Raycast {
     pub is_hit: bool,
     /// The coordinates directly under the raycast
     pub hit_pos: [u32; 3],
+    /// The block type directly under the raycast
+    pub hit_block: Block,
     /// True if an adjacent block is hit
     pub is_adj_hit: bool,
     /// The coordinates adjacent to the hit
@@ -75,6 +77,7 @@ pub fn raycast(
 
         raycast.is_hit = true;
         raycast.hit_pos = [ray.x, ray.y, ray.z];
+        raycast.hit_block = ray.block;
 
         let offset = ray.face.offset();
         let new_x = ray.x as i32 + offset[0];

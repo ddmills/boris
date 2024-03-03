@@ -74,6 +74,8 @@ pub fn setup_block_toolbar_ui(mut commands: Commands) {
                 Block::GRASS,
                 Block::DIRT,
                 Block::STONE,
+                Block::ASHLAR,
+                Block::ASHLAR_LARGE,
                 Block::LAMP,
                 Block::MAGMA,
             ]

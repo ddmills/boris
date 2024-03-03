@@ -16,6 +16,8 @@ impl Block {
     pub const GRASS: Self = Self(4);
     pub const LAMP: Self = Self(5);
     pub const MAGMA: Self = Self(6);
+    pub const ASHLAR_LARGE: Self = Self(7);
+    pub const ASHLAR: Self = Self(8);
 }
 
 impl Block {
@@ -32,6 +34,8 @@ impl Block {
             Self::GRASS => true,
             Self::LAMP => true,
             Self::MAGMA => true,
+            Self::ASHLAR_LARGE => true,
+            Self::ASHLAR => true,
             _ => false,
         }
     }
@@ -40,11 +44,6 @@ impl Block {
         match *self {
             Self::OOB => true,
             Self::EMPTY => false,
-            Self::STONE => true,
-            Self::DIRT => true,
-            Self::GRASS => true,
-            Self::LAMP => true,
-            Self::MAGMA => true,
             _ => true,
         }
     }
@@ -66,8 +65,10 @@ impl Block {
             Self::DIRT => 1,
             Self::GRASS => 2,
             Self::STONE => 3,
-            Self::LAMP => 5,
+            Self::ASHLAR_LARGE => 4,
+            Self::ASHLAR => 5,
             Self::MAGMA => 6,
+            Self::LAMP => 8,
             _ => 0,
         }
     }
@@ -81,6 +82,8 @@ impl Block {
             Self::STONE => String::from("stone"),
             Self::LAMP => String::from("lamp"),
             Self::MAGMA => String::from("magma"),
+            Self::ASHLAR_LARGE => String::from("ashlar (large)"),
+            Self::ASHLAR => String::from("ashlar"),
             _ => String::from("unknown"),
         }
     }

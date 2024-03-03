@@ -1,4 +1,4 @@
-use bevy::ecs::{event::Event, system::Resource};
+use bevy::ecs::system::Resource;
 use ndshape::{RuntimeShape, Shape};
 
 use crate::{Block, BlockBuffer, BlockDetail, BlockFace, LightNode};

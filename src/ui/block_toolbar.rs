@@ -2,6 +2,8 @@ use bevy::{prelude::*, ui::FocusPolicy};
 
 use crate::Block;
 
+use super::Tool;
+
 const BTN_PRESSED: Color = Color::BLUE;
 const BTN_NONE: Color = Color::ORANGE_RED;
 const BTN_HOVERED: Color = Color::GREEN;
@@ -15,6 +17,7 @@ pub struct BtnToolbarBlock {
 #[derive(Resource)]
 pub struct Toolbar {
     pub block: Block,
+    pub tool: Tool,
 }
 
 pub fn toolbar_select(
@@ -25,6 +28,7 @@ pub fn toolbar_select(
         match *interaction {
             Interaction::Pressed => {
                 toolbar.block = btn.block;
+                toolbar.tool = Tool::PlaceBlocks(btn.block);
                 bkg.0 = BTN_PRESSED;
             }
             Interaction::Hovered => {
@@ -42,23 +46,26 @@ pub fn toolbar_select(
 
 pub fn setup_block_toolbar_ui(mut commands: Commands, toolbar: Res<Toolbar>) {
     commands
-        .spawn((NodeBundle {
-            focus_policy: FocusPolicy::Block,
-            style: Style {
-                position_type: PositionType::Absolute,
-                width: Val::Percent(100.0),
-                border: UiRect::top(Val::Px(2.0)),
-                bottom: Val::Px(0.0),
-                padding: UiRect::all(Val::Px(8.0)),
-                align_content: AlignContent::Center,
-                justify_content: JustifyContent::Center,
-                column_gap: Val::Px(8.0),
+        .spawn((
+            NodeBundle {
+                focus_policy: FocusPolicy::Block,
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    width: Val::Percent(100.0),
+                    border: UiRect::top(Val::Px(2.0)),
+                    bottom: Val::Px(0.0),
+                    padding: UiRect::all(Val::Px(8.0)),
+                    align_content: AlignContent::Center,
+                    justify_content: JustifyContent::Center,
+                    column_gap: Val::Px(8.0),
+                    ..default()
+                },
+                background_color: Color::rgba(0.2, 0.2, 0.2, 0.4).into(),
+                border_color: Color::rgb(0.1, 0.1, 0.1).into(),
                 ..default()
             },
-            background_color: Color::rgba(0.2, 0.2, 0.2, 0.4).into(),
-            border_color: Color::rgb(0.1, 0.1, 0.1).into(),
-            ..default()
-        },))
+            Interaction::None,
+        ))
         .with_children(|parent| {
             vec![
                 Block::GRASS,

@@ -29,13 +29,6 @@ pub struct RayResult {
     pub face: BlockFace,
 }
 
-#[derive(Event)]
-pub struct TerrainModifiedEvent {
-    pub x: u32,
-    pub y: u32,
-    pub z: u32,
-}
-
 impl Terrain {
     pub fn new(
         chunk_count_x: u32,
@@ -426,7 +419,7 @@ impl Terrain {
             && attempts < 1000)
         {
             attempts += 1;
-            if !(y >= slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {
+            if !(y > slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {
                 let b = self.get_block(x as u32, y as u32, z as u32);
                 if b.is_filled() {
                     return RayResult {

@@ -1,12 +1,11 @@
+use bevy::input::mouse::MouseButtonInput;
 use bevy::input::ButtonState;
-use bevy::math::vec3;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
-use bevy::{input::mouse::MouseButtonInput, window::PrimaryWindow};
-use controls::{setup_camera, update_camera, MainCamera};
+use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
 use terrain::*;
-use ui::{setup_block_toolbar_ui, toolbar_select, ui_capture_pointer, Toolbar, Ui};
+use ui::{setup_block_toolbar_ui, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui};
 
 mod common;
 mod controls;
@@ -19,12 +18,18 @@ fn main() {
         .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Toolbar {
             block: Block::STONE,
+            tool: Tool::PlaceBlocks(Block::STONE),
         })
         .insert_resource(Ui {
             pointer_captured: false,
         })
+        .insert_resource(Raycast {
+            is_hit: false,
+            hit_pos: [0, 0, 0],
+            is_adj_hit: false,
+            adj_pos: [0, 0, 0],
+        })
         .add_event::<TerrainSliceChanged>()
-        .add_event::<TerrainModifiedEvent>()
         .add_plugins(DefaultPlugins)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -50,7 +55,8 @@ fn main() {
         )
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)
-        .add_systems(Update, cursor_raycasting)
+        .add_systems(Update, raycast)
+        .add_systems(Update, testing)
         .add_systems(Update, scroll_events)
         .add_systems(Update, process_dirty_chunks)
         .add_systems(Update, on_slice_changed)
@@ -61,100 +67,53 @@ fn main() {
         .run();
 }
 
-fn cursor_raycasting(
-    cameras: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+fn testing(
     mut terrain: ResMut<Terrain>,
-    terrain_slice: Res<TerrainSlice>,
-    windows: Query<&Window, With<PrimaryWindow>>,
     mut click_evt: EventReader<MouseButtonInput>,
-    mut ev_terrain_mod: EventWriter<TerrainModifiedEvent>,
-    mut cursors: Query<&mut Transform, With<Cursor>>,
     selected_block: Res<Toolbar>,
-    ui: Res<Ui>,
+    raycast: Res<Raycast>,
 ) {
-    if ui.pointer_captured {
-        return;
-    }
-
-    for window in windows.iter() {
-        let mut cursor = cursors.single_mut();
-        let (camera, transform) = cameras.single();
-
-        let Some(cursor_pos) = window.cursor_position() else {
-            return;
-        };
-
-        let Some(ray) = camera.viewport_to_world(transform, cursor_pos) else {
-            return;
-        };
-
-        let origin = ray.origin;
-        let dir = vec3(ray.direction.x, ray.direction.y, ray.direction.z);
-
-        let slice_y = terrain_slice.get_value();
-        let radius = 200;
-
-        let rc = terrain.raycast(
-            origin.x, origin.y, origin.z, dir.x, dir.y, dir.z, slice_y, radius,
-        );
-
-        if !rc.is_hit {
-            click_evt.clear();
+    for ev in click_evt.read() {
+        if ev.state != ButtonState::Pressed {
+            continue;
         }
 
-        let offset = rc.face.offset();
-
-        let new_x = (rc.x as i32 + offset[0]) as i32;
-        let new_y = (rc.y as i32 + offset[1]) as i32;
-        let new_z = (rc.z as i32 + offset[2]) as i32;
-
-        if !terrain.is_oob(new_x, new_y, new_z) {
-            cursor.translation =
-                Vec3::new(new_x as f32 + 0.5, new_y as f32 + 0.5, new_z as f32 + 0.5);
-        }
-
-        for ev in click_evt.read() {
-            if ev.state != ButtonState::Pressed {
-                continue;
-            }
-
-            match ev.button {
-                MouseButton::Right => {
-                    println!(
-                        "remove block {},{},{},{}",
-                        rc.x,
-                        rc.y,
-                        rc.z,
-                        rc.block.name()
-                    );
-                    // terrain.set_block(rc.x, rc.y, rc.z, Block::GRASS);
-                    terrain.set_block(rc.x, rc.y, rc.z, Block::EMPTY);
+        match ev.button {
+            MouseButton::Right => {
+                if !raycast.is_hit {
+                    return;
                 }
-                MouseButton::Left => {
-                    println!(
-                        "place block {},{},{}. face={}",
-                        rc.x,
-                        rc.y,
-                        rc.z,
-                        rc.face.bit()
-                    );
 
-                    if !terrain.is_oob(new_x, new_y, new_z) {
-                        let clamped_x = new_x as u32;
-                        let clamped_y = new_y as u32;
-                        let clamped_z = new_z as u32;
+                println!(
+                    "remove block {},{},{}",
+                    raycast.hit_pos[0], raycast.hit_pos[1], raycast.hit_pos[2],
+                );
 
-                        terrain.set_block(clamped_x, clamped_y, clamped_z, selected_block.block);
-
-                        ev_terrain_mod.send(TerrainModifiedEvent {
-                            x: clamped_x,
-                            y: clamped_y,
-                            z: clamped_z,
-                        });
-                    }
-                }
-                _ => {}
+                terrain.set_block(
+                    raycast.hit_pos[0],
+                    raycast.hit_pos[1],
+                    raycast.hit_pos[2],
+                    Block::EMPTY,
+                );
             }
+            MouseButton::Left => {
+                if !raycast.is_adj_hit {
+                    return;
+                }
+
+                println!(
+                    "add block {},{},{}",
+                    raycast.adj_pos[0], raycast.adj_pos[1], raycast.adj_pos[2],
+                );
+
+                terrain.set_block(
+                    raycast.adj_pos[0],
+                    raycast.adj_pos[1],
+                    raycast.adj_pos[2],
+                    selected_block.block,
+                );
+            }
+            _ => {}
         }
     }
 }

@@ -4,14 +4,16 @@ use crate::{common::FractalNoise, Block, Terrain};
 use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
-    let seed = 123;
+    let seed = 432;
     let mut height = FractalNoise::new(seed, 0.01, 7);
-    let mut caves = FractalNoise::new(seed + 1, 0.015, 4);
+    let mut caverns = FractalNoise::new(seed + 1, 0.01, 4);
+    let mut caves = FractalNoise::new(seed + 1, 0.02, 3);
 
     let top = terrain.world_size_y() - 1;
     let mountain_height = min(top - 4, 32);
-    let magma_level = 2;
+    let magma_level = 3;
     let dirt_depth = 3;
+    let cavern_depth = 0.35;
 
     for chunk_idx in 0..terrain.chunk_count {
         terrain.init_chunk(chunk_idx);
@@ -47,11 +49,20 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
                 }
 
                 // below ground
-                let c = caves.get_3d(x_f32, y_f32, z_f32);
+                let c = caverns.get_3d(x_f32, y_f32, z_f32);
 
-                if c < 0.25 {
-                    terrain.init_block(x, y, z, Block::EMPTY);
-                } else if y == surface {
+                let c_depth = cavern_depth * terrain.world_size_y() as f32;
+                let depth = ((c_depth - (y + 6) as f32) / c_depth).abs();
+
+                if c > depth {
+                    let cave = caves.get_3d(x_f32, y_f32, z_f32);
+                    if cave < 0.5 {
+                        terrain.init_block(x, y, z, Block::EMPTY);
+                        continue;
+                    }
+                }
+
+                if y == surface {
                     terrain.init_block(x, y, z, Block::GRASS);
                 } else if y > surface - dirt_depth {
                     terrain.init_block(x, y, z, Block::DIRT);

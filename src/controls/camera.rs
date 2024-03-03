@@ -1,5 +1,4 @@
 use bevy::{
-    a11y::Focus,
     input::mouse::{MouseMotion, MouseWheel},
     prelude::*,
     window::PrimaryWindow,
@@ -35,8 +34,8 @@ pub fn update_camera(
     terrain_slice: Res<TerrainSlice>,
 ) {
     // change input mapping for orbit and panning here
-    let orbit_button = MouseButton::Middle;
-    let pan_button = MouseButton::Right;
+    let orbit_button = KeyCode::AltLeft;
+    let pan_button = MouseButton::Middle;
     let window = windows.single();
     let zoom_mode = input_keys.pressed(KeyCode::ControlLeft);
 
@@ -45,20 +44,20 @@ pub fn update_camera(
     let mut scroll = 0.0;
     let mut orbit_button_changed = false;
 
-    if input_mouse.pressed(orbit_button) {
+    if input_keys.pressed(orbit_button) {
         for ev in ev_motion.read() {
-            rotation_move += ev.delta;
+            rotation_move += ev.delta * 0.25;
         }
     } else if input_mouse.pressed(pan_button) {
         // Pan only if we're not rotating at the moment
         for ev in ev_motion.read() {
-            pan += ev.delta;
+            pan += ev.delta * 0.75;
         }
     }
     for ev in ev_scroll.read() {
         scroll += ev.y;
     }
-    if input_mouse.just_released(orbit_button) || input_mouse.just_pressed(orbit_button) {
+    if input_keys.just_released(orbit_button) || input_keys.just_pressed(orbit_button) {
         orbit_button_changed = true;
     }
 
@@ -73,7 +72,7 @@ pub fn update_camera(
         let mut any = false;
         if rotation_move.length_squared() > 0.0 {
             any = true;
-            let window = get_primary_window_size(&window);
+            let window = get_primary_window_size(window);
             let delta_x = {
                 let delta = rotation_move.x / window.x * std::f32::consts::PI * 2.0;
                 if pan_orbit.upside_down {
@@ -86,7 +85,7 @@ pub fn update_camera(
             let yaw = Quat::from_rotation_y(-delta_x);
             let pitch = Quat::from_rotation_x(-delta_y);
             transform.rotation = yaw * transform.rotation; // rotate around global y axis
-            transform.rotation = transform.rotation * pitch; // rotate around local x axis
+            transform.rotation *= pitch; // rotate around local x axis
         } else if pan.length_squared() > 0.0 {
             any = true;
             // make panning distance independent of resolution and FOV,
@@ -133,7 +132,7 @@ fn get_primary_window_size(window: &Window) -> Vec2 {
 }
 
 /// Spawn a camera like this
-pub fn spawn_camera(mut commands: Commands) {
+pub fn setup_camera(mut commands: Commands) {
     let translation = Vec3::new(0., 64., 0.);
     let radius = translation.length();
     let focus = Vec3::new(32., 50., 32.);
@@ -141,6 +140,10 @@ pub fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera3dBundle {
             transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
+            projection: Projection::Perspective(PerspectiveProjection {
+                fov: std::f32::consts::PI / 7.0,
+                ..Default::default()
+            }),
             ..Default::default()
         },
         MainCamera {

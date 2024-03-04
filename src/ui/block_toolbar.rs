@@ -10,8 +10,8 @@ const BTN_HOVERED: Color = Color::GREEN;
 const BTN_TOGGLED: Color = Color::PURPLE;
 
 #[derive(Component)]
-pub struct BtnToolbarBlock {
-    block: Block,
+pub struct BtnTool {
+    tool: Tool,
 }
 
 #[derive(Resource)]
@@ -21,12 +21,12 @@ pub struct Toolbar {
 
 pub fn toolbar_select(
     mut toolbar: ResMut<Toolbar>,
-    mut btn_query: Query<(&Interaction, &BtnToolbarBlock, &mut BackgroundColor)>,
+    mut btn_query: Query<(&Interaction, &BtnTool, &mut BackgroundColor)>,
 ) {
     for (interaction, btn, mut bkg) in &mut btn_query {
         match *interaction {
             Interaction::Pressed => {
-                toolbar.tool = Tool::PlaceBlocks(btn.block);
+                toolbar.tool = btn.tool.clone();
                 bkg.0 = BTN_PRESSED;
             }
             Interaction::Hovered => {
@@ -37,12 +37,8 @@ pub fn toolbar_select(
             }
         }
 
-        match toolbar.tool {
-            Tool::PlaceBlocks(block) => {
-                if btn.block == block {
-                    bkg.0 = BTN_TOGGLED;
-                }
-            }
+        if btn.tool == toolbar.tool {
+            bkg.0 = BTN_TOGGLED;
         }
     }
 }
@@ -70,6 +66,34 @@ pub fn setup_block_toolbar_ui(mut commands: Commands) {
             Interaction::None,
         ))
         .with_children(|parent| {
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(48.0),
+                            height: Val::Px(48.0),
+                            justify_content: JustifyContent::Center,
+                            align_content: AlignContent::Center,
+                            ..default()
+                        },
+                        background_color: BTN_NONE.into(),
+                        ..default()
+                    },
+                    BtnTool {
+                        tool: Tool::ClearBlocks,
+                    },
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "clear",
+                        TextStyle {
+                            font_size: 18.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                            ..default()
+                        },
+                    ));
+                });
+
             vec![
                 Block::GRASS,
                 Block::DIRT,
@@ -94,7 +118,9 @@ pub fn setup_block_toolbar_ui(mut commands: Commands) {
                             background_color: BTN_NONE.into(),
                             ..default()
                         },
-                        BtnToolbarBlock { block },
+                        BtnTool {
+                            tool: Tool::PlaceBlocks(block),
+                        },
                     ))
                     .with_children(|parent| {
                         parent.spawn(TextBundle::from_section(

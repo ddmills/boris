@@ -94,9 +94,11 @@ pub fn process_dirty_chunks(
     mut terrain: ResMut<Terrain>,
     mut meshes: ResMut<Assets<Mesh>>,
     chunks: Query<&Chunk>,
+    mut ev_terrain_slice: EventWriter<TerrainSliceChanged>,
 ) {
     let maximum = 1;
     let mut cur = 0;
+    let mut update_slice = false;
 
     chunks.iter().for_each(|chunk| {
         let is_dirty = terrain.get_chunk_dirty(chunk.chunk_idx);
@@ -120,7 +122,13 @@ pub fn process_dirty_chunks(
         }
 
         terrain.set_chunk_dirty(chunk.chunk_idx, false);
+
+        update_slice = true;
     });
+
+    if update_slice {
+        ev_terrain_slice.send(TerrainSliceChanged);
+    }
 }
 
 pub fn on_slice_changed(

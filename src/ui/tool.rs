@@ -1,14 +1,23 @@
 use bevy::{
+    asset::{AssetServer, Assets, Handle},
     ecs::{
+        event::EventWriter,
         query::With,
-        system::{Local, Query, Res, ResMut},
+        system::{Commands, Local, Query, Res, ResMut},
     },
     input::{mouse::MouseButton, ButtonInput},
-    math::Vec3,
+    math::{primitives::Cuboid, Vec3},
+    pbr::{MaterialMeshBundle, StandardMaterial},
+    prelude::default,
+    render::{color::Color, mesh::Mesh},
     transform::components::Transform,
 };
 
-use crate::{controls::Raycast, Block, Cursor, Terrain};
+use crate::{
+    colonists::{Colonist, SpawnColonistEvent},
+    controls::Raycast,
+    Block, Cursor, Terrain,
+};
 
 use super::Toolbar;
 
@@ -16,6 +25,7 @@ use super::Toolbar;
 pub enum Tool {
     PlaceBlocks(Block),
     ClearBlocks,
+    SpawnColonist,
 }
 
 #[derive(Default)]
@@ -25,12 +35,14 @@ pub struct ToolState {
 }
 
 pub fn tool_system(
+    mut commands: Commands,
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
     mut terrain: ResMut<Terrain>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut state: Local<ToolState>,
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
+    mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
 ) {
     match toolbar.tool {
         Tool::PlaceBlocks(block) => {
@@ -82,8 +94,7 @@ pub fn tool_system(
                     ((max_z - min_z) + 1) as f32,
                 );
                 cursor.scale = scale;
-                cursor.translation =
-                    Vec3::new(min_x as f32, min_y as f32, min_z as f32) + scale / 2.;
+                cursor.translation = Vec3::new(min_x as f32, min_y as f32, min_z as f32);
             }
         }
         Tool::ClearBlocks => {
@@ -135,8 +146,18 @@ pub fn tool_system(
                     ((max_z - min_z) + 1) as f32,
                 );
                 cursor.scale = scale;
-                cursor.translation =
-                    Vec3::new(min_x as f32, min_y as f32, min_z as f32) + scale / 2.;
+                cursor.translation = Vec3::new(min_x as f32, min_y as f32, min_z as f32);
+            }
+        }
+        Tool::SpawnColonist => {
+            if mouse_input.just_released(MouseButton::Left) {
+                if !raycast.is_adj_hit {
+                    return;
+                }
+
+                ev_spawn_colonist.send(SpawnColonistEvent {
+                    pos: raycast.adj_pos,
+                });
             }
         }
     }

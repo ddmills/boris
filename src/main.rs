@@ -2,6 +2,8 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::input::ButtonState;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
+use bevy_obj::ObjPlugin;
+use colonists::{on_spawn_colonist, SpawnColonistEvent};
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
 use terrain::*;
@@ -9,6 +11,7 @@ use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
 };
 
+mod colonists;
 mod common;
 mod controls;
 mod debug;
@@ -31,8 +34,9 @@ fn main() {
             adj_pos: [0, 0, 0],
             hit_block: Block::EMPTY,
         })
+        .add_event::<SpawnColonistEvent>()
         .add_event::<TerrainSliceChanged>()
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, ObjPlugin))
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
             ..default()
@@ -67,6 +71,7 @@ fn main() {
         .add_systems(Update, update_camera)
         .add_systems(Update, toolbar_select)
         .add_systems(Update, tool_system)
+        .add_systems(Update, on_spawn_colonist)
         .run();
 }
 
@@ -108,10 +113,10 @@ struct Cursor {}
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+    asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = meshes.add(Cuboid::new(1., 1., 1.));
+    let mesh = asset_server.load("meshes/cube.obj");
     let material = materials.add(Color::RED);
 
     commands.spawn((

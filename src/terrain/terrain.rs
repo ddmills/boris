@@ -1,7 +1,7 @@
 use bevy::ecs::system::Resource;
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{Block, BlockBuffer, BlockDetail, BlockFace, LightNode};
+use crate::{common::sig_num, Block, BlockBuffer, BlockDetail, BlockFace, LightNode};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -492,16 +492,6 @@ impl Terrain {
             attempts,
             face: BlockFace::PosY,
         }
-    }
-}
-
-fn sig_num(v: f32) -> i32 {
-    if v > 0. {
-        1
-    } else if v < 0. {
-        -1
-    } else {
-        0
     }
 }
 

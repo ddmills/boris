@@ -1,20 +1,17 @@
 use bevy::{
-    asset::{AssetServer, Assets, Handle},
     ecs::{
         event::EventWriter,
         query::With,
-        system::{Commands, Local, Query, Res, ResMut},
+        system::{Local, Query, Res, ResMut},
     },
     input::{mouse::MouseButton, ButtonInput},
-    math::{primitives::Cuboid, Vec3},
-    pbr::{MaterialMeshBundle, StandardMaterial},
-    prelude::default,
-    render::{color::Color, mesh::Mesh},
+    math::Vec3,
     transform::components::Transform,
 };
 
 use crate::{
-    colonists::{Colonist, SpawnColonistEvent},
+    colonists::{PathfindEvent, SpawnColonistEvent},
+    common::min_max,
     controls::Raycast,
     Block, Cursor, Terrain,
 };
@@ -26,6 +23,7 @@ pub enum Tool {
     PlaceBlocks(Block),
     ClearBlocks,
     SpawnColonist,
+    Pathfind,
 }
 
 #[derive(Default)]
@@ -35,7 +33,6 @@ pub struct ToolState {
 }
 
 pub fn tool_system(
-    mut commands: Commands,
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
     mut terrain: ResMut<Terrain>,
@@ -43,6 +40,7 @@ pub fn tool_system(
     mut state: Local<ToolState>,
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
+    mut ev_pathfind: EventWriter<PathfindEvent>,
 ) {
     match toolbar.tool {
         Tool::PlaceBlocks(block) => {
@@ -160,13 +158,16 @@ pub fn tool_system(
                 });
             }
         }
-    }
-}
+        Tool::Pathfind => {
+            if mouse_input.just_released(MouseButton::Left) {
+                if !raycast.is_adj_hit {
+                    return;
+                }
 
-fn min_max(a: u32, b: u32) -> [u32; 2] {
-    if a > b {
-        [b, a]
-    } else {
-        [a, b]
+                ev_pathfind.send(PathfindEvent {
+                    pos: raycast.adj_pos,
+                });
+            }
+        }
     }
 }

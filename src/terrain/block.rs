@@ -29,14 +29,7 @@ impl Block {
         match *self {
             Self::OOB => false,
             Self::EMPTY => false,
-            Self::STONE => true,
-            Self::DIRT => true,
-            Self::GRASS => true,
-            Self::LAMP => true,
-            Self::MAGMA => true,
-            Self::ASHLAR_LARGE => true,
-            Self::ASHLAR => true,
-            _ => false,
+            _ => true,
         }
     }
 

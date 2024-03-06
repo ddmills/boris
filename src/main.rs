@@ -3,7 +3,9 @@ use bevy::input::ButtonState;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
-use colonists::{on_spawn_colonist, SpawnColonistEvent};
+use colonists::{
+    on_pathfind, on_spawn_colonist, path_follow, pathfinding, PathfindEvent, SpawnColonistEvent,
+};
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
 use terrain::*;
@@ -35,6 +37,7 @@ fn main() {
             hit_block: Block::EMPTY,
         })
         .add_event::<SpawnColonistEvent>()
+        .add_event::<PathfindEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_plugins((DefaultPlugins, ObjPlugin))
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
@@ -72,6 +75,9 @@ fn main() {
         .add_systems(Update, toolbar_select)
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
+        .add_systems(Update, pathfinding)
+        .add_systems(Update, on_pathfind)
+        .add_systems(Update, path_follow)
         .run();
 }
 

@@ -8,6 +8,7 @@ bevy = { version = "0.13.0" }
 bevy_obj = "0.13.0"
 fastnoise-lite = "=1.0.1"
 ndshape = "0.3.0"
+ordered-float = "4.2.0"
 
 # [profile.dev]bevy = { version = "0.13.0" }
 # opt-level = 1

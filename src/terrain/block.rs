@@ -29,6 +29,11 @@ impl Block {
         !matches!(*self, Self::OOB | Self::EMPTY)
     }
 
+    /// can the block be walked through
+    pub fn is_navigable(&self) -> bool {
+        matches!(*self, Self::EMPTY)
+    }
+
     pub fn is_opaque(&self) -> bool {
         match *self {
             Self::OOB => true,

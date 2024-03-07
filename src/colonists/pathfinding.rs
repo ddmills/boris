@@ -43,15 +43,17 @@ pub fn path_follow(
         let target = Vec3::new(next_pos[0] as f32, next_pos[1] as f32, next_pos[2] as f32);
 
         let direction = (target - transform.translation).normalize();
+        let distance = transform.translation.distance(target);
+        let move_dist = time.delta_seconds() * 4.;
 
-        if transform.translation.distance(target) < 0.01 {
+        if distance < move_dist {
             if pather.current <= 1 {
                 commands.entity(entity).remove::<Path>();
             } else {
                 pather.current -= 1;
             }
         } else {
-            transform.translation += direction * time.delta_seconds() * 3.;
+            transform.translation += direction * move_dist;
         }
 
         for i in 1..pather.path.len() {
@@ -100,7 +102,7 @@ pub fn pathfinding(
             cost: |a, b| {
                 let block = terrain.get_block_detail_i32(b[0], b[1], b[2]);
 
-                if block.block != Block::EMPTY {
+                if !block.block.is_navigable() {
                     return f32::INFINITY;
                 }
 

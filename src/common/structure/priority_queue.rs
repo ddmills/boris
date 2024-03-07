@@ -27,6 +27,7 @@ pub struct PriorityQueue<T, A: Ord + PartialEq + Eq + PartialOrd> {
     heap: BinaryHeap<PriorityQueueItem<T, A>>,
 }
 
+#[allow(dead_code)]
 impl<T, A: Ord + PartialEq + Eq + PartialOrd> PriorityQueue<T, A> {
     pub fn new() -> Self {
         Self {

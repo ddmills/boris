@@ -26,11 +26,7 @@ impl Block {
     }
 
     pub fn is_filled(&self) -> bool {
-        match *self {
-            Self::OOB => false,
-            Self::EMPTY => false,
-            _ => true,
-        }
+        !matches!(*self, Self::OOB | Self::EMPTY)
     }
 
     pub fn is_opaque(&self) -> bool {

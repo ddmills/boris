@@ -1,5 +1,3 @@
-use bevy::input::mouse::MouseButtonInput;
-use bevy::input::ButtonState;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
@@ -65,7 +63,6 @@ fn main() {
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
-        .add_systems(Update, testing)
         .add_systems(Update, scroll_events)
         .add_systems(Update, process_dirty_chunks)
         .add_systems(Update, on_slice_changed)
@@ -79,39 +76,6 @@ fn main() {
         .add_systems(Update, on_pathfind)
         .add_systems(Update, path_follow)
         .run();
-}
-
-fn testing(
-    mut terrain: ResMut<Terrain>,
-    mut click_evt: EventReader<MouseButtonInput>,
-    raycast: Res<Raycast>,
-) {
-    for ev in click_evt.read() {
-        if ev.state != ButtonState::Pressed {
-            continue;
-        }
-
-        if let MouseButton::Right = ev.button {
-            if !raycast.is_hit {
-                return;
-            }
-
-            println!(
-                "remove block {},{},{} -> {}",
-                raycast.hit_pos[0],
-                raycast.hit_pos[1],
-                raycast.hit_pos[2],
-                raycast.hit_block.name()
-            );
-
-            terrain.set_block(
-                raycast.hit_pos[0],
-                raycast.hit_pos[1],
-                raycast.hit_pos[2],
-                Block::EMPTY,
-            );
-        }
-    }
 }
 
 #[derive(Component, Default)]

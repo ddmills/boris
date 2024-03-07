@@ -1,7 +1,8 @@
 use ordered_float::*;
 use std::collections::HashMap;
 
-use super::{Distance, DistanceFormula, PriorityQueue};
+use super::{Distance, DistanceFormula};
+use crate::common::PriorityQueue;
 
 pub struct AStarSettings<F>
 where

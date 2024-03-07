@@ -1,5 +1,3 @@
-use std::path;
-
 use bevy::{
     ecs::{
         component::Component,

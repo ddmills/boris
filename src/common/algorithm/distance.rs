@@ -1,5 +1,6 @@
 use crate::common::{max_3, min_3};
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum DistanceFormula {
     Manhattan,

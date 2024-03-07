@@ -11,6 +11,7 @@ use bevy::{
     gizmos::gizmos::Gizmos,
     math::Vec3,
     render::color::Color,
+    time::Time,
     transform::components::Transform,
 };
 
@@ -33,17 +34,36 @@ pub struct Path {
     current: usize,
 }
 
-pub fn path_follow(mut gizmos: Gizmos, mut commands: Commands, pathers: Query<&mut Path>) {
-    for pather in pathers.iter() {
-        for i in 1..pather.path.len() {
-            let prev = pather.path[i - 1];
-            let cur = pather.path[i];
+pub fn path_follow(
+    time: Res<Time>,
+    mut gizmos: Gizmos,
+    mut commands: Commands,
+    mut pathers: Query<(Entity, &mut Path, &mut Transform)>,
+) {
+    for (entity, mut pather, mut transform) in pathers.iter_mut() {
+        let next_pos = pather.path[pather.current];
+        let target = Vec3::new(next_pos[0] as f32, next_pos[1] as f32, next_pos[2] as f32);
 
+        let direction = (target - transform.translation).normalize();
+
+        if transform.translation.distance(target) < 0.01 {
+            if pather.current <= 1 {
+                commands.entity(entity).remove::<Path>();
+            } else {
+                pather.current -= 1;
+            }
+        } else {
+            transform.translation += direction * time.delta_seconds() * 3.;
+        }
+
+        for i in 1..pather.path.len() {
+            let current = pather.path[i - 1];
+            let next = pather.path[i];
             let mid = Vec3::new(0.5, 0.5, 0.5);
 
             gizmos.line(
-                Vec3::new(prev[0] as f32, prev[1] as f32, prev[2] as f32) + mid,
-                Vec3::new(cur[0] as f32, cur[1] as f32, cur[2] as f32) + mid,
+                Vec3::new(current[0] as f32, current[1] as f32, current[2] as f32) + mid,
+                Vec3::new(next[0] as f32, next[1] as f32, next[2] as f32) + mid,
                 Color::RED,
             );
         }
@@ -102,8 +122,8 @@ pub fn pathfinding(
 
         if result.is_success {
             commands.entity(e).insert(Path {
+                current: result.path.len() - 2, // first one is the starting position
                 path: result.path,
-                current: 0,
             });
         }
     }

@@ -2,7 +2,7 @@
 /// against `fill`. The `fill` function needs to both check if the point
 /// should be filled (bool), and fill it in.
 #[allow(dead_code)]
-pub fn flood_fill<F: Fn([i32; 3]) -> bool>(seed: [i32; 3], fill: F) {
+pub fn flood_fill<F: FnMut([i32; 3]) -> bool>(seed: [i32; 3], mut fill: F) {
     let mut queue = vec![seed];
 
     while let Some(p) = queue.pop() {

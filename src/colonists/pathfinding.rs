@@ -15,7 +15,7 @@ use bevy::{
 
 use crate::{
     common::{astar, AStarSettings, Distance},
-    Block, Terrain,
+    Terrain,
 };
 
 use super::{Colonist, PathfindEvent};

@@ -1,7 +1,9 @@
 use bevy::ecs::system::Resource;
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{common::sig_num, Block, BlockBuffer, BlockDetail, BlockFace, LightNode};
+use crate::{
+    colonists::Partition, common::sig_num, Block, BlockBuffer, BlockDetail, BlockFace, LightNode,
+};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -115,6 +117,17 @@ impl Terrain {
             pos[0] * self.chunk_size,
             pos[1] * self.chunk_size,
             pos[2] * self.chunk_size,
+        ]
+    }
+
+    pub fn get_block_world_pos(&self, chunk_idx: u32, block_idx: u32) -> [u32; 3] {
+        let chunk_pos = self.get_chunk_offset(chunk_idx);
+        let block_pos = self.chunk_shape.delinearize(block_idx);
+
+        [
+            chunk_pos[0] + block_pos[0],
+            chunk_pos[1] + block_pos[1],
+            chunk_pos[2] + block_pos[2],
         ]
     }
 
@@ -305,6 +318,14 @@ impl Terrain {
         0
     }
 
+    pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
+        if self.is_oob(x, y, z) {
+            return Block::OOB;
+        }
+
+        self.get_block(x as u32, y as u32, z as u32)
+    }
+
     pub fn get_block_detail_i32(&self, x: i32, y: i32, z: i32) -> BlockDetail {
         if self.is_oob(x, y, z) {
             return BlockDetail {
@@ -315,6 +336,31 @@ impl Terrain {
         }
 
         self.get_block_detail(x as u32, y as u32, z as u32)
+    }
+
+    pub fn set_partition(&mut self, chunk_idx: u32, block_idx: u32, value: u16) {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.set_partition(block_idx, value);
+        }
+    }
+
+    pub fn get_partition(&self, chunk_idx: u32, block_idx: u32) -> u16 {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_partition(block_idx);
+        }
+
+        Partition::NONE
+    }
+
+    pub fn get_neighbors_immediate(&self, x: u32, y: u32, z: u32) -> [Block; 6] {
+        [
+            self.get_block(x + 1, y, z),
+            self.get_block(x - 1, y, z),
+            self.get_block(x, y + 1, z),
+            self.get_block(x, y - 1, z),
+            self.get_block(x, y, z + 1),
+            self.get_block(x, y, z - 1),
+        ]
     }
 
     pub fn get_neighbors_detail(&self, x: u32, y: u32, z: u32) -> [BlockDetail; 26] {

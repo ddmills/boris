@@ -102,7 +102,7 @@ pub fn pathfinding(
             cost: |a, b| {
                 let block = terrain.get_block_detail_i32(b[0], b[1], b[2]);
 
-                if !block.block.is_navigable() {
+                if !block.block.is_empty() {
                     return f32::INFINITY;
                 }
 

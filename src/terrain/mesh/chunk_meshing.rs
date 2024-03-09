@@ -21,7 +21,7 @@ pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
 pub const ATTRIBUTE_BLOCK_LIGHT: MeshVertexAttribute =
     MeshVertexAttribute::new("BlockLight", 98218357661, VertexFormat::Uint32);
 
-pub fn setup_chunks(
+pub fn setup_chunk_meshes(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,

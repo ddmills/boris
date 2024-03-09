@@ -80,6 +80,34 @@ pub fn setup_block_toolbar_ui(mut commands: Commands) {
                         ..default()
                     },
                     BtnTool {
+                        tool: Tool::BlockInfo,
+                    },
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "info",
+                        TextStyle {
+                            font_size: 18.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                            ..default()
+                        },
+                    ));
+                });
+
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(48.0),
+                            height: Val::Px(48.0),
+                            justify_content: JustifyContent::Center,
+                            align_content: AlignContent::Center,
+                            ..default()
+                        },
+                        background_color: BTN_NONE.into(),
+                        ..default()
+                    },
+                    BtnTool {
                         tool: Tool::ClearBlocks,
                     },
                 ))
@@ -158,6 +186,7 @@ pub fn setup_block_toolbar_ui(mut commands: Commands) {
                 Block::ASHLAR_LARGE,
                 Block::LAMP,
                 Block::MAGMA,
+                Block::LADDER,
             ]
             .into_iter()
             .for_each(|block: Block| {

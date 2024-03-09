@@ -18,6 +18,7 @@ impl Block {
     pub const MAGMA: Self = Self(6);
     pub const ASHLAR_LARGE: Self = Self(7);
     pub const ASHLAR: Self = Self(8);
+    pub const LADDER: Self = Self(9);
 }
 
 impl Block {
@@ -29,8 +30,7 @@ impl Block {
         !matches!(*self, Self::OOB | Self::EMPTY)
     }
 
-    /// can the block be walked through
-    pub fn is_navigable(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         matches!(*self, Self::EMPTY)
     }
 
@@ -62,6 +62,7 @@ impl Block {
             Self::ASHLAR_LARGE => 4,
             Self::ASHLAR => 5,
             Self::MAGMA => 6,
+            Self::LADDER => 7,
             Self::LAMP => 8,
             _ => 0,
         }
@@ -78,6 +79,7 @@ impl Block {
             Self::MAGMA => String::from("magma"),
             Self::ASHLAR_LARGE => String::from("ashlar (large)"),
             Self::ASHLAR => String::from("ashlar"),
+            Self::LADDER => String::from("ladder"),
             _ => String::from("unknown"),
         }
     }

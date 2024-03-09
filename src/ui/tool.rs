@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{PathfindEvent, SpawnColonistEvent},
+    colonists::{Partition, PartitionGraph, PathfindEvent, SpawnColonistEvent},
     common::min_max,
     controls::Raycast,
     Block, Cursor, Terrain,
@@ -24,6 +24,7 @@ pub enum Tool {
     ClearBlocks,
     SpawnColonist,
     Pathfind,
+    BlockInfo,
 }
 
 #[derive(Default)]
@@ -35,6 +36,7 @@ pub struct ToolState {
 pub fn tool_system(
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
+    graph: Res<PartitionGraph>,
     mut terrain: ResMut<Terrain>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut state: Local<ToolState>,
@@ -167,6 +169,31 @@ pub fn tool_system(
                 ev_pathfind.send(PathfindEvent {
                     pos: raycast.adj_pos,
                 });
+            }
+        }
+        Tool::BlockInfo => {
+            if mouse_input.just_released(MouseButton::Left) {
+                if !raycast.is_adj_hit {
+                    return;
+                }
+
+                let [chunk_idx, block_idx] = terrain.get_block_indexes(
+                    raycast.adj_pos[0],
+                    raycast.adj_pos[1],
+                    raycast.adj_pos[2],
+                );
+                let partition_id = terrain.get_partition(chunk_idx, block_idx);
+
+                if partition_id != Partition::NONE {
+                    let partition = graph.partitions.get(&partition_id).unwrap();
+
+                    println!("partition {}, {}", partition_id, partition.is_computed);
+                    for n in partition.neighbors.iter() {
+                        println!("neighbor {}", n);
+                    }
+                } else {
+                    println!("no partition");
+                }
             }
         }
     }

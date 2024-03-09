@@ -49,11 +49,11 @@ pub fn partition_debug(
     }
 
     if let Some(partition) = graph.partitions.get(&debug.id) {
-        debug_partition(partition, &terrain, &mut gizmos, Color::GREEN);
+        debug_partition(partition, &terrain, &mut gizmos, Color::SALMON);
     }
 
     for neighbor in graph.get_neighbors(debug.id) {
-        debug_partition(neighbor, &terrain, &mut gizmos, Color::YELLOW_GREEN);
+        debug_partition(neighbor, &terrain, &mut gizmos, Color::SEA_GREEN);
     }
 }
 
@@ -90,14 +90,17 @@ fn debug_partition(
 pub struct PartitionGraph {
     pub partitions: HashMap<u16, Partition>,
     cur_id: u16,
-    pub returned_ids: Vec<u16>, // todo: these would be "deleted" ids
+    pub returned_ids: Vec<u16>,
 }
 
 impl PartitionGraph {
     pub fn create_partition(&mut self, chunk_idx: u32) -> u16 {
-        self.cur_id += 1;
+        let id = self.returned_ids.pop().unwrap_or_else(|| {
+            self.cur_id += 1;
+            self.cur_id
+        });
         let p = Partition {
-            id: self.cur_id,
+            id,
             chunk_idx,
             neighbors: HashSet::new(),
             is_computed: false,
@@ -106,7 +109,7 @@ impl PartitionGraph {
 
         self.partitions.insert(p.id, p);
 
-        self.cur_id
+        id
     }
 
     pub fn get_partition_mut(&mut self, partition_id: u16) -> Option<&mut Partition> {
@@ -166,6 +169,7 @@ impl PartitionGraph {
 
         for id in partition_ids {
             partitions.push(self.partitions.remove(&id).unwrap());
+            self.returned_ids.push(id);
         }
 
         partitions

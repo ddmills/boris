@@ -21,7 +21,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(4, 4, 4, 16))
+        .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(Block::STONE),
         })

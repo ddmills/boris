@@ -12,8 +12,8 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::{
-    pack_block, Block, BlockFace, Chunk, ChunkMaterial, ChunkMaterialRes, Neighbor, Terrain,
-    TerrainSlice, TerrainSliceChanged, VertexCornerCount,
+    colonists::PartitionEvent, pack_block, Block, BlockFace, Chunk, ChunkMaterial,
+    ChunkMaterialRes, Neighbor, Terrain, TerrainSlice, TerrainSliceChanged, VertexCornerCount,
 };
 
 pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
@@ -95,6 +95,7 @@ pub fn process_dirty_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     chunks: Query<&Chunk>,
     mut ev_terrain_slice: EventWriter<TerrainSliceChanged>,
+    mut ev_partition: EventWriter<PartitionEvent>,
 ) {
     let maximum = 1;
     let mut cur = 0;
@@ -124,6 +125,10 @@ pub fn process_dirty_chunks(
         terrain.set_chunk_dirty(chunk.chunk_idx, false);
 
         update_slice = true;
+        ev_partition.send(PartitionEvent {
+            chunk_idx: chunk.chunk_idx,
+            refresh: true,
+        });
     });
 
     if update_slice {

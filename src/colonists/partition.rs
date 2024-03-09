@@ -1,6 +1,9 @@
 use bevy::{
-    ecs::system::{Res, ResMut, Resource},
-    gizmos::gizmos::Gizmos,
+    ecs::{
+        event::{Event, EventReader, EventWriter},
+        system::{Res, ResMut, Resource},
+    },
+    gizmos::{self, gizmos::Gizmos},
     math::Vec3,
     render::color::Color,
     utils::{HashMap, HashSet},
@@ -23,6 +26,10 @@ impl Partition {
     pub fn add_block(&mut self, block_idx: u32) {
         self.blocks.push(block_idx);
     }
+
+    pub fn remove_neighbor(&mut self, neighbor_id: u16) {
+        self.neighbors.remove(&neighbor_id);
+    }
 }
 
 #[derive(Resource, Default)]
@@ -42,27 +49,40 @@ pub fn partition_debug(
     }
 
     if let Some(partition) = graph.partitions.get(&debug.id) {
-        for block_idx in partition.blocks.iter() {
-            let [x, y, z] = terrain.get_block_world_pos(partition.chunk_idx, *block_idx);
-            let pos = Vec3::new(x as f32, y as f32 + 0.1, z as f32);
+        debug_partition(partition, &terrain, &mut gizmos, Color::GREEN);
+    }
 
-            gizmos.line(pos, pos + Vec3::new(1., 0., 0.), Color::GRAY);
-            gizmos.line(pos, pos + Vec3::new(0., 0., 1.), Color::GRAY);
+    for neighbor in graph.get_neighbors(debug.id) {
+        debug_partition(neighbor, &terrain, &mut gizmos, Color::YELLOW_GREEN);
+    }
+}
 
-            gizmos.line(pos, pos + Vec3::new(1., 0., 0.), Color::GRAY);
-            gizmos.line(pos, pos + Vec3::new(0., 0., 1.), Color::GRAY);
+fn debug_partition(
+    partition: &Partition,
+    terrain: &Res<Terrain>,
+    gizmos: &mut Gizmos,
+    color: Color,
+) {
+    for block_idx in partition.blocks.iter() {
+        let [x, y, z] = terrain.get_block_world_pos(partition.chunk_idx, *block_idx);
+        let pos = Vec3::new(x as f32, y as f32 + 0.02, z as f32);
 
-            gizmos.line(
-                pos + Vec3::new(1., 0., 1.),
-                pos + Vec3::new(1., 0., 0.),
-                Color::GRAY,
-            );
-            gizmos.line(
-                pos + Vec3::new(1., 0., 1.),
-                pos + Vec3::new(0., 0., 1.),
-                Color::GRAY,
-            );
-        }
+        gizmos.line(pos, pos + Vec3::new(1., 0., 0.), color);
+        gizmos.line(pos, pos + Vec3::new(0., 0., 1.), color);
+
+        gizmos.line(pos, pos + Vec3::new(1., 0., 0.), color);
+        gizmos.line(pos, pos + Vec3::new(0., 0., 1.), color);
+
+        gizmos.line(
+            pos + Vec3::new(1., 0., 1.),
+            pos + Vec3::new(1., 0., 0.),
+            color,
+        );
+        gizmos.line(
+            pos + Vec3::new(1., 0., 1.),
+            pos + Vec3::new(0., 0., 1.),
+            color,
+        );
     }
 }
 
@@ -70,6 +90,7 @@ pub fn partition_debug(
 pub struct PartitionGraph {
     pub partitions: HashMap<u16, Partition>,
     cur_id: u16,
+    pub returned_ids: Vec<u16>, // todo: these would be "deleted" ids
 }
 
 impl PartitionGraph {
@@ -88,21 +109,83 @@ impl PartitionGraph {
         self.cur_id
     }
 
+    pub fn get_partition_mut(&mut self, partition_id: u16) -> Option<&mut Partition> {
+        self.partitions.get_mut(&partition_id)
+    }
+
+    pub fn get_partition(&self, partition_id: u16) -> Option<&Partition> {
+        self.partitions.get(&partition_id)
+    }
+
+    fn get_partition_ids_for_chunk(&self, chunk_idx: u32) -> Vec<u16> {
+        self.partitions
+            .iter()
+            .filter_map(|(id, p)| {
+                if p.chunk_idx == chunk_idx {
+                    Some(*id)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub fn get_neighbors(&self, partition_id: u16) -> Vec<&Partition> {
+        let Some(partition) = self.get_partition(partition_id) else {
+            return vec![];
+        };
+
+        partition
+            .neighbors
+            .iter()
+            .map(|n| self.get_partition(*n).unwrap())
+            .collect()
+    }
+
+    pub fn delete_partitions_for_chunk(&mut self, chunk_idx: u32) -> Vec<Partition> {
+        let partition_ids = self.get_partition_ids_for_chunk(chunk_idx);
+        let mut cleanups: Vec<[u16; 2]> = vec![];
+
+        for partition_id in partition_ids.clone() {
+            let partition = self.get_partition(partition_id).unwrap();
+
+            for neighbor_id in partition.neighbors.iter() {
+                cleanups.push([*neighbor_id, partition_id]);
+            }
+        }
+
+        let mut partitions = vec![];
+        let mut removed = vec![];
+
+        for [neighbor_id, remove_id] in cleanups {
+            self.get_partition_mut(neighbor_id)
+                .unwrap()
+                .remove_neighbor(remove_id);
+            removed.push(remove_id);
+        }
+
+        for id in partition_ids {
+            partitions.push(self.partitions.remove(&id).unwrap());
+        }
+
+        partitions
+    }
+
     pub fn is_partition_computed(&self, id: u16) -> bool {
-        if let Some(p) = self.partitions.get(&id) {
+        if let Some(p) = self.get_partition(id) {
             return p.is_computed;
         }
         false
     }
 
     pub fn set_partition_computed(&mut self, id: u16, value: bool) {
-        if let Some(p) = self.partitions.get_mut(&id) {
+        if let Some(p) = self.get_partition_mut(id) {
             p.is_computed = value;
         }
     }
 
     pub fn set_block(&mut self, partition_id: u16, block_idx: u32) {
-        if let Some(p) = self.partitions.get_mut(&partition_id) {
+        if let Some(p) = self.get_partition_mut(partition_id) {
             p.add_block(block_idx);
         }
     }
@@ -116,10 +199,29 @@ impl PartitionGraph {
     }
 }
 
-pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>) {
-    println!("partitioning world..");
+#[derive(Event)]
+pub struct PartitionEvent {
+    pub chunk_idx: u32,
+    pub refresh: bool,
+}
 
-    for chunk_idx in 0..terrain.chunk_count {
+pub fn partition(
+    mut terrain: ResMut<Terrain>,
+    mut graph: ResMut<PartitionGraph>,
+    mut partition_ev: EventReader<PartitionEvent>,
+) {
+    for ev in partition_ev.read() {
+        let chunk_idx = ev.chunk_idx;
+
+        if ev.refresh {
+            let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
+            for p in cleanups {
+                for b in p.blocks.iter() {
+                    terrain.set_partition(p.chunk_idx, *b, Partition::NONE);
+                }
+            }
+        }
+
         println!("partitioning chunk {}", chunk_idx);
         for block_idx in 0..terrain.chunk_shape.size() {
             let block = terrain.get_block_by_idx(chunk_idx, block_idx);
@@ -157,7 +259,6 @@ pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>
                 let new_partition_id = graph.create_partition(chunk_idx);
                 terrain.set_partition(chunk_idx, block_idx, new_partition_id);
                 graph.set_block(new_partition_id, block_idx);
-                println!("created new partition {}", new_partition_id);
             };
 
             let partition_id = terrain.get_partition(chunk_idx, block_idx);
@@ -173,7 +274,6 @@ pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>
             // next, flood fill from the block, looking for other
             // navigable blocks to add to the current partition
             flood_fill([x as i32, y as i32, z as i32], |[nx, ny, nz]| {
-                println!("flooding {} {} {}", nx, ny, nz);
                 if terrain.is_oob(nx, ny, nz) {
                     return false;
                 }
@@ -236,16 +336,23 @@ pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>
                 terrain.set_partition(nchunk_idx, nblock_idx, partition_id);
                 graph.set_block(partition_id, nblock_idx);
 
-                println!(
-                    "set partition for block {} {} {}",
-                    nchunk_idx, nblock_idx, partition_id
-                );
                 true
             });
 
             // we have flooded the partition, we mark it as computed
             graph.set_partition_computed(partition_id, true);
         }
+    }
+}
+
+pub fn partition_setup(terrain: Res<Terrain>, mut partition_chunk_ev: EventWriter<PartitionEvent>) {
+    println!("partitioning world..");
+
+    for chunk_idx in 0..terrain.chunk_count {
+        partition_chunk_ev.send(PartitionEvent {
+            chunk_idx,
+            refresh: false,
+        });
     }
     println!("..done partitioning world");
 }

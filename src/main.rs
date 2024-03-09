@@ -2,8 +2,8 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    on_pathfind, on_spawn_colonist, partition, path_follow, pathfinding, PartitionGraph,
-    PathfindEvent, SpawnColonistEvent,
+    on_pathfind, on_spawn_colonist, partition, partition_debug, path_follow, pathfinding,
+    PartitionDebug, PartitionGraph, PathfindEvent, SpawnColonistEvent,
 };
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
@@ -39,6 +39,7 @@ fn main() {
         .add_event::<PathfindEvent>()
         .add_event::<TerrainSliceChanged>()
         .init_resource::<PartitionGraph>()
+        .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -78,6 +79,7 @@ fn main() {
         .add_systems(Update, pathfinding)
         .add_systems(Update, on_pathfind)
         .add_systems(Update, path_follow)
+        .add_systems(Update, partition_debug)
         .run();
 }
 

@@ -1,5 +1,8 @@
 use bevy::{
     ecs::system::{Res, ResMut, Resource},
+    gizmos::gizmos::Gizmos,
+    math::Vec3,
+    render::color::Color,
     utils::{HashMap, HashSet},
 };
 use ndshape::AbstractShape;
@@ -10,10 +13,57 @@ pub struct Partition {
     id: u16,
     pub neighbors: HashSet<u16>,
     pub is_computed: bool,
+    pub chunk_idx: u32,
+    pub blocks: Vec<u32>,
 }
 
 impl Partition {
     pub const NONE: u16 = 0;
+
+    pub fn add_block(&mut self, block_idx: u32) {
+        self.blocks.push(block_idx);
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct PartitionDebug {
+    pub id: u16,
+    pub show: bool,
+}
+
+pub fn partition_debug(
+    terrain: Res<Terrain>,
+    graph: Res<PartitionGraph>,
+    debug: Res<PartitionDebug>,
+    mut gizmos: Gizmos,
+) {
+    if !debug.show {
+        return;
+    }
+
+    if let Some(partition) = graph.partitions.get(&debug.id) {
+        for block_idx in partition.blocks.iter() {
+            let [x, y, z] = terrain.get_block_world_pos(partition.chunk_idx, *block_idx);
+            let pos = Vec3::new(x as f32, y as f32 + 0.1, z as f32);
+
+            gizmos.line(pos, pos + Vec3::new(1., 0., 0.), Color::GRAY);
+            gizmos.line(pos, pos + Vec3::new(0., 0., 1.), Color::GRAY);
+
+            gizmos.line(pos, pos + Vec3::new(1., 0., 0.), Color::GRAY);
+            gizmos.line(pos, pos + Vec3::new(0., 0., 1.), Color::GRAY);
+
+            gizmos.line(
+                pos + Vec3::new(1., 0., 1.),
+                pos + Vec3::new(1., 0., 0.),
+                Color::GRAY,
+            );
+            gizmos.line(
+                pos + Vec3::new(1., 0., 1.),
+                pos + Vec3::new(0., 0., 1.),
+                Color::GRAY,
+            );
+        }
+    }
 }
 
 #[derive(Resource, Default)]
@@ -23,12 +73,14 @@ pub struct PartitionGraph {
 }
 
 impl PartitionGraph {
-    pub fn create_partition(&mut self) -> u16 {
+    pub fn create_partition(&mut self, chunk_idx: u32) -> u16 {
         self.cur_id += 1;
         let p = Partition {
             id: self.cur_id,
+            chunk_idx,
             neighbors: HashSet::new(),
             is_computed: false,
+            blocks: vec![],
         };
 
         self.partitions.insert(p.id, p);
@@ -46,6 +98,12 @@ impl PartitionGraph {
     pub fn set_partition_computed(&mut self, id: u16, value: bool) {
         if let Some(p) = self.partitions.get_mut(&id) {
             p.is_computed = value;
+        }
+    }
+
+    pub fn set_block(&mut self, partition_id: u16, block_idx: u32) {
+        if let Some(p) = self.partitions.get_mut(&partition_id) {
+            p.add_block(block_idx);
         }
     }
 
@@ -96,8 +154,9 @@ pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>
                 // if we are here, that means the block is navigable,
                 // and it is not assigned to a partition yet. We must
                 // create a new partition and assign it
-                let new_partition_id = graph.create_partition();
+                let new_partition_id = graph.create_partition(chunk_idx);
                 terrain.set_partition(chunk_idx, block_idx, new_partition_id);
+                graph.set_block(new_partition_id, block_idx);
                 println!("created new partition {}", new_partition_id);
             };
 
@@ -162,9 +221,10 @@ pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>
                     } else {
                         // a partition does not exist, create it, and add it as
                         // a neighbor
-                        let npartition_id = graph.create_partition();
+                        let npartition_id = graph.create_partition(nchunk_idx);
                         graph.set_neighbors(partition_id, npartition_id);
                         terrain.set_partition(nchunk_idx, nblock_idx, npartition_id);
+                        graph.set_block(npartition_id, nblock_idx);
                     }
 
                     // we do not create partitions across chunk boundaries
@@ -174,6 +234,7 @@ pub fn partition(mut terrain: ResMut<Terrain>, mut graph: ResMut<PartitionGraph>
                 // this block is navigable, and in the same chunk, so we assign it
                 // to the same partition and continue flooding.
                 terrain.set_partition(nchunk_idx, nblock_idx, partition_id);
+                graph.set_block(partition_id, nblock_idx);
 
                 println!(
                     "set partition for block {} {} {}",

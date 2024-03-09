@@ -3,14 +3,16 @@ use bevy::{
         event::{Event, EventReader, EventWriter},
         system::{Res, ResMut, Resource},
     },
-    gizmos::{self, gizmos::Gizmos},
+    gizmos::gizmos::Gizmos,
     math::Vec3,
     render::color::Color,
     utils::{HashMap, HashSet},
 };
 use ndshape::AbstractShape;
 
-use crate::{common::flood_fill, Terrain};
+use crate::{common::flood_fill, Block, Terrain};
+
+use super::PartitionFlags;
 
 pub struct Partition {
     id: u16,
@@ -18,6 +20,7 @@ pub struct Partition {
     pub is_computed: bool,
     pub chunk_idx: u32,
     pub blocks: Vec<u32>,
+    pub flags: PartitionFlags,
 }
 
 impl Partition {
@@ -105,6 +108,7 @@ impl PartitionGraph {
             neighbors: HashSet::new(),
             is_computed: false,
             blocks: vec![],
+            flags: PartitionFlags::NONE,
         };
 
         self.partitions.insert(p.id, p);
@@ -182,6 +186,19 @@ impl PartitionGraph {
         false
     }
 
+    pub fn get_flags(&self, id: u16) -> PartitionFlags {
+        if let Some(p) = self.get_partition(id) {
+            return p.flags;
+        }
+        PartitionFlags::NONE
+    }
+
+    pub fn set_flags(&mut self, id: u16, flags: PartitionFlags) {
+        if let Some(p) = self.get_partition_mut(id) {
+            p.flags = flags;
+        }
+    }
+
     pub fn set_partition_computed(&mut self, id: u16, value: bool) {
         if let Some(p) = self.get_partition_mut(id) {
             p.is_computed = value;
@@ -221,51 +238,31 @@ pub fn partition(
             let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
             for p in cleanups {
                 for b in p.blocks.iter() {
-                    terrain.set_partition(p.chunk_idx, *b, Partition::NONE);
+                    terrain.set_partition_id(p.chunk_idx, *b, Partition::NONE);
                 }
             }
         }
 
         println!("partitioning chunk {}", chunk_idx);
         for block_idx in 0..terrain.chunk_shape.size() {
-            let block = terrain.get_block_by_idx(chunk_idx, block_idx);
+            let [x, y, z] = terrain.get_block_world_pos(chunk_idx, block_idx);
 
-            let p_id = terrain.get_partition(chunk_idx, block_idx);
+            let seed_flags = get_block_flags(&terrain, x as i32, y as i32, z as i32);
 
-            if p_id == Partition::NONE {
-                // lets check if the block is navigable.
-                // a block can be navigated if it is empty,
-                // the block above it is empty, and the block
-                // below it is filled.
-                let is_empty = block.is_empty();
+            // don't partition empty space
+            if seed_flags == PartitionFlags::NONE {
+                continue;
+            }
 
-                if !is_empty {
-                    continue;
-                }
+            let mut partition_id = terrain.get_partition_id(chunk_idx, block_idx);
 
-                let [x, y, z] = terrain.get_block_world_pos(chunk_idx, block_idx);
-
-                let block_above = terrain.get_block(x, y + 1, z);
-
-                if !block_above.is_empty() {
-                    continue;
-                }
-
-                let block_below = terrain.get_block(x, y - 1, z);
-
-                if !block_below.is_filled() {
-                    continue;
-                }
-
+            if partition_id == Partition::NONE {
                 // if we are here, that means the block is navigable,
                 // and it is not assigned to a partition yet. We must
                 // create a new partition and assign it
-                let new_partition_id = graph.create_partition(chunk_idx);
-                terrain.set_partition(chunk_idx, block_idx, new_partition_id);
-                graph.set_block(new_partition_id, block_idx);
-            };
-
-            let partition_id = terrain.get_partition(chunk_idx, block_idx);
+                partition_id = graph.create_partition(chunk_idx);
+                graph.set_flags(partition_id, seed_flags);
+            }
 
             // if the block is already in a computed partition, it has
             // already been claimed and we can skip it.
@@ -273,10 +270,8 @@ pub fn partition(
                 continue;
             }
 
-            let [x, y, z] = terrain.get_block_world_pos(chunk_idx, block_idx);
-
             // next, flood fill from the block, looking for other
-            // navigable blocks to add to the current partition
+            // navigable blocks to add the current partition
             flood_fill([x as i32, y as i32, z as i32], |[nx, ny, nz]| {
                 if terrain.is_oob(nx, ny, nz) {
                     return false;
@@ -285,59 +280,50 @@ pub fn partition(
                 let [nchunk_idx, nblock_idx] =
                     terrain.get_block_indexes(nx as u32, ny as u32, nz as u32);
 
-                // todo: can the whole block before this be removed, and just done as part
-                // of the normal routine?
-                if nchunk_idx == chunk_idx && nblock_idx == block_idx {
-                    return true;
-                }
+                let npartition_id = terrain.get_partition_id(nchunk_idx, nblock_idx);
 
-                let npartition_id = terrain.get_partition(nchunk_idx, nblock_idx);
-
-                // have we already visited this block?
+                // if this block is already assigned to our partition,
+                // it means we have already visited it, and we should
+                // not flood from it again.
                 if npartition_id == partition_id {
                     return false;
                 }
 
-                let nblock = terrain.get_block_by_idx(nchunk_idx, nblock_idx);
+                let nblock_flags = get_block_flags(&terrain, nx, ny, nz);
 
-                if !nblock.is_empty() {
+                // this block is not navigable and won't fit in any partition
+                if nblock_flags == PartitionFlags::NONE {
                     return false;
                 }
 
-                let nblock_above = terrain.get_block_i32(nx, ny + 1, nz);
+                let npartition_flags = graph.get_flags(partition_id);
 
-                if !nblock_above.is_empty() {
-                    return false;
-                }
-
-                let nblock_below = terrain.get_block_i32(nx, ny - 1, nz);
-                if !nblock_below.is_filled() {
-                    return false;
-                }
-
-                // if the block belongs to a different chunk, we must check if
-                // it already has a partition. if not, create a new non-computed
-                // partition for it. We add this partition as a neighbor.
-                if nchunk_idx != chunk_idx {
+                // if we are in a different chunk, or if the flags do not match,
+                // we must determine which partition this block belongs to, and
+                // aassign it as a neighbor
+                if nblock_flags != npartition_flags || nchunk_idx != chunk_idx {
                     if npartition_id != Partition::NONE {
                         // a partition already exists, add it as a neighbor
                         graph.set_neighbors(partition_id, npartition_id);
                     } else {
-                        // a partition does not exist, create it, and add it as
-                        // a neighbor
+                        // a partition does not exist, create a new one, assign the
+                        // block to it, and add it as a neighbor
                         let npartition_id = graph.create_partition(nchunk_idx);
                         graph.set_neighbors(partition_id, npartition_id);
-                        terrain.set_partition(nchunk_idx, nblock_idx, npartition_id);
+                        terrain.set_partition_id(nchunk_idx, nblock_idx, npartition_id);
                         graph.set_block(npartition_id, nblock_idx);
+                        graph.set_flags(npartition_id, nblock_flags);
                     }
 
-                    // we do not create partitions across chunk boundaries
+                    // we are done flooding here, as we will process this neighbor
+                    // partition later.
                     return false;
                 }
 
-                // this block is navigable, and in the same chunk, so we assign it
-                // to the same partition and continue flooding.
-                terrain.set_partition(nchunk_idx, nblock_idx, partition_id);
+                // this block is navigable, it is in the same chunk, and it has
+                // matching flags, so we can assign it to the partition and
+                // continue flooding.
+                terrain.set_partition_id(nchunk_idx, nblock_idx, partition_id);
                 graph.set_block(partition_id, nblock_idx);
 
                 true
@@ -347,6 +333,33 @@ pub fn partition(
             graph.set_partition_computed(partition_id, true);
         }
     }
+}
+
+fn get_block_flags(terrain: &ResMut<Terrain>, x: i32, y: i32, z: i32) -> PartitionFlags {
+    let block = terrain.get_block_i32(x, y, z);
+    let mut flags = PartitionFlags::NONE;
+
+    if !block.is_empty() {
+        if block == Block::LADDER {
+            flags |= PartitionFlags::LADDER;
+        } else {
+            return flags;
+        }
+    }
+
+    let nblock_below = terrain.get_block_i32(x, y - 1, z);
+
+    if nblock_below.is_filled() {
+        flags |= PartitionFlags::SOLID_GROUND;
+
+        let nblock_above = terrain.get_block_i32(x, y + 1, z);
+
+        if nblock_above.is_empty() {
+            flags |= PartitionFlags::TALL;
+        }
+    }
+
+    flags
 }
 
 pub fn partition_setup(terrain: Res<Terrain>, mut partition_chunk_ev: EventWriter<PartitionEvent>) {

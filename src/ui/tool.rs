@@ -183,17 +183,20 @@ pub fn tool_system(
                     raycast.adj_pos[1],
                     raycast.adj_pos[2],
                 );
-                let partition_id = terrain.get_partition(chunk_idx, block_idx);
+                let partition_id = terrain.get_partition_id(chunk_idx, block_idx);
 
                 if partition_id != Partition::NONE {
                     let partition = graph.partitions.get(&partition_id).unwrap();
                     partition_debug.id = partition_id;
                     partition_debug.show = true;
 
-                    println!("partition {}, {}", partition_id, partition.is_computed);
-                    for n in partition.neighbors.iter() {
-                        println!("neighbor {}", n);
-                    }
+                    let flags = graph.get_flags(partition_id);
+
+                    println!("partition {}, {}", partition_id, flags);
+
+                    // for n in partition.neighbors.iter() {
+                    //     println!("neighbor {}", n);
+                    // }
                 } else {
                     println!("no partition");
                 }

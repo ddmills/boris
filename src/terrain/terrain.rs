@@ -338,13 +338,13 @@ impl Terrain {
         self.get_block_detail(x as u32, y as u32, z as u32)
     }
 
-    pub fn set_partition(&mut self, chunk_idx: u32, block_idx: u32, value: u16) {
+    pub fn set_partition_id(&mut self, chunk_idx: u32, block_idx: u32, value: u16) {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             chunk.set_partition(block_idx, value);
         }
     }
 
-    pub fn get_partition(&self, chunk_idx: u32, block_idx: u32) -> u16 {
+    pub fn get_partition_id(&self, chunk_idx: u32, block_idx: u32) -> u16 {
         if let Some(chunk) = self.get_chunk(chunk_idx) {
             return chunk.get_partition(block_idx);
         }

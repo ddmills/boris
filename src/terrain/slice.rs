@@ -4,7 +4,7 @@ use bevy::{
         event::{Event, EventReader, EventWriter},
         system::{Commands, Res, ResMut, Resource},
     },
-    input::mouse::MouseWheel,
+    input::{keyboard::KeyCode, mouse::MouseWheel, ButtonInput},
     pbr::{Material, MaterialMeshBundle, MaterialPipeline, MaterialPipelineKey},
     prelude::default,
     reflect::TypePath,
@@ -120,12 +120,16 @@ pub struct TerrainSliceChanged;
 
 pub fn scroll_events(
     mut scroll_evt: EventReader<MouseWheel>,
+    input_keys: Res<ButtonInput<KeyCode>>,
     mut terrain_slice: ResMut<TerrainSlice>,
     mut ev_terrain_slice: EventWriter<TerrainSliceChanged>,
 ) {
     for ev in scroll_evt.read() {
         match ev.unit {
             bevy::input::mouse::MouseScrollUnit::Line => {
+                if input_keys.pressed(KeyCode::ControlLeft) {
+                    continue;
+                }
                 let scroll = ev.y as i32;
                 let slice = terrain_slice.y as i32;
                 terrain_slice.set_value(slice + scroll);

@@ -10,9 +10,50 @@ use bevy::{
 };
 use ndshape::AbstractShape;
 
-use crate::{common::flood_fill, Block, Terrain};
+use crate::{colonists::partition_flags, common::flood_fill, Block, Terrain};
 
 use super::PartitionFlags;
+
+#[derive(Default)]
+pub struct PartitionExtents {
+    is_init: bool,
+    pub min_x: u32,
+    pub min_y: u32,
+    pub min_z: u32,
+    pub max_x: u32,
+    pub max_y: u32,
+    pub max_z: u32,
+}
+
+impl PartitionExtents {
+    pub fn center(&self) -> [u32; 3] {
+        [
+            self.min_x + (self.max_x - self.min_x) / 2,
+            self.min_y + (self.max_y - self.min_y) / 2,
+            self.min_z + (self.max_z - self.min_z) / 2,
+        ]
+    }
+
+    pub fn extend(&mut self, pos: [u32; 3]) {
+        if !self.is_init {
+            self.min_x = pos[0];
+            self.min_y = pos[1];
+            self.min_z = pos[2];
+            self.max_x = pos[0];
+            self.max_y = pos[1];
+            self.max_z = pos[2];
+            self.is_init = true;
+            return;
+        };
+
+        self.min_x = pos[0].min(self.min_x);
+        self.min_y = pos[1].min(self.min_y);
+        self.min_z = pos[2].min(self.min_z);
+        self.max_x = pos[0].max(self.max_x);
+        self.max_y = pos[1].max(self.max_y);
+        self.max_z = pos[2].max(self.max_z);
+    }
+}
 
 pub struct Partition {
     id: u16,
@@ -21,13 +62,15 @@ pub struct Partition {
     pub chunk_idx: u32,
     pub blocks: Vec<u32>,
     pub flags: PartitionFlags,
+    pub extents: PartitionExtents,
 }
 
 impl Partition {
     pub const NONE: u16 = 0;
 
-    pub fn add_block(&mut self, block_idx: u32) {
+    pub fn add_block(&mut self, block_idx: u32, block_pos: [u32; 3]) {
         self.blocks.push(block_idx);
+        self.extents.extend(block_pos);
     }
 
     pub fn remove_neighbor(&mut self, neighbor_id: u16) {
@@ -52,11 +95,17 @@ pub fn partition_debug(
     }
 
     if let Some(partition) = graph.partitions.get(&debug.id) {
-        debug_partition(partition, &terrain, &mut gizmos, Color::SALMON);
+        debug_partition(
+            partition,
+            &terrain,
+            &mut gizmos,
+            Color::OLIVE,
+            Color::ORANGE,
+        );
     }
 
     for neighbor in graph.get_neighbors(debug.id) {
-        debug_partition(neighbor, &terrain, &mut gizmos, Color::SEA_GREEN);
+        debug_partition(neighbor, &terrain, &mut gizmos, Color::GRAY, Color::GRAY);
     }
 }
 
@@ -65,6 +114,7 @@ fn debug_partition(
     terrain: &Res<Terrain>,
     gizmos: &mut Gizmos,
     color: Color,
+    color_extents: Color,
 ) {
     for block_idx in partition.blocks.iter() {
         let [x, y, z] = terrain.get_block_world_pos(partition.chunk_idx, *block_idx);
@@ -85,6 +135,84 @@ fn debug_partition(
             pos + Vec3::new(1., 0., 1.),
             pos + Vec3::new(0., 0., 1.),
             color,
+        );
+
+        let extents = &partition.extents;
+
+        let ex_min = Vec3::new(
+            extents.min_x as f32,
+            extents.min_y as f32,
+            extents.min_z as f32,
+        );
+        let ex_max = Vec3::new(
+            extents.max_x as f32 + 1.,
+            extents.max_y as f32 + 1.,
+            extents.max_z as f32 + 1.,
+        );
+
+        gizmos.line(
+            ex_min,
+            Vec3::new(ex_max.x, ex_min.y, ex_min.z),
+            color_extents,
+        );
+        gizmos.line(
+            ex_min,
+            Vec3::new(ex_min.x, ex_max.y, ex_min.z),
+            color_extents,
+        );
+        gizmos.line(
+            ex_min,
+            Vec3::new(ex_min.x, ex_min.y, ex_max.z),
+            color_extents,
+        );
+
+        gizmos.line(
+            ex_max,
+            Vec3::new(ex_min.x, ex_max.y, ex_max.z),
+            color_extents,
+        );
+        gizmos.line(
+            ex_max,
+            Vec3::new(ex_max.x, ex_min.y, ex_max.z),
+            color_extents,
+        );
+        gizmos.line(
+            ex_max,
+            Vec3::new(ex_max.x, ex_max.y, ex_min.z),
+            color_extents,
+        );
+
+        gizmos.line(
+            Vec3::new(ex_max.x, ex_min.y, ex_min.z),
+            Vec3::new(ex_max.x, ex_max.y, ex_min.z),
+            color_extents,
+        );
+        gizmos.line(
+            Vec3::new(ex_min.x, ex_max.y, ex_max.z),
+            Vec3::new(ex_min.x, ex_min.y, ex_max.z),
+            color_extents,
+        );
+
+        gizmos.line(
+            Vec3::new(ex_min.x, ex_max.y, ex_min.z),
+            Vec3::new(ex_max.x, ex_max.y, ex_min.z),
+            color_extents,
+        );
+        gizmos.line(
+            Vec3::new(ex_min.x, ex_min.y, ex_max.z),
+            Vec3::new(ex_max.x, ex_min.y, ex_max.z),
+            color_extents,
+        );
+
+        gizmos.line(
+            Vec3::new(ex_min.x, ex_max.y, ex_max.z),
+            Vec3::new(ex_min.x, ex_max.y, ex_min.z),
+            color_extents,
+        );
+        gizmos.line(
+            Vec3::new(ex_max.x, ex_min.y, ex_min.z),
+            Vec3::new(ex_max.x, ex_min.y, ex_max.z),
+            color_extents,
         );
     }
 }
@@ -109,11 +237,20 @@ impl PartitionGraph {
             is_computed: false,
             blocks: vec![],
             flags: PartitionFlags::NONE,
+            extents: PartitionExtents::default(),
         };
 
         self.partitions.insert(p.id, p);
 
         id
+    }
+
+    pub fn get_center(&self, partition_id: u16) -> Option<[u32; 3]> {
+        if let Some(p) = self.partitions.get(&partition_id) {
+            return Some(p.extents.center());
+        }
+
+        None
     }
 
     pub fn get_partition_mut(&mut self, partition_id: u16) -> Option<&mut Partition> {
@@ -205,9 +342,9 @@ impl PartitionGraph {
         }
     }
 
-    pub fn set_block(&mut self, partition_id: u16, block_idx: u32) {
+    pub fn set_block(&mut self, partition_id: u16, block_idx: u32, block_pos: [u32; 3]) {
         if let Some(p) = self.get_partition_mut(partition_id) {
-            p.add_block(block_idx);
+            p.add_block(block_idx, block_pos);
         }
     }
 
@@ -224,6 +361,50 @@ impl PartitionGraph {
 pub struct PartitionEvent {
     pub chunk_idx: u32,
     pub refresh: bool,
+}
+
+pub fn merge_partitions(
+    graph: &mut ResMut<PartitionGraph>,
+    terrain: &mut ResMut<Terrain>,
+    a_id: u16,
+    b_id: u16,
+) -> u16 {
+    // merge B into A
+    let b_partition = graph.get_partition(b_id).unwrap();
+    let block_idxs: Vec<u32> = b_partition.blocks.to_vec();
+    let neighbors_ids: Vec<u16> = b_partition.neighbors.iter().copied().collect();
+    let b_computed = b_partition.is_computed;
+    let a_partition = graph.get_partition_mut(a_id).unwrap();
+    a_partition.is_computed = a_partition.is_computed && b_computed;
+
+    // todo: merge neighbors
+    println!(
+        "merging {}->{}, {} blocks total",
+        b_id,
+        a_id,
+        block_idxs.len()
+    );
+
+    for block_idx in block_idxs {
+        let block_pos = terrain.get_block_world_pos(a_partition.chunk_idx, block_idx);
+        a_partition.add_block(block_idx, block_pos);
+        terrain.set_partition_id(a_partition.chunk_idx, block_idx, a_id);
+    }
+
+    for neighor_id in neighbors_ids {
+        if neighor_id == a_id {
+            continue;
+        }
+
+        if let Some(neighbor) = graph.get_partition_mut(neighor_id) {
+            neighbor.remove_neighbor(b_id);
+            graph.set_neighbors(a_id, neighor_id);
+        }
+    }
+
+    graph.partitions.remove(&b_id);
+
+    a_id
 }
 
 pub fn partition(
@@ -285,7 +466,7 @@ pub fn partition(
                 // if this block is already assigned to our partition,
                 // it means we have already visited it, and we should
                 // not flood from it again.
-                if npartition_id == partition_id {
+                if npartition_id == partition_id && block_idx != nblock_idx {
                     return false;
                 }
 
@@ -310,8 +491,13 @@ pub fn partition(
                         // block to it, and add it as a neighbor
                         let npartition_id = graph.create_partition(nchunk_idx);
                         graph.set_neighbors(partition_id, npartition_id);
+
                         terrain.set_partition_id(nchunk_idx, nblock_idx, npartition_id);
-                        graph.set_block(npartition_id, nblock_idx);
+                        graph.set_block(
+                            npartition_id,
+                            nblock_idx,
+                            [nx as u32, ny as u32, nz as u32],
+                        );
                         graph.set_flags(npartition_id, nblock_flags);
                     }
 
@@ -320,11 +506,15 @@ pub fn partition(
                     return false;
                 }
 
+                if npartition_id != Partition::NONE && npartition_id != partition_id {
+                    merge_partitions(&mut graph, &mut terrain, partition_id, npartition_id);
+                }
+
                 // this block is navigable, it is in the same chunk, and it has
                 // matching flags, so we can assign it to the partition and
                 // continue flooding.
                 terrain.set_partition_id(nchunk_idx, nblock_idx, partition_id);
-                graph.set_block(partition_id, nblock_idx);
+                graph.set_block(partition_id, nblock_idx, [nx as u32, ny as u32, nz as u32]);
 
                 true
             });
@@ -337,19 +527,24 @@ pub fn partition(
 
 fn get_block_flags(terrain: &ResMut<Terrain>, x: i32, y: i32, z: i32) -> PartitionFlags {
     let block = terrain.get_block_i32(x, y, z);
+
     let mut flags = PartitionFlags::NONE;
 
+    if block == Block::LADDER {
+        return PartitionFlags::LADDER;
+    }
+
     if !block.is_empty() {
-        if block == Block::LADDER {
-            flags |= PartitionFlags::LADDER;
-        } else {
-            return flags;
-        }
+        return PartitionFlags::NONE;
     }
 
     let nblock_below = terrain.get_block_i32(x, y - 1, z);
 
-    if nblock_below.is_filled() {
+    if nblock_below == Block::LADDER {
+        return PartitionFlags::LADDER;
+    }
+
+    if nblock_below.is_walkable() {
         flags |= PartitionFlags::SOLID_GROUND;
 
         let nblock_above = terrain.get_block_i32(x, y + 1, z);

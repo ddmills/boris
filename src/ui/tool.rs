@@ -192,11 +192,14 @@ pub fn tool_system(
 
                     let flags = graph.get_flags(partition_id);
 
-                    println!("partition {}, {}", partition_id, flags);
-
-                    // for n in partition.neighbors.iter() {
-                    //     println!("neighbor {}", n);
-                    // }
+                    println!(
+                        "partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}",
+                        partition_id,
+                        chunk_idx,
+                        partition.neighbors.len(),
+                        flags,
+                        partition.is_computed,
+                    );
                 } else {
                     println!("no partition");
                 }

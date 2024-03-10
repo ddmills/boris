@@ -1,32 +1,36 @@
 use ordered_float::*;
 use std::collections::HashMap;
 
-use super::{Distance, DistanceFormula};
 use crate::common::PriorityQueue;
 
-pub struct AStarSettings<F>
+pub struct AStarSettings<F, T, C, K>
 where
-    F: Fn([i32; 3], [i32; 3]) -> f32,
+    T: std::cmp::Eq + std::hash::Hash + Copy,
+    F: Fn(T, T) -> f32,
+    C: Fn(T, T) -> f32,
+    K: Fn(T) -> Vec<T>,
 {
-    pub start: [i32; 3],
-    pub goal: [i32; 3],
-    pub allow_diagonals: bool,
-    pub cost: F,
+    pub start: T,
+    pub goal: T,
+    pub cost: C,
+    pub heuristic: F,
+    pub neighbors: K,
     pub max_depth: u32,
 }
 
-pub struct AStarResult {
+pub struct AStarResult<T> {
     pub is_success: bool,
-    pub path: Vec<[i32; 3]>,
+    pub path: Vec<T>,
     pub cost: f32,
 }
 
-pub fn astar<F: Fn([i32; 3], [i32; 3]) -> f32>(settings: AStarSettings<F>) -> AStarResult {
-    let heuristic = if settings.allow_diagonals {
-        DistanceFormula::Diagonal
-    } else {
-        DistanceFormula::Manhattan
-    };
+pub fn astar<F, T, C, K>(settings: AStarSettings<F, T, C, K>) -> AStarResult<T>
+where
+    T: std::cmp::Eq + std::hash::Hash + Copy,
+    F: Fn(T, T) -> f32,
+    C: Fn(T, T) -> f32,
+    K: Fn(T) -> Vec<T>,
+{
     let mut depth = 0;
     let mut open = PriorityQueue::new();
     let mut from = HashMap::new();
@@ -59,11 +63,7 @@ pub fn astar<F: Fn([i32; 3], [i32; 3]) -> f32>(settings: AStarSettings<F>) -> AS
             break;
         }
 
-        let neighbors = if settings.allow_diagonals {
-            neighbors_diagonal(current)
-        } else {
-            neighbors(current)
-        };
+        let neighbors = (settings.neighbors)(current);
 
         for next in neighbors {
             let cost = if next == settings.goal {
@@ -81,8 +81,9 @@ pub fn astar<F: Fn([i32; 3], [i32; 3]) -> f32>(settings: AStarSettings<F>) -> AS
             if !costs.contains_key(&next) || new_cost < *costs.get(&next).unwrap() {
                 costs.insert(next, new_cost);
 
-                let priority = OrderedFloat(100000.0)
-                    - new_cost * Distance::get(heuristic, next, settings.goal);
+                // todo: use a min priority queue and remove hard-coded float here
+                let priority =
+                    OrderedFloat(100000.0) - new_cost * (settings.heuristic)(next, settings.goal);
 
                 open.put(next, priority);
                 from.insert(next, current);
@@ -107,49 +108,4 @@ pub fn astar<F: Fn([i32; 3], [i32; 3]) -> f32>(settings: AStarSettings<F>) -> AS
 
     // note: path is returned in reverse order
     result
-}
-
-fn neighbors(point: [i32; 3]) -> Vec<[i32; 3]> {
-    let [x, y, z] = point;
-
-    vec![
-        [x + 1, y, z],
-        [x - 1, y, z],
-        [x, y + 1, z],
-        [x, y - 1, z],
-        [x, y, z + 1],
-        [x, y, z - 1],
-    ]
-}
-
-fn neighbors_diagonal(point: [i32; 3]) -> Vec<[i32; 3]> {
-    let [x, y, z] = point;
-    vec![
-        [x - 1, y + 1, z - 1],
-        [x, y + 1, z - 1],
-        [x + 1, y + 1, z - 1],
-        [x - 1, y + 1, z],
-        [x, y + 1, z],
-        [x + 1, y + 1, z],
-        [x - 1, y + 1, z + 1],
-        [x, y + 1, z + 1],
-        [x + 1, y + 1, z + 1],
-        [x - 1, y, z - 1],
-        [x, y, z - 1],
-        [x + 1, y, z - 1],
-        [x - 1, y, z],
-        [x + 1, y, z],
-        [x - 1, y, z + 1],
-        [x, y, z + 1],
-        [x + 1, y, z + 1],
-        [x - 1, y - 1, z - 1],
-        [x, y - 1, z - 1],
-        [x + 1, y - 1, z - 1],
-        [x - 1, y - 1, z],
-        [x, y - 1, z],
-        [x + 1, y - 1, z],
-        [x - 1, y - 1, z + 1],
-        [x, y - 1, z + 1],
-        [x + 1, y - 1, z + 1],
-    ]
 }

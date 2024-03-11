@@ -3,22 +3,20 @@ use bevy::{
         component::Component,
         entity::Entity,
         event::EventReader,
-        query::With,
+        query::{With, Without},
         system::{Commands, Query, Res},
     },
     gizmos::gizmos::Gizmos,
-    math::Vec3,
+    math::{vec3, Vec3},
     render::color::Color,
     time::Time,
     transform::components::Transform,
-    utils::hashbrown::HashMap,
 };
-use ordered_float::OrderedFloat;
 
 use crate::{
     colonists::Partition,
-    common::{astar, AStarSettings, Distance, PriorityQueue},
-    terrain, Terrain,
+    common::{astar, AStarSettings, Distance},
+    Terrain,
 };
 
 use super::{Colonist, PartitionGraph, PathfindEvent};
@@ -30,67 +28,283 @@ pub struct NeedsPath {
 }
 
 #[derive(Component)]
-pub struct Path {
-    path: Vec<[i32; 3]>,
+pub struct PathSegment {
+    blocks: Vec<[u32; 3]>,
     current: usize,
 }
 
 #[derive(Component)]
+pub struct PathComplete {}
+
+#[derive(Component)]
 pub struct PartitionPath {
     path: Vec<u16>,
+    goal: [u32; 3],
     current: usize,
 }
 
-pub fn path_follow(
-    time: Res<Time>,
-    mut gizmos: Gizmos,
-    mut commands: Commands,
-    graph: Res<PartitionGraph>,
-    terrain: Res<Terrain>,
-    mut pathers: Query<(Entity, &mut PartitionPath, &mut Transform)>,
-) {
-    for (entity, mut pather, mut transform) in pathers.iter_mut() {
-        let next_part = pather.path[pather.current];
-        let Some(partition) = graph.get_partition(next_part) else {
-            // old path! need recalculating
-            println!("old path needs recalc!");
-            continue;
-        };
-        let pos = terrain.get_chunk_offset(partition.chunk_idx);
-        let target = Vec3::new(pos[0] as f32, (pos[1] + 16) as f32, pos[2] as f32);
+#[derive(Component)]
+pub struct BlockMove {
+    pub speed: f32,
+    pub target: [u32; 3],
+}
 
-        let direction = (target - transform.translation).normalize();
-        let distance = transform.translation.distance(target);
-        let move_dist = time.delta_seconds() * 4.;
+pub fn path_follow_block(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut BlockMove, &mut Transform)>,
+) {
+    for (entity, mut block_move, mut transform) in query.iter_mut() {
+        let pos = vec3(
+            block_move.target[0] as f32,
+            block_move.target[1] as f32,
+            block_move.target[2] as f32,
+        );
+
+        let direction = (pos - transform.translation).normalize();
+        let distance = transform.translation.distance(pos);
+        let move_dist = time.delta_seconds() * block_move.speed;
 
         if distance < move_dist {
-            if pather.current <= 1 {
-                commands.entity(entity).remove::<Path>();
-            } else {
-                pather.current -= 1;
-            }
+            transform.translation = pos;
+            commands.entity(entity).remove::<BlockMove>();
         } else {
             transform.translation += direction * move_dist;
         }
-
-        // for i in 1..pather.path.len() {
-        //     let current = pather.path[i - 1];
-        //     let next = pather.path[i];
-        //     let mid = Vec3::new(0.5, 0.5, 0.5);
-
-        //     gizmos.line(
-        //         Vec3::new(current[0] as f32, current[1] as f32, current[2] as f32) + mid,
-        //         Vec3::new(next[0] as f32, next[1] as f32, next[2] as f32) + mid,
-        //         Color::RED,
-        //     );
-        // }
     }
 }
 
-struct PartitionPathResult {
-    pub is_success: bool,
-    pub path: Vec<u16>,
-    pub cost: f32,
+pub fn path_follow_segment(
+    mut commands: Commands,
+    mut pathers: Query<(Entity, &mut PathSegment), Without<BlockMove>>,
+) {
+    for (entity, mut path) in pathers.iter_mut() {
+        if path.current == 0 {
+            commands.entity(entity).remove::<PathSegment>();
+            continue;
+        }
+
+        path.current -= 1;
+
+        let next_block = path.blocks[path.current];
+
+        commands.entity(entity).insert(BlockMove {
+            target: next_block,
+            speed: 4.,
+        });
+    }
+}
+
+pub fn path_follow_segment_debug(mut gizmos: Gizmos, pathers: Query<&PathSegment>) {
+    for path in pathers.iter() {
+        for i in 1..path.blocks.len() {
+            let current = path.blocks[i - 1];
+            let next = path.blocks[i];
+
+            let mid = Vec3::new(0.5, 0.5, 0.5);
+
+            let color = if i > path.current {
+                Color::GRAY
+            } else if i == path.current {
+                Color::ORANGE_RED
+            } else {
+                Color::ORANGE
+            };
+
+            gizmos.line(
+                Vec3::new(current[0] as f32, current[1] as f32, current[2] as f32) + mid,
+                Vec3::new(next[0] as f32, next[1] as f32, next[2] as f32) + mid,
+                color,
+            );
+        }
+    }
+}
+
+pub fn path_follow_partition(
+    mut commands: Commands,
+    graph: Res<PartitionGraph>,
+    terrain: Res<Terrain>,
+    mut pathers: Query<(Entity, &mut PartitionPath, &Transform), Without<PathSegment>>,
+) {
+    for (entity, mut path, transform) in pathers.iter_mut() {
+        if path.current == 0 {
+            println!("completed path follow!");
+            commands.entity(entity).remove::<PartitionPath>();
+            continue;
+        }
+        path.current -= 1;
+
+        if path.current != 0 {
+            let current_partition_id = path.path[path.current];
+            let next_partition_id = path.path[path.current - 1];
+
+            let Some(current_partition) = graph.get_partition(current_partition_id) else {
+                // old path! need recalculating
+                println!("old path needs recalc! (missing current)");
+                commands.entity(entity).remove::<PartitionPath>();
+                continue;
+            };
+
+            let Some(next_partition) = graph.get_partition(next_partition_id) else {
+                // old path! need recalculating
+                println!("old path needs recalc! (missing next)");
+                commands.entity(entity).remove::<PartitionPath>();
+                continue;
+            };
+
+            let pos = [
+                transform.translation.x as i32,
+                transform.translation.y as i32,
+                transform.translation.z as i32,
+            ];
+
+            let next_centroid = next_partition.extents.center();
+
+            let result = astar(AStarSettings {
+                start: pos,
+                is_goal: |p| {
+                    // assuming u32 here as we are filter oob earlier
+                    let [chunk_idx, block_idx] =
+                        terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
+                    let partition_id = terrain.get_partition_id(chunk_idx, block_idx);
+
+                    partition_id == next_partition_id
+                },
+                cost: |a, b| Distance::diagonal([a[0], a[1], a[2]], [b[0], b[1], b[2]]),
+                heuristic: |v| {
+                    Distance::diagonal(
+                        v,
+                        [
+                            next_centroid[0] as i32,
+                            next_centroid[1] as i32,
+                            next_centroid[2] as i32,
+                        ],
+                    )
+                },
+                neighbors: |v| {
+                    [
+                        [v[0], v[1] + 1, v[2]], // UP
+                        [v[0], v[1] - 1, v[2]], // DOWN
+                        [v[0] - 1, v[1], v[2]], // LEFT
+                        [v[0] + 1, v[1], v[2]], // RIGHT
+                        [v[0], v[1], v[2] - 1], // FORWARD
+                        [v[0], v[1], v[2] + 1], // BACK
+                    ]
+                    .iter()
+                    .filter_map(|p| {
+                        // let block = terrain.get_block_i32(p[0], p[1], p[2]);
+                        // todo, use block flags, add diagonals when possible
+
+                        let [chunk_idx, block_idx] =
+                            terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
+                        let partition_id = terrain.get_partition_id(chunk_idx, block_idx);
+
+                        if partition_id == current_partition_id || partition_id == next_partition_id
+                        {
+                            Some(*p)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+                },
+                max_depth: 300,
+            });
+
+            if !result.is_success {
+                println!("no segment path found!");
+                commands.entity(entity).remove::<PartitionPath>();
+                return;
+            }
+
+            let blocks = result
+                .path
+                .iter()
+                .map(|p| [p[0] as u32, p[1] as u32, p[2] as u32])
+                .collect();
+
+            commands.entity(entity).insert(PathSegment {
+                blocks,
+                current: result.path.len(),
+            });
+        } else {
+            // we are in last one, we need special astar logic
+            let partition_id = path.path[path.current];
+
+            let Some(partition) = graph.get_partition(partition_id) else {
+                // old path! need recalculating
+                println!("old path needs recalc! (missing current)");
+                commands.entity(entity).remove::<PartitionPath>();
+                continue;
+            };
+
+            let pos = [
+                transform.translation.x as i32,
+                transform.translation.y as i32,
+                transform.translation.z as i32,
+            ];
+
+            let goal_i32 = [
+                path.goal[0] as i32,
+                path.goal[1] as i32,
+                path.goal[2] as i32,
+            ];
+
+            let result = astar(AStarSettings {
+                start: pos,
+                is_goal: |p| {
+                    // assuming u32 here as we are filter oob earlier
+                    p[0] == goal_i32[0] && p[1] == goal_i32[1] && p[2] == goal_i32[2]
+                },
+                cost: |a, b| Distance::diagonal([a[0], a[1], a[2]], [b[0], b[1], b[2]]),
+                heuristic: |v| Distance::diagonal(v, goal_i32),
+                neighbors: |v| {
+                    [
+                        [v[0], v[1] + 1, v[2]], // UP
+                        [v[0], v[1] - 1, v[2]], // DOWN
+                        [v[0] - 1, v[1], v[2]], // LEFT
+                        [v[0] + 1, v[1], v[2]], // RIGHT
+                        [v[0], v[1], v[2] - 1], // FORWARD
+                        [v[0], v[1], v[2] + 1], // BACK
+                    ]
+                    .iter()
+                    .filter_map(|p| {
+                        // let block = terrain.get_block_i32(p[0], p[1], p[2]);
+                        // todo, use block flags, add diagonals when possible
+
+                        let [chunk_idx, block_idx] =
+                            terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
+                        let p_id = terrain.get_partition_id(chunk_idx, block_idx);
+
+                        if p_id == partition_id {
+                            Some(*p)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+                },
+                max_depth: 300,
+            });
+
+            if !result.is_success {
+                println!("no final segment path found!");
+                commands.entity(entity).remove::<PartitionPath>();
+                return;
+            }
+
+            let blocks = result
+                .path
+                .iter()
+                .map(|p| [p[0] as u32, p[1] as u32, p[2] as u32])
+                .collect();
+
+            commands.entity(entity).insert(PathSegment {
+                blocks,
+                current: result.path.len(),
+            });
+        }
+    }
 }
 
 pub fn pathfinding(
@@ -119,7 +333,7 @@ pub fn pathfinding(
             terrain.get_block_indexes(needs_path.goal[0], needs_path.goal[1], needs_path.goal[2]);
 
         let starting_partition = terrain.get_partition_id(start_chunk_idx, start_block_idx);
-        let goal_partition = terrain.get_partition_id(goal_chunk_idx, goal_block_idx);
+        let goal_partition_id = terrain.get_partition_id(goal_chunk_idx, goal_block_idx);
 
         if starting_partition == Partition::NONE {
             println!("cannot find path, no starting partition!");
@@ -127,24 +341,28 @@ pub fn pathfinding(
             continue;
         }
 
-        if goal_partition == Partition::NONE {
+        if goal_partition_id == Partition::NONE {
             println!("cannot find path, no goal partition!");
             commands.entity(e).remove::<NeedsPath>();
             continue;
         }
 
-        if starting_partition == goal_partition {
+        if starting_partition == goal_partition_id {
             commands.entity(e).insert(PartitionPath {
-                current: 1,
-                path: vec![goal_partition, starting_partition],
+                current: 2,
+                path: vec![goal_partition_id, starting_partition],
+                goal: needs_path.goal,
             });
 
             continue;
         }
 
-        let result = astar(AStarSettings {
+        let goal_partition = graph.get_partition(goal_partition_id).unwrap();
+        let destination = goal_partition.extents.center();
+
+        let partition_path = astar(AStarSettings {
             start: starting_partition,
-            goal: goal_partition,
+            is_goal: |p| p == goal_partition_id,
             max_depth: 2000,
             neighbors: |v| {
                 if let Some(p) = graph.get_partition(v) {
@@ -152,12 +370,9 @@ pub fn pathfinding(
                 }
                 vec![]
             },
-            heuristic: |a, b| {
-                let chunk_idx_a = graph.get_partition(a).unwrap().chunk_idx;
-                let chunk_idx_b = graph.get_partition(b).unwrap().chunk_idx;
-
-                let [ax, ay, az] = terrain.get_chunk_offset(chunk_idx_a);
-                let [bx, by, bz] = terrain.get_chunk_offset(chunk_idx_b);
+            heuristic: |a| {
+                let [ax, ay, az] = graph.get_partition(a).unwrap().extents.center();
+                let [bx, by, bz] = destination;
 
                 Distance::diagonal(
                     [ax as i32, ay as i32, az as i32],
@@ -165,87 +380,31 @@ pub fn pathfinding(
                 )
             },
             cost: |a, b| {
+                let [ax, ay, az] = graph.get_partition(a).unwrap().extents.center();
+                let [bx, by, bz] = graph.get_partition(b).unwrap().extents.center();
+
                 println!("cost {}->{}", a, b);
-
-                if let Some(p) = graph.get_partition(b) {
-                    let len = p.blocks.len() as f32;
-                    return len.max(1.);
-                }
-
-                println!("partition does not exist {}, neighbor of {}", b, a);
-                1000.0
+                Distance::diagonal(
+                    [ax as i32, ay as i32, az as i32],
+                    [bx as i32, by as i32, bz as i32],
+                )
             },
         });
 
-        if result.is_success {
-            commands.entity(e).insert(PartitionPath {
-                current: result.path.len() - 2, // first one is the starting position
-                path: result.path,
-            });
+        commands.entity(e).remove::<NeedsPath>();
+
+        if !partition_path.is_success {
+            println!("could not find path");
+            return;
         }
 
-        commands.entity(e).remove::<NeedsPath>();
+        commands.entity(e).insert(PartitionPath {
+            current: partition_path.path.len(), // first one is the starting position
+            path: partition_path.path,
+            goal: needs_path.goal,
+        });
     }
 }
-
-// pub fn pathfinding_old(
-//     terrain: Res<Terrain>,
-//     mut commands: Commands,
-//     pathfinders: Query<(Entity, &NeedsPath)>,
-// ) {
-//     for (e, needs_path) in pathfinders.iter() {
-//         println!(
-//             "find path {},{},{}->{},{},{}",
-//             needs_path.start[0],
-//             needs_path.start[1],
-//             needs_path.start[2],
-//             needs_path.goal[0],
-//             needs_path.goal[1],
-//             needs_path.goal[2]
-//         );
-
-//         let result = astar(AStarSettings {
-//             start: [
-//                 needs_path.start[0] as i32,
-//                 needs_path.start[1] as i32,
-//                 needs_path.start[2] as i32,
-//             ],
-//             goal: [
-//                 needs_path.goal[0] as i32,
-//                 needs_path.goal[1] as i32,
-//                 needs_path.goal[2] as i32,
-//             ],
-//             allow_diagonals: true,
-//             max_depth: 5000,
-//             cost: |a, b| {
-//                 let block = terrain.get_block_detail_i32(b[0], b[1], b[2]);
-
-//                 if !block.block.is_empty() {
-//                     return f32::INFINITY;
-//                 }
-
-//                 let below = terrain.get_block_detail_i32(b[0], b[1] - 1, b[2]);
-
-//                 if !below.block.is_filled() {
-//                     return f32::INFINITY;
-//                 }
-
-//                 Distance::diagonal(a, b)
-//             },
-//         });
-
-//         println!("result {} -> {}", result.is_success, result.path.len());
-
-//         commands.entity(e).remove::<NeedsPath>();
-
-//         if result.is_success {
-//             commands.entity(e).insert(Path {
-//                 current: result.path.len() - 2, // first one is the starting position
-//                 path: result.path,
-//             });
-//         }
-//     }
-// }
 
 pub fn on_pathfind(
     mut commands: Commands,

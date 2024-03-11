@@ -377,14 +377,6 @@ pub fn merge_partitions(
     let a_partition = graph.get_partition_mut(a_id).unwrap();
     a_partition.is_computed = a_partition.is_computed && b_computed;
 
-    // todo: merge neighbors
-    println!(
-        "merging {}->{}, {} blocks total",
-        b_id,
-        a_id,
-        block_idxs.len()
-    );
-
     for block_idx in block_idxs {
         let block_pos = terrain.get_block_world_pos(a_partition.chunk_idx, block_idx);
         a_partition.add_block(block_idx, block_pos);

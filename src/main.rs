@@ -2,8 +2,9 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    on_pathfind, on_spawn_colonist, partition, partition_debug, partition_setup, path_follow,
-    pathfinding, PartitionDebug, PartitionEvent, PartitionGraph, PathfindEvent, SpawnColonistEvent,
+    on_pathfind, on_spawn_colonist, partition, partition_debug, partition_setup, path_follow_block,
+    path_follow_partition, path_follow_segment, path_follow_segment_debug, pathfinding,
+    PartitionDebug, PartitionEvent, PartitionGraph, PathfindEvent, SpawnColonistEvent,
 };
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
@@ -79,7 +80,10 @@ fn main() {
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, pathfinding)
         .add_systems(Update, on_pathfind)
-        .add_systems(Update, path_follow)
+        .add_systems(Update, path_follow_block)
+        .add_systems(Update, path_follow_segment)
+        .add_systems(Update, path_follow_segment_debug)
+        .add_systems(Update, path_follow_partition)
         .add_systems(Update, partition_debug)
         .add_systems(Update, partition)
         .run();

@@ -57,6 +57,7 @@ impl BlockBuffer {
         Block::OOB
     }
 
+    #[allow(dead_code)]
     pub fn get_block_world_pos(&self, block_idx: u32) -> [u32; 3] {
         let local_pos = self.shape.delinearize(block_idx);
 

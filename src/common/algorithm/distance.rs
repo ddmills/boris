@@ -1,4 +1,4 @@
-use crate::common::{max_3, min_3};
+use crate::common::{max_3, min_max_3};
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -12,6 +12,7 @@ pub enum DistanceFormula {
 
 pub struct Distance;
 
+#[allow(dead_code)]
 impl Distance {
     pub fn get(formula: DistanceFormula, a: [i32; 3], b: [i32; 3]) -> f32 {
         match formula {
@@ -32,7 +33,12 @@ impl Distance {
         let dy = (a[1] - b[1]).abs();
         let dz = (a[2] - b[2]).abs();
 
-        (dx + dy + dz) as f32 - (0.59 * min_3(dx, dy, dz) as f32)
+        let [dmin, dmid, dmax] = min_max_3(dx, dy, dz);
+
+        // From "Benchmarks for Pathfinding in 3D Voxel Space"
+        // by Daniel Brewer and Nathan R. Sturtevant
+        // (√3 − √2) * dmin + (√2 - 1) * dmid + dmax
+        0.32 * dmin as f32 + 0.59 * dmid as f32 + dmax as f32
     }
 
     pub fn chebyshev(a: [i32; 3], b: [i32; 3]) -> f32 {

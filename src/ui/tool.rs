@@ -193,12 +193,13 @@ pub fn tool_system(
                     let flags = graph.get_flags(partition_id);
 
                     println!(
-                        "partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}",
+                        "partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}, cost={}",
                         partition_id,
                         chunk_idx,
                         partition.neighbors.len(),
                         flags,
                         partition.is_computed,
+                        partition.extents.traversal_distance,
                     );
                 } else {
                     println!("no partition");

@@ -10,7 +10,10 @@ use bevy::{
 };
 use ndshape::AbstractShape;
 
-use crate::{colonists::partition_flags, common::flood_fill, Block, Terrain};
+use crate::{
+    common::{flood_fill, max_3, Distance},
+    Block, Terrain,
+};
 
 use super::PartitionFlags;
 
@@ -23,6 +26,7 @@ pub struct PartitionExtents {
     pub max_x: u32,
     pub max_y: u32,
     pub max_z: u32,
+    pub traversal_distance: f32,
 }
 
 impl PartitionExtents {
@@ -52,6 +56,22 @@ impl PartitionExtents {
         self.max_x = pos[0].max(self.max_x);
         self.max_y = pos[1].max(self.max_y);
         self.max_z = pos[2].max(self.max_z);
+    }
+
+    pub fn distance_to_edge(&self, x: i32, _y: i32, z: i32) -> f32 {
+        // TODO: this only works in 2D space
+        let dx = max_3(self.min_x as i32 - x, 0, x - self.max_x as i32).abs();
+        let dz = max_3(self.min_z as i32 - z, 0, z - self.max_z as i32).abs();
+        // let dz = max_3(self.min_z as i32 - z, 0, z - self.max_z as i32).abs();
+
+        (dx + dz) as f32 - (0.59 * dx.min(dz) as f32)
+    }
+
+    pub fn update_traversal_distance(&mut self) {
+        self.traversal_distance = Distance::diagonal(
+            [self.min_x as i32, self.min_y as i32, self.min_z as i32],
+            [self.max_x as i32, self.max_y as i32, self.max_z as i32],
+        );
     }
 }
 
@@ -339,6 +359,10 @@ impl PartitionGraph {
     pub fn set_partition_computed(&mut self, id: u16, value: bool) {
         if let Some(p) = self.get_partition_mut(id) {
             p.is_computed = value;
+
+            if value {
+                p.extents.update_traversal_distance();
+            }
         }
     }
 
@@ -382,6 +406,8 @@ pub fn merge_partitions(
         a_partition.add_block(block_idx, block_pos);
         terrain.set_partition_id(a_partition.chunk_idx, block_idx, a_id);
     }
+
+    a_partition.extents.update_traversal_distance();
 
     for neighor_id in neighbors_ids {
         if neighor_id == a_id {
@@ -517,7 +543,7 @@ pub fn partition(
     }
 }
 
-fn get_block_flags(terrain: &ResMut<Terrain>, x: i32, y: i32, z: i32) -> PartitionFlags {
+pub fn get_block_flags(terrain: &ResMut<Terrain>, x: i32, y: i32, z: i32) -> PartitionFlags {
     let block = terrain.get_block_i32(x, y, z);
 
     let mut flags = PartitionFlags::NONE;

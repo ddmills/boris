@@ -352,6 +352,7 @@ impl Terrain {
         Partition::NONE
     }
 
+    #[allow(dead_code)]
     pub fn get_neighbors_immediate(&self, x: u32, y: u32, z: u32) -> [Block; 6] {
         [
             self.get_block(x + 1, y, z),

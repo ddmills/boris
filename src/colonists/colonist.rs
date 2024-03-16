@@ -2,6 +2,7 @@ use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
         component::Component,
+        entity::Entity,
         event::{Event, EventReader},
         system::{Commands, Res, ResMut},
     },
@@ -21,7 +22,8 @@ pub struct SpawnColonistEvent {
 
 #[derive(Event)]
 pub struct PathfindEvent {
-    pub pos: [u32; 3],
+    pub goals: Vec<[u32; 3]>,
+    pub entity: Entity,
 }
 
 pub fn on_spawn_colonist(

@@ -2,7 +2,7 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    on_pathfind, on_spawn_colonist, partition, partition_debug, partition_setup, path_follow_block,
+    on_spawn_colonist, partition, partition_debug, partition_setup, path_follow_block,
     path_follow_partition, path_follow_segment, path_follow_segment_debug, pathfinding,
     PartitionDebug, PartitionEvent, PartitionGraph, PathfindEvent, SpawnColonistEvent,
 };
@@ -22,7 +22,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Terrain::new(6, 2, 6, 16))
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(Block::STONE),
         })
@@ -79,7 +79,6 @@ fn main() {
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, pathfinding)
-        .add_systems(Update, on_pathfind)
         .add_systems(Update, path_follow_block)
         .add_systems(Update, path_follow_segment)
         .add_systems(Update, path_follow_segment_debug)

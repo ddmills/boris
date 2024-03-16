@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Partition, PartitionDebug, PartitionGraph, PathfindEvent, SpawnColonistEvent},
+    colonists::{Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
     common::min_max,
     controls::Raycast,
     Block, Cursor, Terrain,
@@ -24,7 +24,9 @@ pub enum Tool {
     ClearBlocks,
     SpawnColonist,
     Pathfind,
+    PathfindNeighbor,
     BlockInfo,
+    JobMine,
 }
 
 #[derive(Default)]
@@ -37,12 +39,11 @@ pub fn tool_system(
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
     graph: Res<PartitionGraph>,
-    mut terrain: ResMut<Terrain>,
     mouse_input: Res<ButtonInput<MouseButton>>,
+    mut terrain: ResMut<Terrain>,
     mut state: Local<ToolState>,
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
-    mut ev_pathfind: EventWriter<PathfindEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
 ) {
     match toolbar.tool {
@@ -167,9 +168,63 @@ pub fn tool_system(
                     return;
                 }
 
-                ev_pathfind.send(PathfindEvent {
-                    pos: raycast.adj_pos,
-                });
+                // ev_pathfind.send(PathfindEvent {
+                //     goals: vec![raycast.adj_pos],
+                // });
+            }
+        }
+        Tool::PathfindNeighbor => {
+            if mouse_input.just_released(MouseButton::Left) {
+                if !raycast.is_adj_hit {
+                    return;
+                }
+
+                let mut goals = vec![];
+
+                if raycast.hit_pos[0] > 1 {
+                    goals.push([
+                        raycast.hit_pos[0] - 1,
+                        raycast.hit_pos[1],
+                        raycast.hit_pos[2],
+                    ]);
+                }
+                if raycast.hit_pos[0] < terrain.world_size_x() - 1 {
+                    goals.push([
+                        raycast.hit_pos[0] + 1,
+                        raycast.hit_pos[1],
+                        raycast.hit_pos[2],
+                    ]);
+                }
+                if raycast.hit_pos[1] > 1 {
+                    goals.push([
+                        raycast.hit_pos[0],
+                        raycast.hit_pos[1] - 1,
+                        raycast.hit_pos[2],
+                    ]);
+                }
+                if raycast.hit_pos[1] < terrain.world_size_y() - 1 {
+                    goals.push([
+                        raycast.hit_pos[0],
+                        raycast.hit_pos[1] + 1,
+                        raycast.hit_pos[2],
+                    ]);
+                }
+                if raycast.hit_pos[2] > 1 {
+                    goals.push([
+                        raycast.hit_pos[0],
+                        raycast.hit_pos[1],
+                        raycast.hit_pos[2] - 1,
+                    ]);
+                }
+                if raycast.hit_pos[2] < terrain.world_size_z() - 1 {
+                    goals.push([
+                        raycast.hit_pos[0],
+                        raycast.hit_pos[1],
+                        raycast.hit_pos[2] + 1,
+                    ]);
+                }
+
+                // ev_pathfind.send(PathfindEvent { goals,  });
             }
         }
         Tool::BlockInfo => {
@@ -204,6 +259,17 @@ pub fn tool_system(
                 } else {
                     println!("no partition");
                 }
+            }
+        }
+        Tool::JobMine => {
+            if mouse_input.just_released(MouseButton::Left)
+                && raycast.is_hit
+                && raycast.hit_block.is_filled()
+            {
+                println!(
+                    "mine block... {},{},{}",
+                    raycast.hit_pos[0], raycast.hit_pos[1], raycast.hit_pos[2]
+                );
             }
         }
     }

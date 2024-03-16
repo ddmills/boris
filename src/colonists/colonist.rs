@@ -11,6 +11,13 @@ use bevy::{
     render::{color::Color, mesh::Mesh},
     transform::components::Transform,
 };
+use big_brain::{
+    actions::Steps,
+    pickers::{FirstToScore, Picker},
+    thinker::Thinker,
+};
+
+use super::{Fatigue, FatigueScorer, Sleep};
 
 #[derive(Component, Default)]
 pub struct Colonist {}
@@ -36,6 +43,11 @@ pub fn on_spawn_colonist(
     let material = materials.add(Color::ORANGE);
 
     for ev in ev_spawn_colonist.read() {
+        let sleep = Steps::build().step(Sleep {
+            duration: 10.0,
+            per_second: 15.0,
+        });
+
         commands.spawn((
             MaterialMeshBundle {
                 mesh: cube.clone(),
@@ -48,6 +60,14 @@ pub fn on_spawn_colonist(
                 ..default()
             },
             Colonist::default(),
+            Fatigue {
+                is_sleeping: false,
+                per_second: 10.,
+                level: 50.,
+            },
+            Thinker::build()
+                .picker(FirstToScore::new(0.6))
+                .when(FatigueScorer, sleep),
         ));
     }
 }

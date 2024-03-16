@@ -1,10 +1,12 @@
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
+use big_brain::{BigBrainPlugin, BigBrainSet};
 use colonists::{
-    on_spawn_colonist, partition, partition_debug, partition_setup, path_follow_block,
-    path_follow_partition, path_follow_segment, path_follow_segment_debug, pathfinding,
-    PartitionDebug, PartitionEvent, PartitionGraph, PathfindEvent, SpawnColonistEvent,
+    fatigue_scorer_system, fatigue_system, on_spawn_colonist, partition, partition_debug,
+    partition_setup, path_follow_block, path_follow_partition, path_follow_segment,
+    path_follow_segment_debug, pathfinding, sleep_action_system, PartitionDebug, PartitionEvent,
+    PartitionGraph, PathfindEvent, SpawnColonistEvent,
 };
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
@@ -66,6 +68,8 @@ fn main() {
             )
                 .chain(),
         )
+        .add_plugins(BigBrainPlugin::new(PreUpdate))
+        .add_systems(Update, fatigue_system)
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
@@ -85,6 +89,13 @@ fn main() {
         .add_systems(Update, path_follow_partition)
         .add_systems(Update, partition_debug)
         .add_systems(Update, partition)
+        .add_systems(
+            PreUpdate,
+            (
+                (sleep_action_system,).in_set(BigBrainSet::Actions),
+                (fatigue_scorer_system).in_set(BigBrainSet::Scorers),
+            ),
+        )
         .run();
 }
 

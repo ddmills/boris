@@ -167,10 +167,6 @@ pub fn tool_system(
                 if !raycast.is_adj_hit {
                     return;
                 }
-
-                // ev_pathfind.send(PathfindEvent {
-                //     goals: vec![raycast.adj_pos],
-                // });
             }
         }
         Tool::PathfindNeighbor => {

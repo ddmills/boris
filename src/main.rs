@@ -3,11 +3,12 @@ use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use big_brain::{BigBrainPlugin, BigBrainSet};
 use colonists::{
-    fatigue_scorer_system, fatigue_system, on_spawn_colonist, partition, partition_debug,
-    partition_setup, path_follow_block, path_follow_partition, path_follow_segment,
-    path_follow_segment_debug, pathfinding, sleep_action_system, PartitionDebug, PartitionEvent,
-    PartitionGraph, PathfindEvent, SpawnColonistEvent,
+    block_move_system, fatigue_scorer_system, fatigue_system, follow_path_action_system,
+    generate_path_action_system, on_spawn_colonist, partition, partition_debug, partition_setup,
+    path_debug, sleep_action_system, wander_action_system, wander_scorer_system, PartitionDebug,
+    PartitionEvent, PartitionGraph, SpawnColonistEvent,
 };
+use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
 use terrain::*;
@@ -31,6 +32,7 @@ fn main() {
         .insert_resource(Ui {
             pointer_captured: false,
         })
+        .insert_resource(Rand::new())
         .insert_resource(Raycast {
             is_hit: false,
             hit_pos: [0, 0, 0],
@@ -39,7 +41,6 @@ fn main() {
             hit_block: Block::EMPTY,
         })
         .add_event::<SpawnColonistEvent>()
-        .add_event::<PathfindEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_event::<PartitionEvent>()
         .init_resource::<PartitionGraph>()
@@ -82,18 +83,21 @@ fn main() {
         .add_systems(Update, toolbar_select)
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
-        .add_systems(Update, pathfinding)
-        .add_systems(Update, path_follow_block)
-        .add_systems(Update, path_follow_segment)
-        .add_systems(Update, path_follow_segment_debug)
-        .add_systems(Update, path_follow_partition)
+        .add_systems(Update, block_move_system)
+        .add_systems(Update, path_debug)
         .add_systems(Update, partition_debug)
         .add_systems(Update, partition)
         .add_systems(
             PreUpdate,
             (
-                (sleep_action_system,).in_set(BigBrainSet::Actions),
-                (fatigue_scorer_system).in_set(BigBrainSet::Scorers),
+                (
+                    sleep_action_system,
+                    wander_action_system,
+                    generate_path_action_system,
+                    follow_path_action_system,
+                )
+                    .in_set(BigBrainSet::Actions),
+                (fatigue_scorer_system, wander_scorer_system).in_set(BigBrainSet::Scorers),
             ),
         )
         .run();

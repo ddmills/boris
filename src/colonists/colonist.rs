@@ -2,7 +2,6 @@ use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
         component::Component,
-        entity::Entity,
         event::{Event, EventReader},
         system::{Commands, Res, ResMut},
     },
@@ -11,26 +10,22 @@ use bevy::{
     render::{color::Color, mesh::Mesh},
     transform::components::Transform,
 };
-use big_brain::{
-    actions::Steps,
-    pickers::{FirstToScore, Picker},
-    thinker::Thinker,
+use big_brain::{actions::Steps, pickers::Highest, thinker::Thinker};
+
+use super::{
+    task::{Fatigue, FatigueScorer, SleepAct},
+    FollowPathAct, GeneratePathAct, PickWanderSpotAct, WanderScorer,
 };
 
-use super::{Fatigue, FatigueScorer, Sleep};
+#[derive(Component, Default)]
+pub struct Colonist;
 
 #[derive(Component, Default)]
-pub struct Colonist {}
+pub struct Agent;
 
 #[derive(Event)]
 pub struct SpawnColonistEvent {
     pub pos: [u32; 3],
-}
-
-#[derive(Event)]
-pub struct PathfindEvent {
-    pub goals: Vec<[u32; 3]>,
-    pub entity: Entity,
 }
 
 pub fn on_spawn_colonist(
@@ -43,11 +38,6 @@ pub fn on_spawn_colonist(
     let material = materials.add(Color::ORANGE);
 
     for ev in ev_spawn_colonist.read() {
-        let sleep = Steps::build().step(Sleep {
-            duration: 10.0,
-            per_second: 15.0,
-        });
-
         commands.spawn((
             MaterialMeshBundle {
                 mesh: cube.clone(),
@@ -59,15 +49,25 @@ pub fn on_spawn_colonist(
                 ),
                 ..default()
             },
-            Colonist::default(),
+            Agent,
+            Colonist,
             Fatigue {
                 is_sleeping: false,
-                per_second: 10.,
-                level: 50.,
+                per_second: 1.,
+                level: 0.,
             },
             Thinker::build()
-                .picker(FirstToScore::new(0.6))
-                .when(FatigueScorer, sleep),
+                .label("Colonist Thinker")
+                .picker(Highest)
+                .when(FatigueScorer, Steps::build().label("Sleep").step(SleepAct))
+                .when(
+                    WanderScorer,
+                    Steps::build()
+                        .label("WanderAndPonder")
+                        .step(PickWanderSpotAct)
+                        .step(GeneratePathAct)
+                        .step(FollowPathAct),
+                ),
         ));
     }
 }

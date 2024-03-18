@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Partition, PartitionDebug, PartitionGraph, PathfindEvent, SpawnColonistEvent},
+    colonists::{Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
     common::min_max,
     controls::Raycast,
     Block, Cursor, Terrain,
@@ -42,7 +42,6 @@ pub fn tool_system(
     mut state: Local<ToolState>,
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
-    mut ev_pathfind: EventWriter<PathfindEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
 ) {
     match toolbar.tool {
@@ -166,10 +165,6 @@ pub fn tool_system(
                 if !raycast.is_adj_hit {
                     return;
                 }
-
-                ev_pathfind.send(PathfindEvent {
-                    pos: raycast.adj_pos,
-                });
             }
         }
         Tool::BlockInfo => {

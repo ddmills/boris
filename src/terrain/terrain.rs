@@ -352,6 +352,16 @@ impl Terrain {
         Partition::NONE
     }
 
+    pub fn get_partition_id_u32(&self, x: u32, y: u32, z: u32) -> u16 {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_partition(block_idx);
+        }
+
+        Partition::NONE
+    }
+
     #[allow(dead_code)]
     pub fn get_neighbors_immediate(&self, x: u32, y: u32, z: u32) -> [Block; 6] {
         [

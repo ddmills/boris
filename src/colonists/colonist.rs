@@ -19,11 +19,6 @@ pub struct SpawnColonistEvent {
     pub pos: [u32; 3],
 }
 
-#[derive(Event)]
-pub struct PathfindEvent {
-    pub pos: [u32; 3],
-}
-
 pub fn on_spawn_colonist(
     mut commands: Commands,
     mut ev_spawn_colonist: EventReader<SpawnColonistEvent>,

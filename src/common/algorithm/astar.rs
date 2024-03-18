@@ -46,6 +46,7 @@ where
     };
 
     if (settings.is_goal)(settings.start) {
+        result.is_success = true;
         return result;
     }
 

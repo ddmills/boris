@@ -543,7 +543,7 @@ pub fn partition(
     }
 }
 
-pub fn get_block_flags(terrain: &ResMut<Terrain>, x: i32, y: i32, z: i32) -> PartitionFlags {
+pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> PartitionFlags {
     let block = terrain.get_block_i32(x, y, z);
 
     let mut flags = PartitionFlags::NONE;

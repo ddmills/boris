@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
@@ -10,6 +12,8 @@ use bevy::{
     render::{color::Color, mesh::Mesh},
     transform::components::Transform,
 };
+
+use super::{ActFindBed, ActNone, ActSleep, ActState, Actor, Behavior, Brain, Fatigue};
 
 #[derive(Component, Default)]
 pub struct Colonist {}
@@ -27,20 +31,41 @@ pub fn on_spawn_colonist(
 ) {
     let cube: Handle<Mesh> = asset_server.load("meshes/cube.obj");
     let material = materials.add(Color::ORANGE);
+    let mut pairs = vec![];
 
     for ev in ev_spawn_colonist.read() {
-        commands.spawn((
-            MaterialMeshBundle {
-                mesh: cube.clone(),
-                material: material.clone(),
-                transform: Transform::from_xyz(
-                    ev.pos[0] as f32,
-                    ev.pos[1] as f32,
-                    ev.pos[2] as f32,
-                ),
-                ..default()
-            },
-            Colonist::default(),
-        ));
+        let behavior_id = commands
+            .spawn((Behavior { idx: 0 }, ActState::Success))
+            .id();
+
+        let actor_id = commands
+            .spawn((
+                MaterialMeshBundle {
+                    mesh: cube.clone(),
+                    material: material.clone(),
+                    transform: Transform::from_xyz(
+                        ev.pos[0] as f32,
+                        ev.pos[1] as f32,
+                        ev.pos[2] as f32,
+                    ),
+                    ..default()
+                },
+                Fatigue {
+                    value: 30.,
+                    per_second: 5.,
+                },
+                Brain {
+                    behavior: behavior_id,
+                    actions: vec![Arc::new(ActFindBed), Arc::new(ActSleep), Arc::new(ActNone)],
+                },
+                Colonist::default(),
+            ))
+            .id();
+
+        pairs.push((actor_id, behavior_id));
+    }
+
+    for (actor_id, behavior_id) in pairs {
+        commands.entity(behavior_id).insert(Actor(actor_id));
     }
 }

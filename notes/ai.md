@@ -1,6 +1,7 @@
 behavior tree
 
 Actors will have a Brain component
+
 Brains will define a generic Blackboard
     - will hold all types of data, including path
     - will hold current action result

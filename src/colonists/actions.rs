@@ -8,7 +8,7 @@ use bevy::{
     time::Time,
 };
 
-use super::{ActState, ActionBuilder, Actor, Fatigue};
+use super::{ActState, ActionBuilder, ActorRef, Fatigue};
 
 #[derive(Component)]
 pub struct ActFindBed;
@@ -42,27 +42,28 @@ impl ActionBuilder for ActSleep {
     }
 }
 
-#[derive(Component)]
-pub struct ActNone;
-impl ActionBuilder for ActNone {
+#[derive(Component, Default)]
+pub struct ActIdle(pub f32);
+
+impl ActionBuilder for ActIdle {
     fn insert(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).insert(ActNone);
+        cmd.entity(entity).insert(ActIdle::default());
     }
 
     fn remove(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).remove::<ActNone>();
+        cmd.entity(entity).remove::<ActIdle>();
     }
 
     fn label(&self) -> String {
-        String::from("ActNone")
+        String::from("ActIdle")
     }
 }
 
-pub fn act_find_bed(mut q_actors: Query<(&Actor, &mut ActState), With<ActFindBed>>) {
-    for (Actor(entity), mut state) in q_actors.iter_mut() {
+pub fn act_find_bed(mut q_actors: Query<(&ActorRef, &mut ActState), With<ActFindBed>>) {
+    for (ActorRef(entity), mut state) in q_actors.iter_mut() {
         if *state == ActState::Executing {
             println!("find a bed for {}", entity.index());
-            // brain.blackboard.bed = 3;
+            // actor.blackboard.bed = 3;
             *state = ActState::Success;
         }
     }
@@ -71,9 +72,9 @@ pub fn act_find_bed(mut q_actors: Query<(&Actor, &mut ActState), With<ActFindBed
 pub fn act_sleep(
     time: Res<Time>,
     mut q_fatigues: Query<&mut Fatigue>,
-    mut q_actors: Query<(&Actor, &mut ActState), With<ActSleep>>,
+    mut q_actors: Query<(&ActorRef, &mut ActState), With<ActSleep>>,
 ) {
-    for (Actor(entity), mut state) in q_actors.iter_mut() {
+    for (ActorRef(entity), mut state) in q_actors.iter_mut() {
         let Ok(mut fatigue) = q_fatigues.get_mut(*entity) else {
             println!("Actor entity does not have a fatigue");
             *state = ActState::Failed;
@@ -81,15 +82,25 @@ pub fn act_sleep(
         };
 
         if *state == ActState::Executing {
-            // println!("sleeping in bed {}", brain.blackboard.bed);
-
             if fatigue.value > 0. {
                 fatigue.value -= time.delta_seconds() * 40.;
             }
 
             if fatigue.value <= 0. {
                 fatigue.value = 0.;
-                println!("sleeping successful");
+                *state = ActState::Success;
+            }
+        }
+    }
+}
+
+pub fn act_idle(time: Res<Time>, mut q_actors: Query<(&mut ActState, &mut ActIdle)>) {
+    for (mut state, mut idle) in q_actors.iter_mut() {
+        if *state == ActState::Executing {
+            if idle.0 < 100. {
+                idle.0 += time.delta_seconds() * 20.;
+                *state = ActState::Executing;
+            } else {
                 *state = ActState::Success;
             }
         }

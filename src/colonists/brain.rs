@@ -7,6 +7,10 @@ use bevy::ecs::{
     system::{Commands, Query},
 };
 
+use crate::colonists::ActIdle;
+
+use super::{ActFindBed, ActSleep, Fatigue};
+
 pub trait ActionBuilder: Send + Sync {
     fn insert(&self, cmd: &mut Commands, entity: Entity);
     fn remove(&self, cmd: &mut Commands, entity: Entity);
@@ -21,91 +25,92 @@ pub enum ActState {
 }
 
 #[derive(Component, Clone)]
-pub struct Brain {
-    pub behavior: Entity,
+pub struct Actor;
+
+#[derive(Component, Clone)]
+pub struct HasBehavior {
+    pub behavior_entity: Entity,
+}
+
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ActorRef(pub Entity);
+
+#[derive(Component, Clone)]
+pub struct Behavior {
+    pub label: String,
+    pub idx: usize,
     pub actions: Vec<Arc<dyn ActionBuilder>>,
 }
 
-#[derive(Component, Debug, Clone, Copy)]
-pub struct Actor(pub Entity);
-
-#[derive(Component, Debug, Clone, Copy)]
-pub struct Behavior {
-    pub idx: usize,
-}
-
-#[derive(Component)]
-pub struct HasAct;
-
-fn set_action<T: ActionBuilder>(builder: &T, cmd: &mut Commands, entity: Entity) {
-    builder.insert(cmd, entity);
-    cmd.entity(entity).insert(HasAct);
-}
-
-pub fn brain_pick_act(
+pub fn behavior_system(
     mut commands: Commands,
-    mut q_behaviors: Query<(&Actor, &mut Behavior, &mut ActState)>,
-    mut q_brains: Query<&Brain>,
+    mut q_behaviors: Query<(Entity, &ActorRef, &mut Behavior, &mut ActState)>,
+    q_has_behavior: Query<&HasBehavior>,
 ) {
-    for brain in q_brains.iter_mut() {
-        let Ok((Actor(actor), mut behavior, mut state)) = q_behaviors.get_mut(brain.behavior)
-        else {
-            println!("Brain without behavior detected?");
+    for (entity, ActorRef(actor), mut behavior, mut state) in q_behaviors.iter_mut() {
+        let Ok(has_behavior) = q_has_behavior.get(*actor) else {
+            println!("Detached behavior detected?");
             continue;
         };
-
-        if behavior.idx >= brain.actions.len() {
-            continue;
-        }
 
         if *state == ActState::Executing {
             continue;
         }
 
-        if behavior.idx > 0 {
-            let cur_act = brain.actions.get(behavior.idx - 1).unwrap();
-            println!(
-                "removing action from actor {}->{}",
-                behavior.idx - 1,
-                cur_act.label()
-            );
-            cur_act.remove(&mut commands, brain.behavior);
+        if behavior.idx >= behavior.actions.len() {
+            commands.entity(*actor).remove::<HasBehavior>();
+            commands.entity(entity).despawn();
+            continue;
         }
 
-        let next_act = brain.actions.get(behavior.idx).unwrap();
-        println!(
-            "inserting action onto actor {}->{}",
-            behavior.idx,
-            next_act.label()
-        );
+        if behavior.idx > 0 {
+            let cur_act = behavior.actions.get(behavior.idx - 1).unwrap();
+            cur_act.remove(&mut commands, has_behavior.behavior_entity);
+        }
 
-        next_act.insert(&mut commands, brain.behavior);
-        // commands.entity(*actor).insert(HasAct);
+        let next_act = behavior.actions.get(behavior.idx).unwrap();
+
+        println!("acting {}->{}", behavior.idx, next_act.label());
+
+        next_act.insert(&mut commands, has_behavior.behavior_entity);
         *state = ActState::Executing;
         behavior.idx += 1;
     }
 }
 
-pub fn brain_system(
+pub fn assign_behavior_system(
     mut commands: Commands,
-    mut q_behaviors: Query<(&Actor, &mut Behavior, &mut ActState)>,
-    q_brains: Query<&Brain, With<HasAct>>,
+    q_actors: Query<(Entity, &Fatigue), (With<Actor>, Without<HasBehavior>)>,
 ) {
-    // for brain in q_brains.iter() {
-    //     let Ok((Actor(actor), behavior, state)) = q_behaviors.get_mut(brain.behavior) else {
-    //         println!("Brain without behavior detected?");
-    //         continue;
-    //     };
+    for (actor, fatigue) in q_actors.iter() {
+        let behavior = if fatigue.value >= 75. {
+            commands
+                .spawn((
+                    Behavior {
+                        label: String::from("Sleep"),
+                        idx: 0,
+                        actions: vec![Arc::new(ActFindBed), Arc::new(ActSleep)],
+                    },
+                    ActState::Success,
+                    ActorRef(actor),
+                ))
+                .id()
+        } else {
+            commands
+                .spawn((
+                    Behavior {
+                        label: String::from("Idle"),
+                        idx: 0,
+                        actions: vec![Arc::new(ActIdle(0.))],
+                    },
+                    ActState::Success,
+                    ActorRef(actor),
+                ))
+                .id()
+        };
 
-    //     if *state == ActState::Success || *state == ActState::Failed {
-    //         let act_builder = brain.actions.get(behavior.idx - 1).unwrap();
-    //         println!(
-    //             "removing action from actor {}->{}",
-    //             behavior.idx - 1,
-    //             act_builder.label()
-    //         );
-    //         act_builder.remove(&mut commands, *actor);
-    //         commands.entity(*actor).remove::<HasAct>();
-    //     }
-    // }
+        commands.entity(actor).insert(HasBehavior {
+            behavior_entity: behavior,
+        });
+    }
 }

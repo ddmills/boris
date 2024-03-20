@@ -2,9 +2,9 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    act_find_bed, act_idle, act_sleep, assign_behavior_system, behavior_system, fatigue_system,
-    on_spawn_colonist, partition, partition_debug, partition_setup, PartitionDebug, PartitionEvent,
-    PartitionGraph, SpawnColonistEvent,
+    assign_behavior_system, behavior_system, fatigue_system, on_spawn_colonist, partition,
+    partition_debug, partition_setup, task_find_bed, task_idle, task_sleep, PartitionDebug,
+    PartitionEvent, PartitionGraph, SpawnColonistEvent,
 };
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
@@ -85,9 +85,9 @@ fn main() {
             (
                 assign_behavior_system,
                 behavior_system,
-                act_find_bed,
-                act_sleep,
-                act_idle,
+                task_find_bed,
+                task_sleep,
+                task_idle,
             )
                 .chain(),
         )

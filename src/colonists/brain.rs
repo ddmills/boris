@@ -7,18 +7,18 @@ use bevy::ecs::{
     system::{Commands, Query},
 };
 
-use crate::colonists::ActIdle;
+use crate::colonists::TaskIdle;
 
-use super::{ActFindBed, ActSleep, Fatigue};
+use super::{Fatigue, TaskFindBed, TaskSleep};
 
-pub trait ActionBuilder: Send + Sync {
+pub trait TaskBuilder: Send + Sync {
     fn insert(&self, cmd: &mut Commands, entity: Entity);
     fn remove(&self, cmd: &mut Commands, entity: Entity);
     fn label(&self) -> String;
 }
 
 #[derive(Component, Clone, Copy, PartialEq)]
-pub enum ActState {
+pub enum TaskState {
     Executing,
     Success,
     Failed,
@@ -39,12 +39,12 @@ pub struct ActorRef(pub Entity);
 pub struct Behavior {
     pub label: String,
     pub idx: usize,
-    pub actions: Vec<Arc<dyn ActionBuilder>>,
+    pub tasks: Vec<Arc<dyn TaskBuilder>>,
 }
 
 pub fn behavior_system(
     mut commands: Commands,
-    mut q_behaviors: Query<(Entity, &ActorRef, &mut Behavior, &mut ActState)>,
+    mut q_behaviors: Query<(Entity, &ActorRef, &mut Behavior, &mut TaskState)>,
     q_has_behavior: Query<&HasBehavior>,
 ) {
     for (entity, ActorRef(actor), mut behavior, mut state) in q_behaviors.iter_mut() {
@@ -53,27 +53,27 @@ pub fn behavior_system(
             continue;
         };
 
-        if *state == ActState::Executing {
+        if *state == TaskState::Executing {
             continue;
         }
 
-        if behavior.idx >= behavior.actions.len() {
+        if behavior.idx >= behavior.tasks.len() {
             commands.entity(*actor).remove::<HasBehavior>();
             commands.entity(entity).despawn();
             continue;
         }
 
         if behavior.idx > 0 {
-            let cur_act = behavior.actions.get(behavior.idx - 1).unwrap();
-            cur_act.remove(&mut commands, has_behavior.behavior_entity);
+            let cur_task = behavior.tasks.get(behavior.idx - 1).unwrap();
+            cur_task.remove(&mut commands, has_behavior.behavior_entity);
         }
 
-        let next_act = behavior.actions.get(behavior.idx).unwrap();
+        let next_task = behavior.tasks.get(behavior.idx).unwrap();
 
-        println!("acting {}->{}", behavior.idx, next_act.label());
+        println!("{}->{}", behavior.label, next_task.label());
 
-        next_act.insert(&mut commands, has_behavior.behavior_entity);
-        *state = ActState::Executing;
+        next_task.insert(&mut commands, has_behavior.behavior_entity);
+        *state = TaskState::Executing;
         behavior.idx += 1;
     }
 }
@@ -89,9 +89,9 @@ pub fn assign_behavior_system(
                     Behavior {
                         label: String::from("Sleep"),
                         idx: 0,
-                        actions: vec![Arc::new(ActFindBed), Arc::new(ActSleep)],
+                        tasks: vec![Arc::new(TaskFindBed), Arc::new(TaskSleep)],
                     },
-                    ActState::Success,
+                    TaskState::Success,
                     ActorRef(actor),
                 ))
                 .id()
@@ -101,9 +101,9 @@ pub fn assign_behavior_system(
                     Behavior {
                         label: String::from("Idle"),
                         idx: 0,
-                        actions: vec![Arc::new(ActIdle(0.))],
+                        tasks: vec![Arc::new(TaskIdle(0.))],
                     },
-                    ActState::Success,
+                    TaskState::Success,
                     ActorRef(actor),
                 ))
                 .id()

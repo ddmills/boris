@@ -42,6 +42,12 @@ pub struct Behavior {
     pub tasks: Vec<Arc<dyn TaskBuilder>>,
 }
 
+#[derive(Component, Clone, Default)]
+pub struct Blackboard {
+    pub bed: u8,
+    pub idle_time: f32,
+}
+
 pub fn behavior_system(
     mut commands: Commands,
     mut q_behaviors: Query<(Entity, &ActorRef, &mut Behavior, &mut TaskState)>,
@@ -91,6 +97,7 @@ pub fn assign_behavior_system(
                         idx: 0,
                         tasks: vec![Arc::new(TaskFindBed), Arc::new(TaskSleep)],
                     },
+                    Blackboard::default(),
                     TaskState::Success,
                     ActorRef(actor),
                 ))
@@ -101,8 +108,9 @@ pub fn assign_behavior_system(
                     Behavior {
                         label: String::from("Idle"),
                         idx: 0,
-                        tasks: vec![Arc::new(TaskIdle(0.))],
+                        tasks: vec![Arc::new(TaskIdle)],
                     },
+                    Blackboard::default(),
                     TaskState::Success,
                     ActorRef(actor),
                 ))

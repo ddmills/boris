@@ -26,7 +26,7 @@ pub struct BlockMove {
     pub target: [i32; 3],
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Path {
     pub partition_path: Vec<u16>,
     pub goals: Vec<[u32; 3]>,

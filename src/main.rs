@@ -2,10 +2,12 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    behavior_pick_system, behavior_system, fatigue_system, on_spawn_colonist, partition,
-    partition_debug, partition_setup, task_find_bed, task_idle, task_sleep, PartitionDebug,
-    PartitionEvent, PartitionGraph, SpawnColonistEvent,
+    behavior_pick_system, behavior_system, block_move_system, fatigue_system, on_spawn_colonist,
+    partition, partition_debug, partition_setup, task_find_bed, task_idle, task_move_to,
+    task_pick_random_spot, task_sleep, PartitionDebug, PartitionEvent, PartitionGraph,
+    SpawnColonistEvent,
 };
+use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::fps::FpsPlugin;
 use terrain::*;
@@ -23,6 +25,7 @@ mod ui;
 fn main() {
     App::new()
         .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Rand::new())
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(Block::STONE),
         })
@@ -80,6 +83,7 @@ fn main() {
         .add_systems(Update, partition_debug)
         .add_systems(Update, partition)
         .add_systems(Update, fatigue_system)
+        .add_systems(Update, block_move_system)
         .add_systems(
             Update,
             (
@@ -88,6 +92,8 @@ fn main() {
                 task_find_bed,
                 task_sleep,
                 task_idle,
+                task_pick_random_spot,
+                task_move_to,
             )
                 .chain(),
         )

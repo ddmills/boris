@@ -17,3 +17,8 @@ an Act must be defined as a component on the entity, ex:
 
 
 Sequence(ActFindBed, MoveToAct, ActSleep)
+
+Actors start without any behavior
+    - A dedicated system will assign a behavior, to entities without one, for now
+        - this could be done using scores
+    - 

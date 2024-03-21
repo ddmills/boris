@@ -1,18 +1,15 @@
 use std::sync::Arc;
 
-use bevy::{
-    core_pipeline::core_2d::graph::input,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        system::{Commands, Query},
-    },
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    query::{With, Without},
+    system::{Commands, Query},
 };
 
 use crate::colonists::TaskIdle;
 
-use super::{Fatigue, TaskFindBed, TaskSleep};
+use super::{Fatigue, Path, TaskFindBed, TaskMoveTo, TaskPickRandomSpot, TaskSleep};
 
 pub trait TaskBuilder: Send + Sync {
     fn insert(&self, cmd: &mut Commands, actor: Entity);
@@ -45,10 +42,12 @@ pub struct Behavior {
     pub tasks: Vec<Arc<dyn TaskBuilder>>,
 }
 
-#[derive(Component, Clone, Default)]
+#[derive(Component, Default)]
 pub struct Blackboard {
     pub bed: u8,
     pub idle_time: f32,
+    pub move_goals: Vec<[u32; 3]>,
+    pub path: Option<Path>,
 }
 
 pub fn behavior_system(
@@ -111,7 +110,11 @@ pub fn behavior_pick_system(
                     Behavior {
                         label: String::from("Idle"),
                         idx: 0,
-                        tasks: vec![Arc::new(TaskIdle)],
+                        tasks: vec![
+                            Arc::new(TaskPickRandomSpot),
+                            Arc::new(TaskMoveTo),
+                            Arc::new(TaskIdle),
+                        ],
                     },
                     Blackboard::default(),
                     TaskState::Success,

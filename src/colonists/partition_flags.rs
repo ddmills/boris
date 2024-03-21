@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use bitflags::bitflags;
 
 bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct PartitionFlags: u8 {
         const NONE = 0;
         const SOLID_GROUND = 1;

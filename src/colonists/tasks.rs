@@ -127,7 +127,6 @@ pub fn task_move_to(
                 continue;
             };
 
-            println!("path generated!");
             blackboard.path = Some(Path {
                 current_partition_idx: partition_path.goals.len() - 1,
                 goals: partition_path.goals,
@@ -147,7 +146,6 @@ pub fn task_move_to(
             .any(|g| g[0] == pos[0] && g[1] == pos[1] && g[2] == pos[2]);
 
         if at_goal {
-            println!("goal reached!");
             blackboard.path = None;
             *state = TaskState::Success;
             continue;
@@ -161,8 +159,6 @@ pub fn task_move_to(
         if let Some(idx) = partition_path_idx {
             path.current_partition_idx = idx;
         };
-
-        println!("pathing?");
 
         // if current block index is zero, it means we've finished the granular path
         if path.current_block_idx == 0 {
@@ -197,7 +193,6 @@ pub fn task_move_to(
         }
 
         let [x, y, z] = path.blocks[path.current_block_idx];
-        println!("inserting block move! {},{},{}", x, y, z);
         commands.entity(*actor).insert(BlockMove {
             speed: 8.,
             target: path.blocks[path.current_block_idx],
@@ -249,8 +244,8 @@ pub fn task_idle(
 ) {
     for (mut state, mut blackboard) in q_behavior.iter_mut() {
         if *state == TaskState::Executing {
-            if blackboard.idle_time < 100. {
-                blackboard.idle_time += time.delta_seconds() * 20.;
+            if blackboard.idle_time < 4. {
+                blackboard.idle_time += time.delta_seconds();
                 *state = TaskState::Executing;
             } else {
                 *state = TaskState::Success;

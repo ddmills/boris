@@ -65,7 +65,11 @@ pub fn behavior_system(
             continue;
         }
 
-        if behavior.idx >= behavior.tasks.len() {
+        if *state == TaskState::Failed {
+            println!("Behavior {} failed!", behavior.label);
+        }
+
+        if behavior.idx >= behavior.tasks.len() || *state == TaskState::Failed {
             commands.entity(*actor).remove::<HasBehavior>();
             commands.entity(entity).despawn();
             continue;

@@ -1,63 +1,23 @@
 use bevy::{
     ecs::{
         component::Component,
-        entity::Entity,
         query::With,
-        system::{Commands, Query, Res},
+        system::{Query, Res},
     },
     time::Time,
 };
+use task_derive::TaskBuilder;
 
 use super::{ActorRef, Blackboard, Fatigue, TaskBuilder, TaskState};
 
-#[derive(Component)]
+#[derive(Component, Clone, TaskBuilder)]
 pub struct TaskFindBed;
-impl TaskBuilder for TaskFindBed {
-    fn insert(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).insert(TaskFindBed);
-    }
 
-    fn remove(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).remove::<TaskFindBed>();
-    }
-
-    fn label(&self) -> String {
-        String::from("ActFindBed")
-    }
-}
-
-#[derive(Component)]
+#[derive(Component, Clone, TaskBuilder)]
 pub struct TaskSleep;
-impl TaskBuilder for TaskSleep {
-    fn insert(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).insert(TaskSleep);
-    }
 
-    fn remove(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).remove::<TaskSleep>();
-    }
-
-    fn label(&self) -> String {
-        String::from("ActSleep")
-    }
-}
-
-#[derive(Component, Default)]
+#[derive(Component, Clone, TaskBuilder)]
 pub struct TaskIdle;
-
-impl TaskBuilder for TaskIdle {
-    fn insert(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).insert(TaskIdle::default());
-    }
-
-    fn remove(&self, cmd: &mut Commands, entity: Entity) {
-        cmd.entity(entity).remove::<TaskIdle>();
-    }
-
-    fn label(&self) -> String {
-        String::from("ActIdle")
-    }
-}
 
 pub fn task_find_bed(
     mut q_actors: Query<(&ActorRef, &mut Blackboard, &mut TaskState), With<TaskFindBed>>,

@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use bevy::ecs::{
-    component::Component,
-    entity::Entity,
-    query::{With, Without},
-    system::{Commands, Query},
+use bevy::{
+    core_pipeline::core_2d::graph::input,
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::{With, Without},
+        system::{Commands, Query},
+    },
 };
 
 use crate::colonists::TaskIdle;
@@ -12,8 +15,8 @@ use crate::colonists::TaskIdle;
 use super::{Fatigue, TaskFindBed, TaskSleep};
 
 pub trait TaskBuilder: Send + Sync {
-    fn insert(&self, cmd: &mut Commands, entity: Entity);
-    fn remove(&self, cmd: &mut Commands, entity: Entity);
+    fn insert(&self, cmd: &mut Commands, actor: Entity);
+    fn remove(&self, cmd: &mut Commands, actor: Entity);
     fn label(&self) -> String;
 }
 
@@ -84,7 +87,7 @@ pub fn behavior_system(
     }
 }
 
-pub fn assign_behavior_system(
+pub fn behavior_pick_system(
     mut commands: Commands,
     q_actors: Query<(Entity, &Fatigue), (With<Actor>, Without<HasBehavior>)>,
 ) {

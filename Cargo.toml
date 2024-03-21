@@ -12,6 +12,7 @@ bonsai-bt = "0.6.3"
 fastnoise-lite = "=1.0.1"
 ndshape = "0.3.0"
 ordered-float = "4.2.0"
+task_derive = { version = "=0.1.0", path = "./task_derive" }
 
 # [profile.dev]bevy = { version = "0.13.0" }
 # opt-level = 1

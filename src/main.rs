@@ -2,7 +2,7 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    assign_behavior_system, behavior_system, fatigue_system, on_spawn_colonist, partition,
+    behavior_pick_system, behavior_system, fatigue_system, on_spawn_colonist, partition,
     partition_debug, partition_setup, task_find_bed, task_idle, task_sleep, PartitionDebug,
     PartitionEvent, PartitionGraph, SpawnColonistEvent,
 };
@@ -83,7 +83,7 @@ fn main() {
         .add_systems(
             Update,
             (
-                assign_behavior_system,
+                behavior_pick_system,
                 behavior_system,
                 task_find_bed,
                 task_sleep,

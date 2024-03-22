@@ -3,7 +3,7 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Ident};
 
 #[proc_macro_derive(TaskBuilder)]
-pub fn my_macro_here_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn task_builder_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let component_name = input.ident;
@@ -37,16 +37,16 @@ fn insert_method(component_name: &Ident, ty_generics: &syn::TypeGenerics) -> Tok
     let turbofish = ty_generics.as_turbofish();
 
     quote! {
-        fn insert(&self, commands: &mut ::bevy::ecs::system::Commands, actor: ::bevy::ecs::entity::Entity) {
-            commands.entity(actor).insert(#component_name #turbofish::clone(self));
+        fn insert(&self, cmd: &mut ::bevy::ecs::system::EntityCommands) {
+            cmd.insert(#component_name #turbofish::clone(self));
         }
     }
 }
 
 fn remove_method(component_name: &Ident) -> TokenStream {
     quote! {
-        fn remove(&self, commands: &mut ::bevy::ecs::system::Commands, actor: ::bevy::ecs::entity::Entity) {
-            commands.entity(actor).remove::<#component_name>();
+        fn remove(&self, cmd: &mut ::bevy::ecs::system::EntityCommands) {
+            cmd.remove::<#component_name>();
         }
     }
 }

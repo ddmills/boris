@@ -4,7 +4,7 @@ use bevy::ecs::{
     component::Component,
     entity::Entity,
     query::{With, Without},
-    system::{Commands, Query},
+    system::{Commands, EntityCommands, Query},
 };
 
 use crate::colonists::TaskIdle;
@@ -12,8 +12,8 @@ use crate::colonists::TaskIdle;
 use super::{Fatigue, Path, TaskFindBed, TaskMoveTo, TaskPickRandomSpot, TaskSleep};
 
 pub trait TaskBuilder: Send + Sync {
-    fn insert(&self, cmd: &mut Commands, actor: Entity);
-    fn remove(&self, cmd: &mut Commands, actor: Entity);
+    fn insert(&self, cmd: &mut EntityCommands);
+    fn remove(&self, cmd: &mut EntityCommands);
     fn label(&self) -> String;
 }
 
@@ -38,20 +38,96 @@ pub struct ActorRef(pub Entity);
 #[derive(Component, Clone)]
 pub struct Behavior {
     pub label: String,
-    pub idx: usize,
-    pub tasks: Vec<Arc<dyn TaskBuilder>>,
+    pub state: BehaviorNodeState,
+}
+
+impl Behavior {
+    pub fn new(label: &str, node: BehaviorNode) -> Self {
+        Self {
+            label: String::from(label),
+            state: BehaviorNodeState::new(node),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum BehaviorNode {
+    Task(Arc<dyn TaskBuilder>),
+    Invert(Box<BehaviorNode>),
+    Sequence(Vec<BehaviorNode>),
+}
+
+#[derive(Clone)]
+pub enum BehaviorNodeState {
+    None,
+    Task(Arc<dyn TaskBuilder>),
+    Invert(Box<BehaviorNode>),
+    Sequence(Vec<BehaviorNode>, usize, Box<BehaviorNodeState>),
+}
+
+impl BehaviorNodeState {
+    pub fn new(node: BehaviorNode) -> Self {
+        match node {
+            BehaviorNode::Task(n) => BehaviorNodeState::Task(n),
+            BehaviorNode::Invert(n) => BehaviorNodeState::Invert(n),
+            BehaviorNode::Sequence(seq) => {
+                BehaviorNodeState::Sequence(seq, 0, Box::new(BehaviorNodeState::None))
+            }
+        }
+    }
+
+    pub fn cleanup(&mut self, cmd: &mut EntityCommands) {
+        if let BehaviorNodeState::Task(task) = self {
+            task.remove(cmd)
+        };
+    }
+
+    pub fn run(&mut self, cmd: &mut EntityCommands, task_state: &mut TaskState) {
+        match self {
+            BehaviorNodeState::None => {}
+            BehaviorNodeState::Task(t) => {
+                println!("insert->{}", t.label());
+                t.insert(cmd);
+                *task_state = TaskState::Executing;
+            }
+            BehaviorNodeState::Invert(_) => {
+                *task_state = match task_state {
+                    TaskState::Executing => TaskState::Executing,
+                    TaskState::Success => TaskState::Failed,
+                    TaskState::Failed => TaskState::Success,
+                };
+            }
+            BehaviorNodeState::Sequence(seq, idx, cursor) => {
+                if *idx >= seq.len() {
+                    return;
+                }
+
+                (*cursor).cleanup(cmd);
+
+                if *task_state != TaskState::Success {
+                    return;
+                }
+
+                let next_task = seq.get(*idx).unwrap();
+                let mut next_state = BehaviorNodeState::new(next_task.clone());
+                next_state.run(cmd, task_state);
+                **cursor = next_state;
+
+                *idx += 1;
+            }
+        }
+    }
 }
 
 #[derive(Component, Default)]
 pub struct Blackboard {
     pub bed: u8,
-    pub idle_time: f32,
     pub move_goals: Vec<[u32; 3]>,
     pub path: Option<Path>,
 }
 
 pub fn behavior_system(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut q_behaviors: Query<(Entity, &ActorRef, &mut Behavior, &mut TaskState)>,
     q_has_behavior: Query<&HasBehavior>,
 ) {
@@ -65,28 +141,21 @@ pub fn behavior_system(
             continue;
         }
 
+        behavior
+            .state
+            .run(&mut cmd.entity(has_behavior.behavior_entity), &mut state);
+
+        if *state != TaskState::Executing {
+            cmd.entity(*actor).remove::<HasBehavior>();
+            cmd.entity(entity).despawn();
+        }
+
         if *state == TaskState::Failed {
             println!("Behavior {} failed!", behavior.label);
         }
-
-        if behavior.idx >= behavior.tasks.len() || *state == TaskState::Failed {
-            commands.entity(*actor).remove::<HasBehavior>();
-            commands.entity(entity).despawn();
-            continue;
+        if *state == TaskState::Success {
+            println!("Behavior {} Success!", behavior.label);
         }
-
-        if behavior.idx > 0 {
-            let cur_task = behavior.tasks.get(behavior.idx - 1).unwrap();
-            cur_task.remove(&mut commands, has_behavior.behavior_entity);
-        }
-
-        let next_task = behavior.tasks.get(behavior.idx).unwrap();
-
-        println!("{}->{}", behavior.label, next_task.label());
-
-        next_task.insert(&mut commands, has_behavior.behavior_entity);
-        *state = TaskState::Executing;
-        behavior.idx += 1;
     }
 }
 
@@ -98,11 +167,13 @@ pub fn behavior_pick_system(
         let behavior = if fatigue.value >= 75. {
             commands
                 .spawn((
-                    Behavior {
-                        label: String::from("Sleep"),
-                        idx: 0,
-                        tasks: vec![Arc::new(TaskFindBed), Arc::new(TaskSleep)],
-                    },
+                    Behavior::new(
+                        "Sleep",
+                        BehaviorNode::Sequence(vec![
+                            BehaviorNode::Task(Arc::new(TaskFindBed)),
+                            BehaviorNode::Task(Arc::new(TaskSleep)),
+                        ]),
+                    ),
                     Blackboard::default(),
                     TaskState::Success,
                     ActorRef(actor),
@@ -111,15 +182,17 @@ pub fn behavior_pick_system(
         } else {
             commands
                 .spawn((
-                    Behavior {
-                        label: String::from("Idle"),
-                        idx: 0,
-                        tasks: vec![
-                            Arc::new(TaskPickRandomSpot),
-                            Arc::new(TaskMoveTo),
-                            Arc::new(TaskIdle),
-                        ],
-                    },
+                    Behavior::new(
+                        "Wander",
+                        BehaviorNode::Sequence(vec![
+                            BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
+                            BehaviorNode::Task(Arc::new(TaskMoveTo)),
+                            BehaviorNode::Task(Arc::new(TaskIdle {
+                                duration_s: 2.,
+                                timer: 0.,
+                            })),
+                        ]),
+                    ),
                     Blackboard::default(),
                     TaskState::Success,
                     ActorRef(actor),

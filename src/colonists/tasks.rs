@@ -24,7 +24,10 @@ pub struct TaskFindBed;
 pub struct TaskSleep;
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskIdle;
+pub struct TaskIdle {
+    pub timer: f32,
+    pub duration_s: f32,
+}
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskPickRandomSpot;
@@ -238,14 +241,11 @@ pub fn task_sleep(
     }
 }
 
-pub fn task_idle(
-    time: Res<Time>,
-    mut q_behavior: Query<(&mut TaskState, &mut Blackboard), With<TaskIdle>>,
-) {
-    for (mut state, mut blackboard) in q_behavior.iter_mut() {
+pub fn task_idle(time: Res<Time>, mut q_behavior: Query<(&mut TaskState, &mut TaskIdle)>) {
+    for (mut state, mut task) in q_behavior.iter_mut() {
         if *state == TaskState::Executing {
-            if blackboard.idle_time < 4. {
-                blackboard.idle_time += time.delta_seconds();
+            if task.timer < task.duration_s {
+                task.timer += time.delta_seconds();
                 *state = TaskState::Executing;
             } else {
                 *state = TaskState::Success;

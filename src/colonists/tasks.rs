@@ -9,11 +9,11 @@ use bevy::{
 };
 use task_derive::TaskBuilder;
 
-use crate::{common::Rand, Terrain};
+use crate::{common::Rand, Block, Terrain};
 
 use super::{
     get_block_flags, get_granular_path, get_partition_path, Actor, ActorRef, Blackboard, BlockMove,
-    Fatigue, GranularPathRequest, PartitionFlags, PartitionGraph, PartitionPathRequest, Path,
+    Fatigue, GranularPathRequest, Job, PartitionFlags, PartitionGraph, PartitionPathRequest, Path,
     TaskBuilder, TaskState,
 };
 
@@ -22,6 +22,12 @@ pub struct TaskFindBed;
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskSleep;
+
+#[derive(Component, Clone, TaskBuilder)]
+pub struct TaskGetJobLocation(pub Job);
+
+#[derive(Component, Clone, TaskBuilder)]
+pub struct TaskMineBlock(pub [u32; 3]);
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskIdle {
@@ -34,6 +40,36 @@ pub struct TaskPickRandomSpot;
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskMoveTo;
+
+pub fn task_mine_block(
+    mut terrain: ResMut<Terrain>,
+    mut q_behavior: Query<(&mut TaskState, &TaskMineBlock)>,
+) {
+    for (mut state, task) in q_behavior.iter_mut() {
+        let [x, y, z] = task.0;
+        terrain.set_block(x, y, z, Block::EMPTY);
+        *state = TaskState::Success;
+    }
+}
+
+pub fn task_get_job_location(
+    mut q_behavior: Query<(&mut Blackboard, &mut TaskState, &TaskGetJobLocation)>,
+) {
+    for (mut blackboard, mut state, task) in q_behavior.iter_mut() {
+        match task.0 {
+            Job::Mine(pos) => {
+                blackboard.move_goals = vec![
+                    [pos[0] - 1, pos[1], pos[2]],
+                    [pos[0] + 1, pos[1], pos[2]],
+                    [pos[0], pos[1], pos[2] + 1],
+                    [pos[0], pos[1], pos[2] - 1],
+                ];
+            }
+        }
+
+        *state = TaskState::Success;
+    }
+}
 
 pub fn task_pick_random_spot(
     mut rand: ResMut<Rand>,
@@ -207,11 +243,9 @@ pub fn task_find_bed(
     mut q_behavior: Query<(&ActorRef, &mut Blackboard, &mut TaskState), With<TaskFindBed>>,
 ) {
     for (ActorRef(entity), mut blackboard, mut state) in q_behavior.iter_mut() {
-        if *state == TaskState::Executing {
-            println!("find a bed for {}", entity.index());
-            blackboard.bed = 3;
-            *state = TaskState::Success;
-        }
+        println!("find a bed for {}", entity.index());
+        blackboard.bed = 3;
+        *state = TaskState::Success;
     }
 }
 
@@ -227,29 +261,25 @@ pub fn task_sleep(
             continue;
         };
 
-        if *state == TaskState::Executing {
-            if fatigue.value > 0. {
-                fatigue.value -= time.delta_seconds() * 40.;
-            }
+        if fatigue.value > 0. {
+            fatigue.value -= time.delta_seconds() * 40.;
+        }
 
-            if fatigue.value <= 0. {
-                println!("slept in bed {}", blackboard.bed);
-                fatigue.value = 0.;
-                *state = TaskState::Success;
-            }
+        if fatigue.value <= 0. {
+            println!("slept in bed {}", blackboard.bed);
+            fatigue.value = 0.;
+            *state = TaskState::Success;
         }
     }
 }
 
 pub fn task_idle(time: Res<Time>, mut q_behavior: Query<(&mut TaskState, &mut TaskIdle)>) {
     for (mut state, mut task) in q_behavior.iter_mut() {
-        if *state == TaskState::Executing {
-            if task.timer < task.duration_s {
-                task.timer += time.delta_seconds();
-                *state = TaskState::Executing;
-            } else {
-                *state = TaskState::Success;
-            }
+        if task.timer >= task.duration_s {
+            *state = TaskState::Success;
+            continue;
         }
+
+        task.timer += time.delta_seconds();
     }
 }

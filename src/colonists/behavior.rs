@@ -4,12 +4,15 @@ use bevy::ecs::{
     component::Component,
     entity::Entity,
     query::{With, Without},
-    system::{Commands, EntityCommands, Query},
+    system::{Commands, EntityCommands, Query, ResMut},
 };
 
 use crate::colonists::TaskIdle;
 
-use super::{Fatigue, Path, TaskFindBed, TaskMoveTo, TaskPickRandomSpot, TaskSleep};
+use super::{
+    jobs, Fatigue, JobList, Path, TaskFindBed, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
+    TaskPickRandomSpot, TaskSleep,
+};
 
 pub trait TaskBuilder: Send + Sync {
     fn insert(&self, cmd: &mut EntityCommands);
@@ -52,8 +55,11 @@ impl Behavior {
 
 #[derive(Clone)]
 pub enum BehaviorNode {
+    /// Perform the task
     Task(Arc<dyn TaskBuilder>),
-    Invert(Box<BehaviorNode>),
+    /// Return the opposite of the child
+    Not(Box<BehaviorNode>),
+    /// Visit all children sequentially
     Sequence(Vec<BehaviorNode>),
 }
 
@@ -61,7 +67,7 @@ pub enum BehaviorNode {
 pub enum BehaviorNodeState {
     None,
     Task(Arc<dyn TaskBuilder>),
-    Invert(Box<BehaviorNode>),
+    Not(Box<BehaviorNode>),
     Sequence(Vec<BehaviorNode>, usize, Box<BehaviorNodeState>),
 }
 
@@ -69,7 +75,7 @@ impl BehaviorNodeState {
     pub fn new(node: BehaviorNode) -> Self {
         match node {
             BehaviorNode::Task(n) => BehaviorNodeState::Task(n),
-            BehaviorNode::Invert(n) => BehaviorNodeState::Invert(n),
+            BehaviorNode::Not(n) => BehaviorNodeState::Not(n),
             BehaviorNode::Sequence(seq) => {
                 BehaviorNodeState::Sequence(seq, 0, Box::new(BehaviorNodeState::None))
             }
@@ -90,7 +96,7 @@ impl BehaviorNodeState {
                 t.insert(cmd);
                 *task_state = TaskState::Executing;
             }
-            BehaviorNodeState::Invert(_) => {
+            BehaviorNodeState::Not(_) => {
                 *task_state = match task_state {
                     TaskState::Executing => TaskState::Executing,
                     TaskState::Success => TaskState::Failed,
@@ -162,46 +168,59 @@ pub fn behavior_system(
 pub fn behavior_pick_system(
     mut commands: Commands,
     q_actors: Query<(Entity, &Fatigue), (With<Actor>, Without<HasBehavior>)>,
+    mut jobs: ResMut<JobList>,
 ) {
     for (actor, fatigue) in q_actors.iter() {
-        let behavior = if fatigue.value >= 75. {
-            commands
-                .spawn((
-                    Behavior::new(
-                        "Sleep",
-                        BehaviorNode::Sequence(vec![
-                            BehaviorNode::Task(Arc::new(TaskFindBed)),
-                            BehaviorNode::Task(Arc::new(TaskSleep)),
-                        ]),
-                    ),
-                    Blackboard::default(),
-                    TaskState::Success,
-                    ActorRef(actor),
-                ))
-                .id()
-        } else {
-            commands
-                .spawn((
-                    Behavior::new(
-                        "Wander",
-                        BehaviorNode::Sequence(vec![
-                            BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
-                            BehaviorNode::Task(Arc::new(TaskMoveTo)),
-                            BehaviorNode::Task(Arc::new(TaskIdle {
-                                duration_s: 2.,
-                                timer: 0.,
-                            })),
-                        ]),
-                    ),
-                    Blackboard::default(),
-                    TaskState::Success,
-                    ActorRef(actor),
-                ))
-                .id()
-        };
+        let behavior = get_behavior(fatigue, &mut jobs);
+
+        let b_entity = commands
+            .spawn((
+                Blackboard::default(),
+                TaskState::Success,
+                ActorRef(actor),
+                behavior,
+            ))
+            .id();
 
         commands.entity(actor).insert(HasBehavior {
-            behavior_entity: behavior,
+            behavior_entity: b_entity,
         });
     }
+}
+
+pub fn get_behavior(fatigue: &Fatigue, jobs: &mut JobList) -> Behavior {
+    if fatigue.value > 75. {
+        return Behavior::new(
+            "Sleep",
+            BehaviorNode::Sequence(vec![
+                BehaviorNode::Task(Arc::new(TaskFindBed)),
+                BehaviorNode::Task(Arc::new(TaskSleep)),
+            ]),
+        );
+    }
+
+    if let Some(job) = jobs.pop() {
+        return match job {
+            jobs::Job::Mine(pos) => Behavior::new(
+                "Mine",
+                BehaviorNode::Sequence(vec![
+                    BehaviorNode::Task(Arc::new(TaskGetJobLocation(job))),
+                    BehaviorNode::Task(Arc::new(TaskMoveTo)),
+                    BehaviorNode::Task(Arc::new(TaskMineBlock(pos))),
+                ]),
+            ),
+        };
+    }
+
+    Behavior::new(
+        "Wander",
+        BehaviorNode::Sequence(vec![
+            BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
+            BehaviorNode::Task(Arc::new(TaskMoveTo)),
+            BehaviorNode::Task(Arc::new(TaskIdle {
+                duration_s: 2.,
+                timer: 0.,
+            })),
+        ]),
+    )
 }

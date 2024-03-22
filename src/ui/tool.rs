@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
+    colonists::{Job, JobList, Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
     common::min_max,
     controls::Raycast,
     Block, Cursor, Terrain,
@@ -25,6 +25,7 @@ pub enum Tool {
     SpawnColonist,
     Pathfind,
     BlockInfo,
+    Mine,
 }
 
 #[derive(Default)]
@@ -43,6 +44,7 @@ pub fn tool_system(
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
+    mut job_list: ResMut<JobList>,
 ) {
     match toolbar.tool {
         Tool::PlaceBlocks(block) => {
@@ -199,6 +201,16 @@ pub fn tool_system(
                 } else {
                     println!("no partition");
                 }
+            }
+        }
+        Tool::Mine => {
+            if mouse_input.just_released(MouseButton::Left) {
+                if !raycast.is_hit {
+                    return;
+                }
+
+                println!("Queue mine job");
+                job_list.queue(Job::Mine(raycast.hit_pos));
             }
         }
     }

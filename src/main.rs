@@ -1,11 +1,13 @@
+use std::collections::VecDeque;
+
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
     behavior_pick_system, behavior_system, block_move_system, fatigue_system, on_spawn_colonist,
-    partition, partition_debug, partition_setup, task_find_bed, task_idle, task_move_to,
-    task_pick_random_spot, task_sleep, PartitionDebug, PartitionEvent, PartitionGraph,
-    SpawnColonistEvent,
+    partition, partition_debug, partition_setup, task_find_bed, task_get_job_location, task_idle,
+    task_mine_block, task_move_to, task_pick_random_spot, task_sleep, Job, JobList, PartitionDebug,
+    PartitionEvent, PartitionGraph, SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -28,6 +30,9 @@ fn main() {
         .insert_resource(Rand::new())
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(Block::STONE),
+        })
+        .insert_resource(JobList {
+            jobs: VecDeque::new(),
         })
         .insert_resource(Ui {
             pointer_captured: false,
@@ -94,6 +99,8 @@ fn main() {
                 task_idle,
                 task_pick_random_spot,
                 task_move_to,
+                task_get_job_location,
+                task_mine_block,
             )
                 .chain(),
         )

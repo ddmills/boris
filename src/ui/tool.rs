@@ -107,6 +107,20 @@ pub fn tool_system(
                 return;
             }
 
+            if state.is_dragging {
+                let [min_x, max_x] = min_max(state.start[0], raycast.hit_pos[0]);
+                let [min_y, max_y] = min_max(state.start[1], raycast.hit_pos[1]);
+                let [min_z, max_z] = min_max(state.start[2], raycast.hit_pos[2]);
+
+                let scale = Vec3::new(
+                    ((max_x - min_x) + 1) as f32,
+                    ((max_y - min_y) + 1) as f32,
+                    ((max_z - min_z) + 1) as f32,
+                );
+                cursor.scale = scale;
+                cursor.translation = Vec3::new(min_x as f32, min_y as f32, min_z as f32);
+            }
+
             if mouse_input.just_released(MouseButton::Left) {
                 if !raycast.is_hit {
                     state.is_dragging = false;
@@ -135,20 +149,6 @@ pub fn tool_system(
                     }
                 }
             }
-
-            if state.is_dragging {
-                let [min_x, max_x] = min_max(state.start[0], raycast.hit_pos[0]);
-                let [min_y, max_y] = min_max(state.start[1], raycast.hit_pos[1]);
-                let [min_z, max_z] = min_max(state.start[2], raycast.hit_pos[2]);
-
-                let scale = Vec3::new(
-                    ((max_x - min_x) + 1) as f32,
-                    ((max_y - min_y) + 1) as f32,
-                    ((max_z - min_z) + 1) as f32,
-                );
-                cursor.scale = scale;
-                cursor.translation = Vec3::new(min_x as f32, min_y as f32, min_z as f32);
-            }
         }
         Tool::SpawnColonist => {
             if mouse_input.just_released(MouseButton::Left) {
@@ -161,7 +161,6 @@ pub fn tool_system(
                 });
             }
         }
-
         Tool::BlockInfo => {
             if mouse_input.just_released(MouseButton::Left) {
                 if !raycast.is_adj_hit {
@@ -197,13 +196,57 @@ pub fn tool_system(
             }
         }
         Tool::Mine => {
+            let mut cursor = cursor_query.get_single_mut().unwrap();
+
+            if mouse_input.just_released(MouseButton::Right) {
+                state.is_dragging = false;
+                cursor.scale = Vec3::ZERO;
+                return;
+            }
+
+            if state.is_dragging {
+                let [min_x, max_x] = min_max(state.start[0], raycast.hit_pos[0]);
+                let [min_y, max_y] = min_max(state.start[1], raycast.hit_pos[1]);
+                let [min_z, max_z] = min_max(state.start[2], raycast.hit_pos[2]);
+
+                let scale = Vec3::new(
+                    ((max_x - min_x) + 1) as f32,
+                    ((max_y - min_y) + 1) as f32,
+                    ((max_z - min_z) + 1) as f32,
+                );
+                cursor.scale = scale;
+                cursor.translation = Vec3::new(min_x as f32, min_y as f32, min_z as f32);
+            }
+
             if mouse_input.just_released(MouseButton::Left) {
                 if !raycast.is_hit {
+                    state.is_dragging = false;
                     return;
                 }
 
-                println!("Queue mine job");
-                job_list.queue(Job::Mine(raycast.hit_pos));
+                if !state.is_dragging {
+                    state.is_dragging = true;
+                    state.start = raycast.hit_pos;
+                    return;
+                }
+
+                state.is_dragging = false;
+
+                let [min_x, max_x] = min_max(state.start[0], raycast.hit_pos[0]);
+                let [min_y, max_y] = min_max(state.start[1], raycast.hit_pos[1]);
+                let [min_z, max_z] = min_max(state.start[2], raycast.hit_pos[2]);
+
+                cursor.scale = Vec3::ZERO;
+
+                for x in min_x..=max_x {
+                    for y in min_y..=max_y {
+                        for z in min_z..=max_z {
+                            if terrain.get_block(x, y, z).is_filled() {
+                                job_list.queue(Job::Mine([x, y, z]));
+                            }
+                        }
+                    }
+                }
             }
         }
     }

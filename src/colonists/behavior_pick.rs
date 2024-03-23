@@ -10,7 +10,7 @@ use bevy::ecs::{
 use super::{
     jobs::Job::Mine, Actor, ActorRef, Behavior, BehaviorNode, Fatigue, HasBehavior, Job, JobList,
     Path, TaskFindBed, TaskGetJobLocation, TaskIdle, TaskMineBlock, TaskMoveTo, TaskPickRandomSpot,
-    TaskSetJob, TaskSleep, TaskState,
+    TaskReturnJob, TaskSetJob, TaskSleep, TaskState,
 };
 
 #[derive(Component, Default)]
@@ -66,10 +66,7 @@ pub fn get_behavior(fatigue: &Fatigue, jobs: &mut JobList) -> Behavior {
                         BehaviorNode::Task(Arc::new(TaskMoveTo)),
                         BehaviorNode::Task(Arc::new(TaskMineBlock(pos))),
                     ])),
-                    Box::new(BehaviorNode::Task(Arc::new(TaskIdle {
-                        duration_s: 5.,
-                        timer: 0.,
-                    }))),
+                    Box::new(BehaviorNode::Task(Arc::new(TaskReturnJob))),
                 ),
             ),
         };

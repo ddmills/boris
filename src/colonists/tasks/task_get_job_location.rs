@@ -18,10 +18,24 @@ pub fn task_get_job_location(
         match job {
             Job::Mine(pos) => {
                 blackboard.move_goals = vec![
-                    [pos[0] - 1, pos[1], pos[2]],
                     [pos[0] + 1, pos[1], pos[2]],
+                    [pos[0] - 1, pos[1], pos[2]],
                     [pos[0], pos[1], pos[2] + 1],
                     [pos[0], pos[1], pos[2] - 1],
+                    [pos[0] + 1, pos[1] + 1, pos[2]],
+                    [pos[0] - 1, pos[1] + 1, pos[2]],
+                    [pos[0], pos[1] + 1, pos[2] + 1],
+                    [pos[0], pos[1] + 1, pos[2] - 1],
+                    [pos[0] + 1, pos[1] - 1, pos[2]],
+                    [pos[0] - 1, pos[1] - 1, pos[2]],
+                    [pos[0], pos[1] - 1, pos[2] + 1],
+                    [pos[0], pos[1] - 1, pos[2] - 1],
+                    [pos[0], pos[1] - 2, pos[2] + 1],
+                    [pos[0], pos[1] - 2, pos[2] - 1],
+                    [pos[0] - 1, pos[1], pos[2] + 1],
+                    [pos[0] - 1, pos[1], pos[2] - 1],
+                    [pos[0] + 1, pos[1], pos[2] + 1],
+                    [pos[0] + 1, pos[1], pos[2] - 1],
                 ];
             }
         }

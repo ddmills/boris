@@ -7,8 +7,8 @@ use colonists::{
     behavior_pick_system, behavior_system, block_move_system, fatigue_system, on_spawn_colonist,
     partition, partition_debug, partition_setup, path_debug, task_debug, task_find_bed,
     task_get_job_location, task_idle, task_mine_block, task_move_to, task_pick_random_spot,
-    task_set_job, task_sleep, JobList, PartitionDebug, PartitionEvent, PartitionGraph,
-    SpawnColonistEvent,
+    task_return_job, task_set_job, task_sleep, JobList, PartitionDebug, PartitionEvent,
+    PartitionGraph, SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -105,6 +105,7 @@ fn main() {
                 task_get_job_location,
                 task_mine_block,
                 task_debug,
+                task_return_job,
             )
                 .chain(),
         )

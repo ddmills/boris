@@ -101,19 +101,24 @@ pub fn task_move_to(
 
         // if current block index is zero, it means we've finished the granular path
         if path.current_block_idx == 0 {
+            let Some(next_partition_id) = path.next_partition_id() else {
+                println!("Path has changed? Retrying pathfinding.");
+                commands.entity(*actor).remove::<Path>();
+                continue;
+            };
+
             let Some(granular_path) = get_granular_path(
                 &graph,
                 &terrain,
                 &GranularPathRequest {
                     start: pos,
                     goals: path.goals.clone(),
-                    goal_partition_id: path.next_partition_id(),
+                    goal_partition_id: *next_partition_id,
                     flags: path.flags,
                 },
             ) else {
-                println!("Could not get granular path, cannot move to!");
+                println!("Could not get granular path, retrying!");
                 commands.entity(*actor).remove::<Path>();
-                *state = TaskState::Failed;
                 continue;
             };
 
@@ -123,13 +128,17 @@ pub fn task_move_to(
 
         path.current_block_idx -= 1;
 
-        let next_block = path.next_block();
+        let Some(next_block) = path.next_block() else {
+            println!("Path has changed? Retrying pathfinding.");
+            commands.entity(*actor).remove::<Path>();
+            continue;
+        };
+
         let block_flags = get_block_flags(&terrain, next_block[0], next_block[1], next_block[2]);
 
         if block_flags & path.flags == PartitionFlags::NONE {
-            println!("Path has changed! it's now blocked!");
+            println!("Path block flags have changed? Retrying pathfinding.");
             commands.entity(*actor).remove::<Path>();
-            *state = TaskState::Failed;
             continue;
         }
 

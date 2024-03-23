@@ -1,14 +1,10 @@
-use std::cmp::Ordering;
-
 use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
         system::{Commands, Query, Res},
     },
-    gizmos::gizmos::Gizmos,
-    math::{vec3, Vec3},
-    render::color::Color,
+    math::vec3,
     time::Time,
     transform::components::Transform,
 };
@@ -66,50 +62,6 @@ pub fn block_move_system(
             commands.entity(entity).remove::<BlockMove>();
         } else {
             transform.translation += direction * move_dist;
-        }
-    }
-}
-
-pub fn path_debug(mut gizmos: Gizmos, pathers: Query<&Path>) {
-    for path in pathers.iter() {
-        for i in 1..path.blocks.len() {
-            let current = path.blocks[i - 1];
-            let next = path.blocks[i];
-
-            let mid = Vec3::new(0.5, 0.5, 0.5);
-
-            let color = match i.cmp(&path.current_block_idx) {
-                Ordering::Less => Color::ORANGE,
-                Ordering::Equal => Color::ORANGE_RED,
-                Ordering::Greater => Color::GRAY,
-            };
-
-            gizmos.line(
-                Vec3::new(current[0] as f32, current[1] as f32, current[2] as f32) + mid,
-                Vec3::new(next[0] as f32, next[1] as f32, next[2] as f32) + mid,
-                color,
-            );
-        }
-
-        for g in path.goals.iter() {
-            let pos = Vec3::new(g[0] as f32, g[1] as f32 + 0.04, g[2] as f32);
-
-            gizmos.line(pos, pos + Vec3::new(1., 0., 0.), Color::CYAN);
-            gizmos.line(pos, pos + Vec3::new(0., 0., 1.), Color::CYAN);
-
-            gizmos.line(pos, pos + Vec3::new(1., 0., 0.), Color::CYAN);
-            gizmos.line(pos, pos + Vec3::new(0., 0., 1.), Color::CYAN);
-
-            gizmos.line(
-                pos + Vec3::new(1., 0., 1.),
-                pos + Vec3::new(1., 0., 0.),
-                Color::CYAN,
-            );
-            gizmos.line(
-                pos + Vec3::new(1., 0., 1.),
-                pos + Vec3::new(0., 0., 1.),
-                Color::CYAN,
-            );
         }
     }
 }
@@ -310,20 +262,20 @@ pub fn is_reachable(
 }
 
 impl Path {
-    pub fn next_partition_id(&self) -> u16 {
+    pub fn next_partition_id(&self) -> Option<&u16> {
         if self.current_partition_idx > 0 {
-            return self.partition_path[self.current_partition_idx - 1];
+            return self.partition_path.get(self.current_partition_idx - 1);
         }
 
-        self.partition_path[0]
+        self.partition_path.first()
     }
 
-    pub fn next_block(&self) -> [i32; 3] {
+    pub fn next_block(&self) -> Option<&[i32; 3]> {
         if self.current_block_idx > 0 {
-            return self.blocks[self.current_block_idx - 1];
+            return self.blocks.get(self.current_block_idx - 1);
         }
 
-        self.blocks[0]
+        self.blocks.first()
     }
 }
 

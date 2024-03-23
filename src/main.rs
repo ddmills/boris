@@ -5,14 +5,13 @@ use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
     behavior_pick_system, behavior_system, block_move_system, fatigue_system, on_spawn_colonist,
-    partition, partition_debug, partition_setup, path_debug, task_debug, task_find_bed,
-    task_get_job_location, task_idle, task_mine_block, task_move_to, task_pick_random_spot,
-    task_return_job, task_set_job, task_sleep, JobList, PartitionDebug, PartitionEvent,
-    PartitionGraph, SpawnColonistEvent,
+    partition, partition_debug, partition_setup, task_debug, task_find_bed, task_get_job_location,
+    task_idle, task_mine_block, task_move_to, task_pick_random_spot, task_return_job, task_set_job,
+    task_sleep, JobList, PartitionDebug, PartitionEvent, PartitionGraph, SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
-use debug::fps::FpsPlugin;
+use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -29,6 +28,7 @@ fn main() {
     App::new()
         .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Rand::new())
+        .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(Block::STONE),
         })

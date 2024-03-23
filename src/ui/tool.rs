@@ -13,6 +13,7 @@ use crate::{
     colonists::{Job, JobList, Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
     common::min_max,
     controls::Raycast,
+    debug::debug_settings::DebugSettings,
     Block, Cursor, Terrain,
 };
 
@@ -21,6 +22,7 @@ use super::Toolbar;
 #[derive(PartialEq, Clone)]
 pub enum Tool {
     PlaceBlocks(Block),
+    TogglePathDebug,
     ClearBlocks,
     SpawnColonist,
     BlockInfo,
@@ -44,6 +46,7 @@ pub fn tool_system(
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
     mut job_list: ResMut<JobList>,
+    mut debug_settings: ResMut<DebugSettings>,
 ) {
     match toolbar.tool {
         Tool::PlaceBlocks(block) => {
@@ -247,6 +250,11 @@ pub fn tool_system(
                         }
                     }
                 }
+            }
+        }
+        Tool::TogglePathDebug => {
+            if mouse_input.just_released(MouseButton::Left) {
+                debug_settings.path = !debug_settings.path;
             }
         }
     }

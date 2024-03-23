@@ -64,7 +64,7 @@ pub fn get_behavior(fatigue: &Fatigue, jobs: &mut JobList) -> Behavior {
                         BehaviorNode::Task(Arc::new(TaskSetJob(job))),
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo)),
-                        BehaviorNode::Task(Arc::new(TaskMineBlock(pos))),
+                        BehaviorNode::Task(Arc::new(TaskMineBlock { pos, progress: 0. })),
                     ])),
                     Box::new(BehaviorNode::Task(Arc::new(TaskReturnJob))),
                 ),
@@ -79,7 +79,7 @@ pub fn get_behavior(fatigue: &Fatigue, jobs: &mut JobList) -> Behavior {
             BehaviorNode::Task(Arc::new(TaskMoveTo)),
             BehaviorNode::Task(Arc::new(TaskIdle {
                 duration_s: 2.,
-                timer: 0.,
+                progress: 0.,
             })),
         ]),
     )

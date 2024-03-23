@@ -91,24 +91,18 @@ fn main() {
         .add_systems(Update, partition)
         .add_systems(Update, fatigue_system)
         .add_systems(Update, block_move_system)
-        .add_systems(
-            Update,
-            (
-                behavior_pick_system,
-                behavior_system,
-                task_set_job,
-                task_find_bed,
-                task_sleep,
-                task_idle,
-                task_pick_random_spot,
-                task_move_to,
-                task_get_job_location,
-                task_mine_block,
-                task_debug,
-                task_return_job,
-            )
-                .chain(),
-        )
+        .add_systems(Update, behavior_pick_system)
+        .add_systems(Update, behavior_system)
+        .add_systems(Update, task_set_job)
+        .add_systems(Update, task_find_bed)
+        .add_systems(Update, task_sleep)
+        .add_systems(Update, task_idle)
+        .add_systems(Update, task_pick_random_spot)
+        .add_systems(Update, task_move_to)
+        .add_systems(Update, task_get_job_location)
+        .add_systems(Update, task_mine_block)
+        .add_systems(Update, task_debug)
+        .add_systems(Update, task_return_job)
         .run();
 }
 

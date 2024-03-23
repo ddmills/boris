@@ -340,7 +340,8 @@ pub fn behavior_system(
 ) {
     for (entity, ActorRef(actor), mut behavior, mut state) in q_behaviors.iter_mut() {
         let Ok(has_behavior) = q_has_behavior.get(*actor) else {
-            println!("Detached behavior detected?");
+            println!("Detached behavior detected? Despawning it.");
+            cmd.entity(entity).despawn();
             continue;
         };
 

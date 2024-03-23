@@ -1,20 +1,9 @@
 use std::sync::Arc;
 
-use bevy::{
-    a11y::accesskit::Node,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        system::{Commands, EntityCommands, Query, ResMut},
-    },
-};
-
-use crate::colonists::TaskIdle;
-
-use super::{
-    jobs, Fatigue, Job, JobList, Path, TaskFindBed, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
-    TaskPickRandomSpot, TaskSetJob, TaskSleep,
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    system::{Commands, EntityCommands, Query},
 };
 
 pub trait TaskBuilder: Send + Sync {
@@ -62,19 +51,24 @@ pub enum BehaviorNode {
     Task(Arc<dyn TaskBuilder>),
     /// Try to do the first behavior, if that fails, do the second
     Try(Box<BehaviorNode>, Box<BehaviorNode>),
+    /// If the first node succeeds, do the second one, otherwise do the last one
+    /// Functionally, this is the same as `Try(Sequence(A, B), C)`
+    IfElse(Box<BehaviorNode>, Box<BehaviorNode>, Box<BehaviorNode>),
     /// Return the opposite of the child
     Not(Box<BehaviorNode>),
-    /// Visit all children sequentially
+    /// Visit children sequentially, until one fails or they all succeed
     Sequence(Vec<BehaviorNode>),
+    /// Visit children sequentially, until one succeeds, or they all fail
+    Select(Vec<BehaviorNode>),
 }
 
 #[derive(Clone)]
 pub enum BehaviorNodeState {
-    None(NodeState),
     Task(NodeState, Arc<dyn TaskBuilder>),
     Try(NodeState, Box<BehaviorNodeState>, Box<BehaviorNodeState>),
     Not(NodeState, Box<BehaviorNodeState>),
     Sequence(NodeState, Vec<BehaviorNodeState>, usize),
+    Select(NodeState, Vec<BehaviorNodeState>, usize),
 }
 
 #[derive(Clone, PartialEq)]
@@ -102,34 +96,63 @@ impl BehaviorNodeState {
                     .collect(),
                 0,
             ),
+            BehaviorNode::IfElse(condition, if_node, else_node) => Self::new(BehaviorNode::Try(
+                Box::new(BehaviorNode::Sequence(vec![*condition, *if_node])),
+                else_node,
+            )),
+            BehaviorNode::Select(seq) => BehaviorNodeState::Select(
+                NodeState::NotStarted,
+                seq.iter()
+                    .map(|node| BehaviorNodeState::new(node.clone()))
+                    .collect(),
+                0,
+            ),
         }
     }
 
-    pub fn cleanup(&mut self, cmd: &mut EntityCommands) {
-        if let BehaviorNodeState::Task(_, task) = self {
-            task.remove(cmd)
-        };
+    pub fn reset(&mut self) {
+        match self {
+            BehaviorNodeState::Task(s, _) => {
+                *s = NodeState::NotStarted;
+            }
+            BehaviorNodeState::Try(s, node, catch) => {
+                *s = NodeState::NotStarted;
+                node.reset();
+                catch.reset();
+            }
+            BehaviorNodeState::Not(s, node) => {
+                *s = NodeState::NotStarted;
+                node.reset();
+            }
+            BehaviorNodeState::Sequence(s, seq, idx) => {
+                *s = NodeState::NotStarted;
+                seq.iter_mut().for_each(|node| node.reset());
+                *idx = 0;
+            }
+            BehaviorNodeState::Select(s, seq, idx) => {
+                *s = NodeState::NotStarted;
+                seq.iter_mut().for_each(|node| node.reset());
+                *idx = 0;
+            }
+        }
     }
 
     pub fn state(&self) -> &NodeState {
         match self {
-            BehaviorNodeState::None(s) => s,
             BehaviorNodeState::Task(s, _) => s,
             BehaviorNodeState::Try(s, _, _) => s,
             BehaviorNodeState::Not(s, _) => s,
             BehaviorNodeState::Sequence(s, _, _) => s,
+            BehaviorNodeState::Select(s, _, _) => s,
         }
     }
 
     fn run(&mut self, cmd: &mut EntityCommands, task_state: TaskState) -> NodeState {
         match self {
-            BehaviorNodeState::None(s) => {
-                *s = NodeState::Success;
-                NodeState::Success
-            }
             BehaviorNodeState::Task(s, task) => match *s {
                 NodeState::NotStarted => {
                     task.insert(cmd);
+                    println!("{} => {}", cmd.id().index(), task.label());
                     *s = NodeState::Executing;
                     NodeState::Executing
                 }
@@ -264,31 +287,50 @@ impl BehaviorNodeState {
                 }
                 NodeState::NotStarted => {
                     *idx = 0;
-
-                    let Some(first) = seq.first_mut() else {
+                    *s = NodeState::Executing;
+                    self.run(cmd, task_state)
+                }
+            },
+            BehaviorNodeState::Select(s, seq, idx) => match s {
+                NodeState::Success => NodeState::Success,
+                NodeState::Failed => NodeState::Failed,
+                NodeState::Executing => {
+                    let Some(current) = seq.get_mut(*idx) else {
                         *s = NodeState::Failed;
                         return NodeState::Failed;
                     };
 
-                    *s = NodeState::Executing;
-
-                    if NodeState::Executing != first.run(cmd, task_state) {
-                        self.run(cmd, task_state)
-                    } else {
-                        NodeState::Executing
+                    match current.run(cmd, task_state).clone() {
+                        NodeState::NotStarted => {
+                            println!("Run was called on a child node for select, but it did not start! {}", *idx);
+                            *s = NodeState::Failed;
+                            NodeState::Failed
+                        }
+                        NodeState::Executing => NodeState::Executing,
+                        NodeState::Success => {
+                            *s = NodeState::Success;
+                            NodeState::Success
+                        }
+                        NodeState::Failed => {
+                            *idx += 1;
+                            if *idx >= seq.len() {
+                                println!("End of sequence select failed!");
+                                *s = NodeState::Failed;
+                                NodeState::Failed
+                            } else {
+                                self.run(cmd, task_state)
+                            }
+                        }
                     }
+                }
+                NodeState::NotStarted => {
+                    *idx = 0;
+                    *s = NodeState::Executing;
+                    self.run(cmd, task_state)
                 }
             },
         }
     }
-}
-
-#[derive(Component, Default)]
-pub struct Blackboard {
-    pub job: Option<Job>,
-    pub bed: u8,
-    pub move_goals: Vec<[u32; 3]>,
-    pub path: Option<Path>,
 }
 
 pub fn behavior_system(
@@ -332,71 +374,4 @@ pub fn behavior_system(
             println!("Behavior {} Not Started?", behavior.label);
         }
     }
-}
-
-pub fn behavior_pick_system(
-    mut commands: Commands,
-    q_actors: Query<(Entity, &Fatigue), (With<Actor>, Without<HasBehavior>)>,
-    mut jobs: ResMut<JobList>,
-) {
-    for (actor, fatigue) in q_actors.iter() {
-        let behavior = get_behavior(fatigue, &mut jobs);
-
-        let b_entity = commands
-            .spawn((
-                Blackboard::default(),
-                TaskState::Success,
-                ActorRef(actor),
-                behavior,
-            ))
-            .id();
-
-        commands.entity(actor).insert(HasBehavior {
-            behavior_entity: b_entity,
-        });
-    }
-}
-
-pub fn get_behavior(fatigue: &Fatigue, jobs: &mut JobList) -> Behavior {
-    if fatigue.value > 75. {
-        return Behavior::new(
-            "Sleep",
-            BehaviorNode::Sequence(vec![
-                BehaviorNode::Task(Arc::new(TaskFindBed)),
-                BehaviorNode::Task(Arc::new(TaskSleep)),
-            ]),
-        );
-    }
-
-    if let Some(job) = jobs.pop() {
-        return match job {
-            jobs::Job::Mine(pos) => Behavior::new(
-                "Mine",
-                BehaviorNode::Try(
-                    Box::new(BehaviorNode::Sequence(vec![
-                        BehaviorNode::Task(Arc::new(TaskSetJob(job))),
-                        BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
-                        BehaviorNode::Task(Arc::new(TaskMoveTo)),
-                        BehaviorNode::Task(Arc::new(TaskMineBlock(pos))),
-                    ])),
-                    Box::new(BehaviorNode::Task(Arc::new(TaskIdle {
-                        duration_s: 5.,
-                        timer: 0.,
-                    }))),
-                ),
-            ),
-        };
-    }
-
-    Behavior::new(
-        "Wander",
-        BehaviorNode::Sequence(vec![
-            BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
-            BehaviorNode::Task(Arc::new(TaskMoveTo)),
-            BehaviorNode::Task(Arc::new(TaskIdle {
-                duration_s: 2.,
-                timer: 0.,
-            })),
-        ]),
-    )
 }

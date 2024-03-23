@@ -5,9 +5,10 @@ use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
     behavior_pick_system, behavior_system, block_move_system, fatigue_system, on_spawn_colonist,
-    partition, partition_debug, partition_setup, task_debug, task_find_bed, task_get_job_location,
-    task_idle, task_mine_block, task_move_to, task_pick_random_spot, task_set_job, task_sleep, Job,
-    JobList, PartitionDebug, PartitionEvent, PartitionGraph, SpawnColonistEvent,
+    partition, partition_debug, partition_setup, path_debug, task_debug, task_find_bed,
+    task_get_job_location, task_idle, task_mine_block, task_move_to, task_pick_random_spot,
+    task_set_job, task_sleep, JobList, PartitionDebug, PartitionEvent, PartitionGraph,
+    SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -83,6 +84,7 @@ fn main() {
         .add_systems(Update, light_system)
         .add_systems(Update, update_camera)
         .add_systems(Update, toolbar_select)
+        .add_systems(Update, path_debug)
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, partition_debug)

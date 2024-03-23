@@ -1,4 +1,5 @@
 mod behavior;
+mod behavior_pick;
 mod colonist;
 mod fatigue;
 mod jobs;
@@ -8,6 +9,7 @@ mod pathfinding;
 mod tasks;
 
 pub use behavior::*;
+pub use behavior_pick::*;
 pub use colonist::*;
 pub use fatigue::*;
 pub use jobs::*;

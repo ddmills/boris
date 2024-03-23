@@ -92,7 +92,7 @@ fn main() {
         .add_systems(Update, fatigue_system)
         .add_systems(Update, block_move_system)
         .add_systems(Update, behavior_pick_system)
-        .add_systems(Update, behavior_system)
+        .add_systems(PreUpdate, behavior_system)
         .add_systems(Update, task_set_job)
         .add_systems(Update, task_find_bed)
         .add_systems(Update, task_sleep)

@@ -27,13 +27,13 @@ pub fn on_spawn_colonist(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let cube: Handle<Mesh> = asset_server.load("meshes/cube.obj");
+    let mesh: Handle<Mesh> = asset_server.load("meshes/colonist.obj");
     let material = materials.add(Color::ORANGE);
 
     for ev in ev_spawn_colonist.read() {
         commands.spawn((
             MaterialMeshBundle {
-                mesh: cube.clone(),
+                mesh: mesh.clone(),
                 material: material.clone(),
                 transform: Transform::from_xyz(
                     ev.pos[0] as f32,

@@ -28,6 +28,7 @@ pub fn task_mine_block(
 
         if terrain.get_block(x, y, z).is_empty() {
             *state = TaskState::Success;
+            continue;
         }
 
         if task.progress >= 1. {

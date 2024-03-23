@@ -32,6 +32,7 @@ pub fn task_move_to(
     for (ActorRef(actor), blackboard, mut state) in q_behavior.iter_mut() {
         let Ok(transform) = q_transforms.get(*actor) else {
             println!("no transform on actor, cannot move to!");
+            commands.entity(*actor).remove::<Path>();
             *state = TaskState::Failed;
             continue;
         };

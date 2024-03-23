@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use bevy::ecs::system::Resource;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Job {
     Mine([u32; 3]),
 }

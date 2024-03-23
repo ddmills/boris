@@ -24,7 +24,10 @@ pub struct TaskFindBed;
 pub struct TaskSleep;
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskGetJobLocation(pub Job);
+pub struct TaskSetJob(pub Job);
+
+#[derive(Component, Clone, TaskBuilder)]
+pub struct TaskGetJobLocation;
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskMineBlock(pub [u32; 3]);
@@ -41,6 +44,23 @@ pub struct TaskPickRandomSpot;
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskMoveTo;
 
+#[derive(Component, Clone, TaskBuilder)]
+pub struct TaskDebug(String);
+
+pub fn task_debug(mut q_behavior: Query<(&mut TaskState, &TaskDebug)>) {
+    for (mut state, task) in q_behavior.iter_mut() {
+        println!("TaskDebug: {}", task.0);
+        *state = TaskState::Success;
+    }
+}
+
+pub fn task_set_job(mut q_behavior: Query<(&mut TaskState, &mut Blackboard, &TaskSetJob)>) {
+    for (mut state, mut blackboard, task) in q_behavior.iter_mut() {
+        blackboard.job = Some(task.0);
+        *state = TaskState::Success;
+    }
+}
+
 pub fn task_mine_block(
     mut terrain: ResMut<Terrain>,
     mut q_behavior: Query<(&mut TaskState, &TaskMineBlock)>,
@@ -53,10 +73,15 @@ pub fn task_mine_block(
 }
 
 pub fn task_get_job_location(
-    mut q_behavior: Query<(&mut Blackboard, &mut TaskState, &TaskGetJobLocation)>,
+    mut q_behavior: Query<(&mut Blackboard, &mut TaskState), With<TaskGetJobLocation>>,
 ) {
-    for (mut blackboard, mut state, task) in q_behavior.iter_mut() {
-        match task.0 {
+    for (mut blackboard, mut state) in q_behavior.iter_mut() {
+        let Some(job) = blackboard.job else {
+            *state = TaskState::Failed;
+            continue;
+        };
+
+        match job {
             Job::Mine(pos) => {
                 blackboard.move_goals = vec![
                     [pos[0] - 1, pos[1], pos[2]],

@@ -1,17 +1,20 @@
 use std::sync::Arc;
 
-use bevy::ecs::{
-    component::Component,
-    entity::Entity,
-    query::{With, Without},
-    system::{Commands, EntityCommands, Query, ResMut},
+use bevy::{
+    a11y::accesskit::Node,
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::{With, Without},
+        system::{Commands, EntityCommands, Query, ResMut},
+    },
 };
 
 use crate::colonists::TaskIdle;
 
 use super::{
-    jobs, Fatigue, JobList, Path, TaskFindBed, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
-    TaskPickRandomSpot, TaskSleep,
+    jobs, Fatigue, Job, JobList, Path, TaskFindBed, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
+    TaskPickRandomSpot, TaskSetJob, TaskSleep,
 };
 
 pub trait TaskBuilder: Send + Sync {
@@ -41,14 +44,14 @@ pub struct ActorRef(pub Entity);
 #[derive(Component, Clone)]
 pub struct Behavior {
     pub label: String,
-    pub state: BehaviorNodeState,
+    pub tree: BehaviorNodeState,
 }
 
 impl Behavior {
-    pub fn new(label: &str, node: BehaviorNode) -> Self {
+    pub fn new(label: &str, tree: BehaviorNode) -> Self {
         Self {
             label: String::from(label),
-            state: BehaviorNodeState::new(node),
+            tree: BehaviorNodeState::new(tree),
         }
     }
 }
@@ -57,6 +60,8 @@ impl Behavior {
 pub enum BehaviorNode {
     /// Perform the task
     Task(Arc<dyn TaskBuilder>),
+    /// Try to do the first behavior, if that fails, do the second
+    Try(Box<BehaviorNode>, Box<BehaviorNode>),
     /// Return the opposite of the child
     Not(Box<BehaviorNode>),
     /// Visit all children sequentially
@@ -65,68 +70,222 @@ pub enum BehaviorNode {
 
 #[derive(Clone)]
 pub enum BehaviorNodeState {
-    None,
-    Task(Arc<dyn TaskBuilder>),
-    Not(Box<BehaviorNode>),
-    Sequence(Vec<BehaviorNode>, usize, Box<BehaviorNodeState>),
+    None(NodeState),
+    Task(NodeState, Arc<dyn TaskBuilder>),
+    Try(NodeState, Box<BehaviorNodeState>, Box<BehaviorNodeState>),
+    Not(NodeState, Box<BehaviorNodeState>),
+    Sequence(NodeState, Vec<BehaviorNodeState>, usize),
+}
+
+#[derive(Clone, PartialEq)]
+pub enum NodeState {
+    Success,
+    Failed,
+    Executing,
+    NotStarted,
 }
 
 impl BehaviorNodeState {
-    pub fn new(node: BehaviorNode) -> Self {
-        match node {
-            BehaviorNode::Task(n) => BehaviorNodeState::Task(n),
-            BehaviorNode::Not(n) => BehaviorNodeState::Not(n),
-            BehaviorNode::Sequence(seq) => {
-                BehaviorNodeState::Sequence(seq, 0, Box::new(BehaviorNodeState::None))
-            }
+    pub fn new(n: BehaviorNode) -> Self {
+        match n {
+            BehaviorNode::Task(task) => BehaviorNodeState::Task(NodeState::NotStarted, task),
+            BehaviorNode::Try(node, catch) => BehaviorNodeState::Try(
+                NodeState::NotStarted,
+                Box::new(BehaviorNodeState::new(*node)),
+                Box::new(BehaviorNodeState::new(*catch)),
+            ),
+            BehaviorNode::Not(node) => BehaviorNodeState::new(*node),
+            BehaviorNode::Sequence(seq) => BehaviorNodeState::Sequence(
+                NodeState::NotStarted,
+                seq.iter()
+                    .map(|node| BehaviorNodeState::new(node.clone()))
+                    .collect(),
+                0,
+            ),
         }
     }
 
     pub fn cleanup(&mut self, cmd: &mut EntityCommands) {
-        if let BehaviorNodeState::Task(task) = self {
+        if let BehaviorNodeState::Task(_, task) = self {
             task.remove(cmd)
         };
     }
 
-    pub fn run(&mut self, cmd: &mut EntityCommands, task_state: &mut TaskState) {
+    pub fn state(&self) -> &NodeState {
         match self {
-            BehaviorNodeState::None => {}
-            BehaviorNodeState::Task(t) => {
-                println!("insert->{}", t.label());
-                t.insert(cmd);
-                *task_state = TaskState::Executing;
+            BehaviorNodeState::None(s) => s,
+            BehaviorNodeState::Task(s, _) => s,
+            BehaviorNodeState::Try(s, _, _) => s,
+            BehaviorNodeState::Not(s, _) => s,
+            BehaviorNodeState::Sequence(s, _, _) => s,
+        }
+    }
+
+    fn run(&mut self, cmd: &mut EntityCommands, task_state: TaskState) -> NodeState {
+        match self {
+            BehaviorNodeState::None(s) => {
+                *s = NodeState::Success;
+                NodeState::Success
             }
-            BehaviorNodeState::Not(_) => {
-                *task_state = match task_state {
-                    TaskState::Executing => TaskState::Executing,
-                    TaskState::Success => TaskState::Failed,
-                    TaskState::Failed => TaskState::Success,
-                };
-            }
-            BehaviorNodeState::Sequence(seq, idx, cursor) => {
-                if *idx >= seq.len() {
-                    return;
+            BehaviorNodeState::Task(s, task) => match *s {
+                NodeState::NotStarted => {
+                    task.insert(cmd);
+                    *s = NodeState::Executing;
+                    NodeState::Executing
                 }
-
-                (*cursor).cleanup(cmd);
-
-                if *task_state != TaskState::Success {
-                    return;
+                NodeState::Executing => match task_state {
+                    TaskState::Executing => NodeState::Executing,
+                    TaskState::Success => {
+                        task.remove(cmd);
+                        *s = NodeState::Success;
+                        NodeState::Success
+                    }
+                    TaskState::Failed => {
+                        task.remove(cmd);
+                        *s = NodeState::Failed;
+                        NodeState::Failed
+                    }
+                },
+                NodeState::Success => NodeState::Success,
+                NodeState::Failed => NodeState::Failed,
+            },
+            BehaviorNodeState::Try(s, node, catch) => match node.state().clone() {
+                NodeState::Success => {
+                    *s = NodeState::Success;
+                    NodeState::Success
                 }
+                NodeState::Failed => {
+                    let b_result = catch.state();
+                    match b_result {
+                        NodeState::Success => {
+                            *s = NodeState::Success;
+                            NodeState::Success
+                        }
+                        NodeState::Failed => {
+                            *s = NodeState::Failed;
+                            NodeState::Failed
+                        }
+                        NodeState::Executing => {
+                            *s = NodeState::Executing;
+                            if NodeState::Executing != catch.run(cmd, task_state) {
+                                self.run(cmd, task_state)
+                            } else {
+                                *s = NodeState::Executing;
+                                NodeState::Executing
+                            }
+                        }
+                        NodeState::NotStarted => {
+                            *s = NodeState::Executing;
+                            if NodeState::Executing != catch.run(cmd, task_state) {
+                                self.run(cmd, task_state)
+                            } else {
+                                *s = NodeState::Executing;
+                                NodeState::Executing
+                            }
+                        }
+                    }
+                }
+                NodeState::Executing => {
+                    *s = NodeState::Executing;
+                    if NodeState::Executing != node.run(cmd, task_state) {
+                        self.run(cmd, task_state)
+                    } else {
+                        *s = NodeState::Executing;
+                        NodeState::Executing
+                    }
+                }
+                NodeState::NotStarted => {
+                    *s = NodeState::Executing;
+                    if NodeState::Executing != node.run(cmd, task_state) {
+                        self.run(cmd, task_state)
+                    } else {
+                        *s = NodeState::Executing;
+                        NodeState::Executing
+                    }
+                }
+            },
+            BehaviorNodeState::Not(s, node) => match node.state().clone() {
+                NodeState::Success => {
+                    *s = NodeState::Failed;
+                    NodeState::Failed
+                }
+                NodeState::Failed => {
+                    *s = NodeState::Success;
+                    NodeState::Success
+                }
+                NodeState::Executing => {
+                    if NodeState::Executing != node.run(cmd, task_state) {
+                        self.run(cmd, task_state)
+                    } else {
+                        *s = NodeState::Executing;
+                        NodeState::Executing
+                    }
+                }
+                NodeState::NotStarted => {
+                    if NodeState::Executing != node.run(cmd, task_state) {
+                        self.run(cmd, task_state)
+                    } else {
+                        *s = NodeState::Executing;
+                        NodeState::Executing
+                    }
+                }
+            },
+            BehaviorNodeState::Sequence(s, seq, idx) => match s {
+                NodeState::Success => NodeState::Success,
+                NodeState::Failed => NodeState::Failed,
+                NodeState::Executing => {
+                    let Some(current) = seq.get_mut(*idx) else {
+                        *s = NodeState::Failed;
+                        return NodeState::Failed;
+                    };
 
-                let next_task = seq.get(*idx).unwrap();
-                let mut next_state = BehaviorNodeState::new(next_task.clone());
-                next_state.run(cmd, task_state);
-                **cursor = next_state;
+                    match current.run(cmd, task_state).clone() {
+                        NodeState::NotStarted => {
+                            println!("Run was called on a child node for sequence, but it did not start! {}", *idx);
+                            *s = NodeState::Failed;
+                            NodeState::Failed
+                        }
+                        NodeState::Executing => NodeState::Executing,
+                        NodeState::Success => {
+                            *idx += 1;
+                            if *idx >= seq.len() {
+                                println!("End of sequence reached successfully!");
+                                *s = NodeState::Success;
+                                NodeState::Success
+                            } else {
+                                self.run(cmd, task_state)
+                            }
+                        }
+                        NodeState::Failed => {
+                            *s = NodeState::Failed;
+                            NodeState::Failed
+                        }
+                    }
+                }
+                NodeState::NotStarted => {
+                    *idx = 0;
 
-                *idx += 1;
-            }
+                    let Some(first) = seq.first_mut() else {
+                        *s = NodeState::Failed;
+                        return NodeState::Failed;
+                    };
+
+                    *s = NodeState::Executing;
+
+                    if NodeState::Executing != first.run(cmd, task_state) {
+                        self.run(cmd, task_state)
+                    } else {
+                        NodeState::Executing
+                    }
+                }
+            },
         }
     }
 }
 
 #[derive(Component, Default)]
 pub struct Blackboard {
+    pub job: Option<Job>,
     pub bed: u8,
     pub move_goals: Vec<[u32; 3]>,
     pub path: Option<Path>,
@@ -147,20 +306,30 @@ pub fn behavior_system(
             continue;
         }
 
-        behavior
-            .state
-            .run(&mut cmd.entity(has_behavior.behavior_entity), &mut state);
+        let node_state = behavior
+            .tree
+            .run(&mut cmd.entity(has_behavior.behavior_entity), *state);
 
-        if *state != TaskState::Executing {
+        *state = match node_state {
+            NodeState::Success => TaskState::Success,
+            NodeState::Failed => TaskState::Failed,
+            NodeState::Executing => TaskState::Executing,
+            NodeState::NotStarted => TaskState::Success,
+        };
+
+        if node_state != NodeState::Executing {
             cmd.entity(*actor).remove::<HasBehavior>();
             cmd.entity(entity).despawn();
         }
 
-        if *state == TaskState::Failed {
+        if node_state == NodeState::Failed {
             println!("Behavior {} failed!", behavior.label);
         }
-        if *state == TaskState::Success {
+        if node_state == NodeState::Success {
             println!("Behavior {} Success!", behavior.label);
+        }
+        if node_state == NodeState::NotStarted {
+            println!("Behavior {} Not Started?", behavior.label);
         }
     }
 }
@@ -203,11 +372,18 @@ pub fn get_behavior(fatigue: &Fatigue, jobs: &mut JobList) -> Behavior {
         return match job {
             jobs::Job::Mine(pos) => Behavior::new(
                 "Mine",
-                BehaviorNode::Sequence(vec![
-                    BehaviorNode::Task(Arc::new(TaskGetJobLocation(job))),
-                    BehaviorNode::Task(Arc::new(TaskMoveTo)),
-                    BehaviorNode::Task(Arc::new(TaskMineBlock(pos))),
-                ]),
+                BehaviorNode::Try(
+                    Box::new(BehaviorNode::Sequence(vec![
+                        BehaviorNode::Task(Arc::new(TaskSetJob(job))),
+                        BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
+                        BehaviorNode::Task(Arc::new(TaskMoveTo)),
+                        BehaviorNode::Task(Arc::new(TaskMineBlock(pos))),
+                    ])),
+                    Box::new(BehaviorNode::Task(Arc::new(TaskIdle {
+                        duration_s: 5.,
+                        timer: 0.,
+                    }))),
+                ),
             ),
         };
     }

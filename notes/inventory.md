@@ -13,5 +13,3 @@ requirements
 7. must be able to "lock" items
     - prevent usage by colonists
 
-
-Item compo

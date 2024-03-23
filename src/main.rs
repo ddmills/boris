@@ -12,6 +12,7 @@ use colonists::{
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
+use items::{on_spawn_pickaxe, SpawnPickaxeEvent};
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -21,6 +22,7 @@ mod colonists;
 mod common;
 mod controls;
 mod debug;
+mod items;
 mod terrain;
 mod ui;
 
@@ -46,6 +48,7 @@ fn main() {
             hit_block: Block::EMPTY,
         })
         .add_event::<SpawnColonistEvent>()
+        .add_event::<SpawnPickaxeEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_event::<PartitionEvent>()
         .init_resource::<PartitionGraph>()
@@ -87,6 +90,7 @@ fn main() {
         .add_systems(Update, path_debug)
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
+        .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, partition_debug)
         .add_systems(Update, partition)
         .add_systems(Update, fatigue_system)

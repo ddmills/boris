@@ -14,6 +14,7 @@ use crate::{
     common::min_max,
     controls::Raycast,
     debug::debug_settings::DebugSettings,
+    items::SpawnPickaxeEvent,
     Block, Cursor, Terrain,
 };
 
@@ -25,6 +26,7 @@ pub enum Tool {
     TogglePathDebug,
     ClearBlocks,
     SpawnColonist,
+    SpawnPickaxe,
     BlockInfo,
     Mine,
 }
@@ -44,6 +46,7 @@ pub fn tool_system(
     mut state: Local<ToolState>,
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
+    mut ev_spawn_pickaxe: EventWriter<SpawnPickaxeEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
     mut job_list: ResMut<JobList>,
     mut debug_settings: ResMut<DebugSettings>,
@@ -255,6 +258,17 @@ pub fn tool_system(
         Tool::TogglePathDebug => {
             if mouse_input.just_released(MouseButton::Left) {
                 debug_settings.path = !debug_settings.path;
+            }
+        }
+        Tool::SpawnPickaxe => {
+            if !raycast.is_adj_hit {
+                return;
+            }
+
+            if mouse_input.just_released(MouseButton::Left) {
+                ev_spawn_pickaxe.send(SpawnPickaxeEvent {
+                    pos: raycast.adj_pos,
+                });
             }
         }
     }

@@ -23,7 +23,6 @@ pub enum Tool {
     PlaceBlocks(Block),
     ClearBlocks,
     SpawnColonist,
-    Pathfind,
     BlockInfo,
     Mine,
 }
@@ -162,13 +161,7 @@ pub fn tool_system(
                 });
             }
         }
-        Tool::Pathfind => {
-            if mouse_input.just_released(MouseButton::Left) {
-                if !raycast.is_adj_hit {
-                    return;
-                }
-            }
-        }
+
         Tool::BlockInfo => {
             if mouse_input.just_released(MouseButton::Left) {
                 if !raycast.is_adj_hit {

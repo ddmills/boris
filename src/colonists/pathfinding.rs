@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use bevy::{
     ecs::{
         component::Component,
@@ -76,12 +78,10 @@ pub fn path_debug(mut gizmos: Gizmos, pathers: Query<&Path>) {
 
             let mid = Vec3::new(0.5, 0.5, 0.5);
 
-            let color = if i > path.current_block_idx {
-                Color::GRAY
-            } else if i == path.current_block_idx {
-                Color::ORANGE_RED
-            } else {
-                Color::ORANGE
+            let color = match i.cmp(&path.current_block_idx) {
+                Ordering::Less => Color::ORANGE,
+                Ordering::Equal => Color::ORANGE_RED,
+                Ordering::Greater => Color::GRAY,
             };
 
             gizmos.line(
@@ -348,10 +348,10 @@ pub fn get_partition_path(
         .map(|(g, [g_chunk_idx, g_block_idx])| {
             (g, terrain.get_partition_id(g_chunk_idx, g_block_idx))
         })
-        .filter(|(g, p_id)| *p_id != Partition::NONE)
+        .filter(|(_, p_id)| *p_id != Partition::NONE)
         .collect();
 
-    let mut goal_partition_ids: Vec<u16> = goals.iter().map(|(g, pid)| *pid).collect();
+    let mut goal_partition_ids: Vec<u16> = goals.iter().map(|(_, pid)| *pid).collect();
     goal_partition_ids.sort();
     goal_partition_ids.dedup();
 

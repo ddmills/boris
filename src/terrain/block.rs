@@ -31,13 +31,7 @@ impl Block {
     }
 
     pub fn is_walkable(&self) -> bool {
-        match *self {
-            Self::OOB => false,
-            Self::EMPTY => false,
-            Self::LADDER => false,
-            Self::MAGMA => false,
-            _ => true,
-        }
+        !matches!(*self, Self::OOB | Self::EMPTY | Self::LADDER | Self::MAGMA)
     }
 
     pub fn is_empty(&self) -> bool {

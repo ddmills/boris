@@ -2,11 +2,13 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
-        system::{Res, ResMut, Resource},
+        query::With,
+        system::{Query, Res, ResMut, Resource},
     },
     gizmos::gizmos::Gizmos,
     math::Vec3,
     render::color::Color,
+    transform::components::Transform,
     utils::{HashMap, HashSet},
 };
 use ndshape::AbstractShape;
@@ -16,7 +18,7 @@ use crate::{
     Block, Terrain,
 };
 
-use super::PartitionFlags;
+use super::{Item, PartitionFlags};
 
 #[derive(Default)]
 pub struct PartitionExtents {
@@ -432,6 +434,7 @@ pub fn partition(
     mut terrain: ResMut<Terrain>,
     mut graph: ResMut<PartitionGraph>,
     mut partition_ev: EventReader<PartitionEvent>,
+    q_items: Query<&Transform, With<Item>>,
 ) {
     for ev in partition_ev.read() {
         let chunk_idx = ev.chunk_idx;
@@ -544,6 +547,32 @@ pub fn partition(
 
             // we have flooded the partition, we mark it as computed
             graph.set_partition_computed(partition_id, true);
+        }
+
+        for item in items {
+            let Ok(transform) = q_items.get(item) else {
+                println!("Item was supposed to be in this chunk.");
+                continue;
+            };
+
+            let x = transform.translation.x as u32;
+            let y = transform.translation.y as u32;
+            let z = transform.translation.z as u32;
+
+            let item_partition_id = terrain.get_partition_id_u32(x, y, z);
+
+            if item_partition_id == Partition::NONE {
+                println!("Item is not in a valid partition! Teleport it?");
+                continue;
+            }
+
+            let Some(partition) = graph.get_partition_mut(item_partition_id) else {
+                println!("Missing partition?");
+                continue;
+            };
+
+            println!("updated item to be in new partition!");
+            partition.items.push(item);
         }
     }
 }

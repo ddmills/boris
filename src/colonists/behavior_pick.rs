@@ -9,9 +9,9 @@ use bevy::ecs::{
 
 use super::{
     jobs::Job::Mine, Actor, ActorRef, Behavior, BehaviorNode, Fatigue, HasBehavior, ItemTag, Job,
-    JobList, Path, TaskCheckHasItem, TaskDebug, TaskFindBed, TaskFindNearestItem,
-    TaskGetJobLocation, TaskIdle, TaskMineBlock, TaskMoveTo, TaskPickRandomSpot, TaskReturnJob,
-    TaskSetJob, TaskSleep, TaskState,
+    JobList, Path, TaskCheckHasItem, TaskDebug, TaskFindNearestItem, TaskGetJobLocation, TaskIdle,
+    TaskMineBlock, TaskMoveTo, TaskPickRandomSpot, TaskPickUpItem, TaskReturnJob, TaskSetJob,
+    TaskState,
 };
 
 #[derive(Component, Default)]
@@ -19,6 +19,7 @@ pub struct Blackboard {
     pub job: Option<Job>,
     pub bed: u8,
     pub move_goals: Vec<[u32; 3]>,
+    pub item: Option<Entity>,
     pub path: Option<Path>,
 }
 
@@ -97,6 +98,7 @@ fn tree_aquire_item(tags: Vec<ItemTag>) -> BehaviorNode {
         Box::new(BehaviorNode::Sequence(vec![
             BehaviorNode::Task(Arc::new(TaskFindNearestItem(tags))),
             BehaviorNode::Task(Arc::new(TaskMoveTo)),
+            BehaviorNode::Task(Arc::new(TaskPickUpItem)),
             BehaviorNode::Task(Arc::new(TaskIdle {
                 duration_s: 0.5,
                 progress: 0.,

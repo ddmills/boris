@@ -36,6 +36,8 @@ pub fn task_find_nearest_item(
     )>,
 ) {
     for (ActorRef(actor), mut state, mut blackboard, task) in q_behavior.iter_mut() {
+        blackboard.item = None;
+
         let Ok(transform) = q_actors.get(*actor) else {
             *state = TaskState::Failed;
             continue;
@@ -75,6 +77,7 @@ pub fn task_find_nearest_item(
             item_tansform.translation.z as u32,
         ];
 
+        blackboard.item = Some(*item);
         blackboard.move_goals = vec![item_pos];
         *state = TaskState::Success;
     }

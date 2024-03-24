@@ -1,20 +1,8 @@
-use bevy::ecs::{component::Component, entity::Entity, system::Commands};
+use bevy::ecs::{component::Component, entity::Entity};
 
 #[derive(Component, Default)]
 pub struct Inventory {
     pub items: Vec<Entity>,
-}
-
-impl Inventory {
-    pub fn add_item(&mut self, mut cmd: Commands, target: Entity, item: Entity) {
-        self.items.push(item);
-        cmd.entity(item).insert(InInventory { holder: target });
-    }
-
-    pub fn remove_item(&mut self, mut cmd: Commands, item: Entity) {
-        self.items.retain(|i| *i != item);
-        cmd.entity(item).remove::<InInventory>();
-    }
 }
 
 #[derive(Component)]

@@ -42,7 +42,7 @@ pub struct PartitionPathRequest {
 }
 
 pub fn block_move_system(
-    mut commands: Commands,
+    mut cmd: Commands,
     time: Res<Time>,
     mut query: Query<(Entity, &BlockMove, &mut Transform)>,
 ) {
@@ -59,7 +59,7 @@ pub fn block_move_system(
 
         if distance < move_dist {
             transform.translation = pos;
-            commands.entity(entity).remove::<BlockMove>();
+            cmd.entity(entity).remove::<BlockMove>();
         } else {
             transform.translation += direction * move_dist;
         }

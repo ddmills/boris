@@ -16,6 +16,7 @@ pub fn task_return_job(
 ) {
     for (blackboard, mut state) in q_actors.iter_mut() {
         let Some(job) = blackboard.job else {
+            println!("no job on blackboard, cannot return to queue!");
             *state = TaskState::Failed;
             continue;
         };

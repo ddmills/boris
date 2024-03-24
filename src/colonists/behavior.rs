@@ -272,7 +272,6 @@ impl BehaviorNodeState {
                         NodeState::Success => {
                             *idx += 1;
                             if *idx >= seq.len() {
-                                println!("End of sequence reached successfully!");
                                 *s = NodeState::Success;
                                 NodeState::Success
                             } else {
@@ -367,12 +366,15 @@ pub fn behavior_system(
 
         if node_state == NodeState::Failed {
             println!("Behavior {} failed!", behavior.label);
+            println!("==== FAILED {}", behavior.label);
         }
         if node_state == NodeState::Success {
             println!("Behavior {} Success!", behavior.label);
+            println!("==== SUCCESS {}", behavior.label);
         }
         if node_state == NodeState::NotStarted {
             println!("Behavior {} Not Started?", behavior.label);
+            println!("==== NOT_STARTED {}", behavior.label);
         }
     }
 }

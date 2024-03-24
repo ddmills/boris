@@ -11,7 +11,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use super::{Actor, Fatigue};
+use super::{Actor, Fatigue, Inventory};
 
 #[derive(Component, Default)]
 pub struct Colonist {}
@@ -22,7 +22,7 @@ pub struct SpawnColonistEvent {
 }
 
 pub fn on_spawn_colonist(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut ev_spawn_colonist: EventReader<SpawnColonistEvent>,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -31,7 +31,7 @@ pub fn on_spawn_colonist(
     let material = materials.add(Color::ORANGE);
 
     for ev in ev_spawn_colonist.read() {
-        commands.spawn((
+        cmd.spawn((
             MaterialMeshBundle {
                 mesh: mesh.clone(),
                 material: material.clone(),
@@ -47,6 +47,7 @@ pub fn on_spawn_colonist(
                 per_second: 5.,
             },
             Actor,
+            Inventory::default(),
             Colonist::default(),
         ));
     }

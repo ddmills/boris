@@ -21,7 +21,7 @@ use crate::{
 pub struct TaskMoveTo;
 
 pub fn task_move_to(
-    mut commands: Commands,
+    mut cmd: Commands,
     terrain: Res<Terrain>,
     graph: Res<PartitionGraph>,
     mut q_paths: Query<&mut Path, With<Actor>>,
@@ -32,7 +32,7 @@ pub fn task_move_to(
     for (ActorRef(actor), blackboard, mut state) in q_behavior.iter_mut() {
         let Ok(transform) = q_transforms.get(*actor) else {
             println!("no transform on actor, cannot move to!");
-            commands.entity(*actor).remove::<Path>();
+            cmd.entity(*actor).remove::<Path>();
             *state = TaskState::Failed;
             continue;
         };
@@ -76,7 +76,7 @@ pub fn task_move_to(
                 current_block_idx: 0,
             };
 
-            commands.entity(*actor).insert(path);
+            cmd.entity(*actor).insert(path);
             continue;
         };
 
@@ -86,7 +86,7 @@ pub fn task_move_to(
             .any(|g| g[0] == pos[0] && g[1] == pos[1] && g[2] == pos[2]);
 
         if at_goal {
-            commands.entity(*actor).remove::<Path>();
+            cmd.entity(*actor).remove::<Path>();
             *state = TaskState::Success;
             continue;
         }
@@ -104,7 +104,7 @@ pub fn task_move_to(
         if path.current_block_idx == 0 {
             let Some(next_partition_id) = path.next_partition_id() else {
                 println!("Path has changed? Retrying pathfinding.");
-                commands.entity(*actor).remove::<Path>();
+                cmd.entity(*actor).remove::<Path>();
                 continue;
             };
 
@@ -119,7 +119,7 @@ pub fn task_move_to(
                 },
             ) else {
                 println!("Could not get granular path, retrying!");
-                commands.entity(*actor).remove::<Path>();
+                cmd.entity(*actor).remove::<Path>();
                 continue;
             };
 
@@ -131,7 +131,7 @@ pub fn task_move_to(
 
         let Some(next_block) = path.next_block() else {
             println!("Path has changed? Retrying pathfinding.");
-            commands.entity(*actor).remove::<Path>();
+            cmd.entity(*actor).remove::<Path>();
             continue;
         };
 
@@ -139,11 +139,11 @@ pub fn task_move_to(
 
         if block_flags & path.flags == PartitionFlags::NONE {
             println!("Path block flags have changed? Retrying pathfinding.");
-            commands.entity(*actor).remove::<Path>();
+            cmd.entity(*actor).remove::<Path>();
             continue;
         }
 
-        commands.entity(*actor).insert(BlockMove {
+        cmd.entity(*actor).insert(BlockMove {
             speed: 8.,
             target: path.blocks[path.current_block_idx],
         });

@@ -32,8 +32,8 @@ struct FpsRoot;
 #[derive(Component)]
 struct FpsText;
 
-fn setup_fps_counter(mut commands: Commands) {
-    let root = commands
+fn setup_fps_counter(mut cmd: Commands) {
+    let root = cmd
         .spawn((
             FpsRoot,
             NodeBundle {
@@ -53,7 +53,7 @@ fn setup_fps_counter(mut commands: Commands) {
         ))
         .id();
 
-    let text_fps = commands
+    let text_fps = cmd
         .spawn((
             FpsText,
             TextBundle {
@@ -70,7 +70,7 @@ fn setup_fps_counter(mut commands: Commands) {
         ))
         .id();
 
-    commands.entity(root).push_children(&[text_fps]);
+    cmd.entity(root).push_children(&[text_fps]);
 }
 
 fn fps_text_update_system(

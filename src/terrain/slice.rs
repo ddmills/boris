@@ -47,7 +47,7 @@ impl TerrainSlice {
 }
 
 pub fn setup_terrain_slice(
-    mut commands: Commands,
+    mut cmd: Commands,
     asset_server: Res<AssetServer>,
     terrain: Res<Terrain>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -76,7 +76,7 @@ pub fn setup_terrain_slice(
 
     let mesh_handle = meshes.add(mesh);
 
-    commands.spawn((
+    cmd.spawn((
         MaterialMeshBundle {
             mesh: mesh_handle.clone(),
             material: slice_material,
@@ -85,7 +85,7 @@ pub fn setup_terrain_slice(
         NoFrustumCulling,
     ));
 
-    commands.insert_resource(TerrainSlice {
+    cmd.insert_resource(TerrainSlice {
         y: initial_slice,
         max,
         min: 0,

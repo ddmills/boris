@@ -22,7 +22,7 @@ pub const ATTRIBUTE_BLOCK_LIGHT: MeshVertexAttribute =
     MeshVertexAttribute::new("BlockLight", 98218357661, VertexFormat::Uint32);
 
 pub fn setup_chunk_meshes(
-    mut commands: Commands,
+    mut cmd: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ChunkMaterial>>,
@@ -40,7 +40,7 @@ pub fn setup_chunk_meshes(
         terrain_slice_y: slice.get_value(),
     });
 
-    commands.insert_resource(ChunkMaterialRes {
+    cmd.insert_resource(ChunkMaterialRes {
         handle: chunk_material.clone(),
     });
 
@@ -67,7 +67,7 @@ pub fn setup_chunk_meshes(
         let z_f32 = z as f32;
         let size = terrain.chunk_size as f32 / 2.;
 
-        commands.spawn((
+        cmd.spawn((
             Chunk {
                 chunk_idx,
                 mesh_handle: mesh_handle.clone(),

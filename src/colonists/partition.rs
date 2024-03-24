@@ -1,5 +1,6 @@
 use bevy::{
     ecs::{
+        entity::Entity,
         event::{Event, EventReader, EventWriter},
         system::{Res, ResMut, Resource},
     },
@@ -83,6 +84,7 @@ pub struct Partition {
     pub blocks: Vec<u32>,
     pub flags: PartitionFlags,
     pub extents: PartitionExtents,
+    pub items: Vec<Entity>,
 }
 
 impl Partition {
@@ -258,6 +260,7 @@ impl PartitionGraph {
             blocks: vec![],
             flags: PartitionFlags::NONE,
             extents: PartitionExtents::default(),
+            items: vec![],
         };
 
         self.partitions.insert(p.id, p);
@@ -432,12 +435,14 @@ pub fn partition(
 ) {
     for ev in partition_ev.read() {
         let chunk_idx = ev.chunk_idx;
+        let mut items: Vec<Entity> = vec![];
 
         if ev.refresh {
             let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
-            for p in cleanups {
+            for mut p in cleanups {
                 for b in p.blocks.iter() {
                     terrain.set_partition_id(p.chunk_idx, *b, Partition::NONE);
+                    items.append(&mut p.items);
                 }
             }
         }

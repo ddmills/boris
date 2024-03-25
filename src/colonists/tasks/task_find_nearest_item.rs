@@ -14,7 +14,7 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        test_item_flags, Actor, ActorRef, Blackboard, Item, ItemTag, Partition, PartitionGraph,
+        test_item_tags, Actor, ActorRef, Blackboard, Item, ItemTag, Partition, PartitionGraph,
         TaskBuilder, TaskState,
     },
     Terrain,
@@ -109,7 +109,7 @@ pub fn find_nearest(
                     return false;
                 };
 
-                test_item_flags(&item.tags, &tags)
+                test_item_tags(&item.tags, &tags)
             })
             .cloned()
             .collect();

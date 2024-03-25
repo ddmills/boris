@@ -1,23 +1,22 @@
 use std::collections::VecDeque;
 
-use bevy::ecs::system::Resource;
+use bevy::ecs::{component::Component, entity::Entity, system::Resource};
 
-#[derive(Clone, Copy)]
-pub enum Job {
+#[derive(Clone, Copy, PartialEq)]
+pub enum JobType {
     Mine([u32; 3]),
 }
 
-#[derive(Resource)]
-pub struct JobList {
-    pub jobs: VecDeque<Job>,
+#[derive(Component, Clone, Copy)]
+pub struct Job {
+    pub job_type: JobType,
 }
 
-impl JobList {
-    pub fn queue(&mut self, job: Job) {
-        self.jobs.push_back(job);
-    }
-
-    pub fn pop(&mut self) -> Option<Job> {
-        self.jobs.pop_front()
-    }
+#[derive(Component)]
+pub struct IsJobAssigned {
+    pub assignee: Entity,
+}
+#[derive(Component)]
+pub struct JobAssignment {
+    pub job: Entity,
 }

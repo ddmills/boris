@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bevy-trait-query = { git = "https://github.com/RobWalt/bevy-trait-query.git", branch = "bevy-0.13" }
 bevy = { version = "0.13.0" }
 rand = { version = "0.8.5", features = ["small_rng"] }
 bevy_obj = "0.13.0"
@@ -12,6 +13,7 @@ fastnoise-lite = "=1.0.1"
 ndshape = "0.3.0"
 ordered-float = "4.2.0"
 task_derive = { version = "=0.1.0", path = "./task_derive" }
+
 
 # [profile.dev]bevy = { version = "0.13.0" }
 # opt-level = 1

@@ -2,7 +2,7 @@ use bevy::{
     ecs::{
         event::EventWriter,
         query::With,
-        system::{Local, Query, Res, ResMut},
+        system::{Command, Commands, Local, Query, Res, ResMut},
     },
     input::{mouse::MouseButton, ButtonInput},
     math::Vec3,
@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Job, JobList, Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
+    colonists::{Job, JobType, Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
     common::min_max,
     controls::Raycast,
     debug::debug_settings::DebugSettings,
@@ -38,6 +38,7 @@ pub struct ToolState {
 }
 
 pub fn tool_system(
+    mut cmd: Commands,
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
     graph: Res<PartitionGraph>,
@@ -48,7 +49,6 @@ pub fn tool_system(
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
     mut ev_spawn_pickaxe: EventWriter<SpawnPickaxeEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
-    mut job_list: ResMut<JobList>,
     mut debug_settings: ResMut<DebugSettings>,
 ) {
     match toolbar.tool {
@@ -248,7 +248,9 @@ pub fn tool_system(
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
                             if terrain.get_block(x, y, z).is_filled() {
-                                job_list.queue(Job::Mine([x, y, z]));
+                                cmd.spawn(Job {
+                                    job_type: JobType::Mine([x, y, z]),
+                                });
                             }
                         }
                     }

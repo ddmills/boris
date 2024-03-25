@@ -20,6 +20,6 @@ pub enum ItemTag {
     PickAxe,
 }
 
-pub fn test_item_flags(all: &Vec<ItemTag>, test: &Vec<ItemTag>) -> bool {
+pub fn test_item_tags(all: &Vec<ItemTag>, test: &Vec<ItemTag>) -> bool {
     test.iter().all(|tag| all.contains(tag))
 }

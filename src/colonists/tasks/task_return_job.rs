@@ -1,18 +1,21 @@
 use bevy::ecs::{
     component::Component,
+    entity::Entity,
     query::With,
-    system::{Query, ResMut},
+    system::{Commands, Query},
 };
 use task_derive::TaskBuilder;
 
-use crate::colonists::{Blackboard, JobList, TaskBuilder, TaskState};
+use crate::colonists::{Blackboard, IsJobAssigned, JobAssignment, TaskBuilder, TaskState};
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskReturnJob;
+pub struct TaskUnassignJob;
 
-pub fn task_return_job(
-    mut jobs: ResMut<JobList>,
-    mut q_actors: Query<(&Blackboard, &mut TaskState), With<TaskReturnJob>>,
+pub fn task_unassign_job(
+    mut cmd: Commands,
+    job_holders: Query<Entity>,
+    q_jobs: Query<&IsJobAssigned>,
+    mut q_actors: Query<(&Blackboard, &mut TaskState), With<TaskUnassignJob>>,
 ) {
     for (blackboard, mut state) in q_actors.iter_mut() {
         let Some(job) = blackboard.job else {
@@ -23,7 +26,17 @@ pub fn task_return_job(
 
         println!("Returning job to job queue");
 
-        jobs.queue(job);
+        if let Ok(assigned) = q_jobs.get(job) {
+            if let Ok(holder) = job_holders.get(assigned.assignee) {
+                cmd.entity(holder).remove::<JobAssignment>();
+            } else {
+                println!("ERR: no holder for job!?");
+            };
+        } else {
+            println!("ERR: job does not exist!?");
+        };
+
+        cmd.entity(job).remove::<IsJobAssigned>();
         *state = TaskState::Success;
     }
 }

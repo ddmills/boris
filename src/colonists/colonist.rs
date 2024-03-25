@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     ecs::{
@@ -11,7 +13,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use super::{Actor, Fatigue, Inventory};
+use super::{Actor, Fatigue, Inventory, ScorerMine, ScorerWander, Thinker};
 
 #[derive(Component, Default)]
 pub struct Colonist {}
@@ -49,6 +51,9 @@ pub fn on_spawn_colonist(
             Actor,
             Inventory::default(),
             Colonist::default(),
+            Thinker {
+                score_builders: vec![Arc::new(ScorerWander), Arc::new(ScorerMine::default())],
+            },
         ));
     }
 }

@@ -1,5 +1,6 @@
 mod behavior;
 mod behavior_pick;
+mod behaviors;
 mod colonist;
 mod fatigue;
 mod inventory;
@@ -7,10 +8,12 @@ mod jobs;
 mod partition;
 mod partition_flags;
 mod pathfinding;
+mod scorer;
 mod tasks;
 
 pub use behavior::*;
 pub use behavior_pick::*;
+pub use behaviors::*;
 pub use colonist::*;
 pub use fatigue::*;
 pub use inventory::*;
@@ -18,4 +21,5 @@ pub use jobs::*;
 pub use partition::*;
 pub use partition_flags::*;
 pub use pathfinding::*;
+pub use scorer::*;
 pub use tasks::*;

@@ -2,7 +2,7 @@ use bevy::ecs::{component::Component, system::Query};
 use task_derive::TaskBuilder;
 
 use crate::colonists::{
-    test_item_flags, ActorRef, Inventory, Item, ItemTag, TaskBuilder, TaskState,
+    test_item_tags, ActorRef, Inventory, Item, ItemTag, TaskBuilder, TaskState,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
@@ -24,7 +24,7 @@ pub fn task_check_has_item(
                 return false;
             };
 
-            test_item_flags(&item.tags, &task.0)
+            test_item_tags(&item.tags, &task.0)
         });
 
         *state = match has_item {

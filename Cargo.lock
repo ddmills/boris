@@ -306,8 +306,9 @@ dependencies = [
 
 [[package]]
 name = "bevy-trait-query"
-version = "0.5.0"
-source = "git+https://github.com/RobWalt/bevy-trait-query.git?branch=bevy-0.13#d3168d378d5badfe6d81293fbafb81139dc4c6a7"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5fa8f2fc5130c12c2d1b3af455603e247c976dc2e1e53ac762592b7207a2d8b"
 dependencies = [
  "bevy-trait-query-impl",
  "bevy_app",
@@ -318,8 +319,9 @@ dependencies = [
 
 [[package]]
 name = "bevy-trait-query-impl"
-version = "0.4.0"
-source = "git+https://github.com/RobWalt/bevy-trait-query.git?branch=bevy-0.13#d3168d378d5badfe6d81293fbafb81139dc4c6a7"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11b125e9b9e677a770fca5c8c6cff6fa9589e6752709bb555556d6e33fa49da6"
 dependencies = [
  "proc-macro-crate 1.3.1",
  "proc-macro2",
@@ -1720,9 +1722,12 @@ dependencies = [
 
 [[package]]
 name = "fastnoise-lite"
-version = "1.0.1"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d642b3aa2ca2ca142183c82976ecc49b66eb1fd538878e335e744415b840718b"
+checksum = "3e5f3c3cc9081e5d0e18bcd50e80cd33cba47fc22f88a9da9c33ecd1c87ea5c0"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "fastrand"

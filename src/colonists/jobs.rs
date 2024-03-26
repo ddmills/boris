@@ -1,21 +1,27 @@
-use std::collections::VecDeque;
+use bevy::ecs::{component::Component, entity::Entity};
 
-use bevy::ecs::{component::Component, entity::Entity, system::Resource};
-
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Debug, Copy, PartialEq)]
 pub enum JobType {
-    Mine([u32; 3]),
+    Mine,
 }
+
+#[derive(Component, Clone, Copy)]
+pub struct JobMine;
 
 #[derive(Component, Clone, Copy)]
 pub struct Job {
     pub job_type: JobType,
+    pub assignee: Option<Entity>,
 }
 
 #[derive(Component)]
-pub struct IsJobAssigned {
-    pub assignee: Entity,
+pub struct JobLocation {
+    pub pos: [u32; 3],
 }
+
+#[derive(Component)]
+pub struct IsJobAccessible;
+
 #[derive(Component)]
 pub struct JobAssignment {
     pub job: Entity,

@@ -38,7 +38,7 @@ pub trait ScorerBuilder: Send + Sync {
     fn build(&self) -> Behavior;
 }
 
-struct ScorerPlugin;
+pub struct ScorerPlugin;
 
 impl Plugin for ScorerPlugin {
     fn build(&self, app: &mut App) {

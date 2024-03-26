@@ -310,12 +310,10 @@ pub fn get_partition_path(
     let starting_partition_id = terrain.get_partition_id(start_chunk_idx, start_block_idx);
 
     if starting_partition_id == Partition::NONE {
-        println!("cannot find path, no starting partition!");
         return None;
     }
 
     if goals.is_empty() {
-        println!("cannot find path, no goal partition!");
         return None;
     }
 
@@ -369,7 +367,6 @@ pub fn get_partition_path(
     });
 
     if !partition_path.is_success {
-        println!("could not find path");
         return None;
     }
 

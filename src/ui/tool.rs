@@ -10,7 +10,10 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Job, JobType, Partition, PartitionDebug, PartitionGraph, SpawnColonistEvent},
+    colonists::{
+        Job, JobLocation, JobMine, JobType, Partition, PartitionDebug, PartitionGraph,
+        SpawnColonistEvent,
+    },
     common::min_max,
     controls::Raycast,
     debug::debug_settings::DebugSettings,
@@ -248,9 +251,14 @@ pub fn tool_system(
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
                             if terrain.get_block(x, y, z).is_filled() {
-                                cmd.spawn(Job {
-                                    job_type: JobType::Mine([x, y, z]),
-                                });
+                                cmd.spawn((
+                                    Job {
+                                        job_type: JobType::Mine,
+                                        assignee: None,
+                                    },
+                                    JobMine,
+                                    JobLocation { pos: [x, y, z] },
+                                ));
                             }
                         }
                     }

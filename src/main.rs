@@ -4,12 +4,12 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    behavior_pick_system, behavior_system, block_move_system, fatigue_system, on_spawn_colonist,
-    partition, partition_debug, partition_setup, score_mine, score_wander, spawn_scorers,
-    task_assign_job, task_check_has_item, task_debug, task_find_bed, task_find_nearest_item,
-    task_get_job_location, task_idle, task_mine_block, task_move_to, task_pick_random_spot,
-    task_pick_up_item, task_sleep, task_unassign_job, PartitionDebug, PartitionEvent,
-    PartitionGraph, SpawnColonistEvent,
+    behavior_pick_system, behavior_system, block_move_system, fatigue_system, mine_job_checker,
+    on_spawn_colonist, partition, partition_debug, partition_setup, score_mine, score_wander,
+    spawn_scorers, task_assign_job, task_check_has_item, task_debug, task_find_bed,
+    task_find_nearest_item, task_get_job_location, task_idle, task_mine_block, task_move_to,
+    task_pick_random_spot, task_pick_up_item, task_sleep, task_unassign_job, Item, PartitionDebug,
+    PartitionEvent, PartitionGraph, ScorerPlugin, SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -53,6 +53,7 @@ fn main() {
         .init_resource::<PartitionGraph>()
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
+        .add_plugins(ScorerPlugin)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
             ..default()
@@ -92,10 +93,11 @@ fn main() {
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, partition_debug)
         .add_systems(Update, partition)
+        .add_systems(Update, mine_job_checker)
         .add_systems(Update, fatigue_system)
         .add_systems(Update, block_move_system)
         .add_systems(Update, behavior_pick_system)
-        .add_systems(PreUpdate, spawn_scorers)
+        // .add_systems(PreUpdate, spawn_scorers)
         .add_systems(PreUpdate, behavior_system)
         .add_systems(Update, score_wander)
         .add_systems(Update, score_mine)

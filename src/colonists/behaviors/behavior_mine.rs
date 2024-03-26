@@ -1,17 +1,25 @@
 use std::sync::Arc;
 
-use bevy::ecs::{
-    self,
-    component::Component,
-    entity::Entity,
-    query::{With, Without},
-    system::{Query, Res},
+use bevy::{
+    ecs::{
+        self,
+        component::Component,
+        entity::Entity,
+        query::{With, Without},
+        system::{Commands, Query, Res},
+    },
+    transform::components::Transform,
 };
 
-use crate::colonists::{
-    test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior, BehaviorNode, InInventory,
-    Inventory, IsJobAssigned, Item, ItemTag, Job, JobType, Score, ScorerBuilder, TaskAssignJob,
-    TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo, TaskUnassignJob,
+use crate::{
+    colonists::{
+        get_partition_path, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior,
+        BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job, JobLocation,
+        JobMine, Partition, PartitionFlags, PartitionGraph, PartitionPathRequest, Score,
+        ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
+        TaskUnassignJob,
+    },
+    Terrain,
 };
 
 #[derive(Component, Clone, Default)]
@@ -49,30 +57,68 @@ impl ScorerBuilder for ScorerMine {
 }
 
 pub fn score_mine(
-    q_jobs: Query<(Entity, &Job), Without<IsJobAssigned>>,
+    terrain: Res<Terrain>,
+    graph: Res<PartitionGraph>,
+    q_jobs: Query<(Entity, &Job, &JobLocation), (With<JobMine>, With<IsJobAccessible>)>,
     q_items: Query<&Item>,
     q_free_items: Query<&Item, Without<InInventory>>,
-    q_actors: Query<&Inventory, With<Actor>>,
+    q_actors: Query<(&Inventory, &Transform), With<Actor>>,
     mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerMine)>,
 ) {
     for (ActorRef(actor), mut score, mut scorer) in q_behaviors.iter_mut() {
-        let Ok(inventory) = q_actors.get(*actor) else {
+        let Ok((inventory, transform)) = q_actors.get(*actor) else {
             *score = Score(0.);
             continue;
         };
 
-        let mine_jobs = q_jobs.iter().filter(|(_, j)| match j.job_type {
-            JobType::Mine(_) => true,
-        });
+        let pos = [
+            transform.translation.x as u32,
+            transform.translation.y as u32,
+            transform.translation.z as u32,
+        ];
 
         let mut best = None;
 
-        for (e, job) in mine_jobs {
-            match job.job_type {
-                JobType::Mine([x, y, z]) => {
-                    best = Some(e);
-                }
+        for (e, job, job_location) in q_jobs.iter() {
+            if job.assignee.is_some() {
+                continue;
             }
+
+            let [x, y, z] = job_location.pos;
+            let goals = vec![
+                [x + 1, y, z],
+                [x - 1, y, z],
+                [x, y, z + 1],
+                [x, y, z - 1],
+                [x + 1, y + 1, z],
+                [x - 1, y + 1, z],
+                [x, y + 1, z + 1],
+                [x, y + 1, z - 1],
+                [x + 1, y - 1, z],
+                [x - 1, y - 1, z],
+                [x, y - 1, z + 1],
+                [x, y - 1, z - 1],
+                [x, y - 2, z + 1],
+                [x, y - 2, z - 1],
+                [x - 1, y, z + 1],
+                [x - 1, y, z - 1],
+                [x + 1, y, z + 1],
+                [x + 1, y, z - 1],
+            ];
+            let request = PartitionPathRequest {
+                start: pos,
+                goals,
+                flags: PartitionFlags::TALL | PartitionFlags::LADDER,
+            };
+
+            // generate path
+            // this could be cached on the behavior
+            let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
+                // job is not reachable. we should cooldown this score checker
+                continue;
+            };
+
+            best = Some(e);
         }
 
         if best.is_none() {
@@ -102,5 +148,49 @@ pub fn score_mine(
         }
 
         *score = Score(0.2);
+    }
+}
+
+pub fn mine_job_checker(
+    mut cmd: Commands,
+    terrain: Res<Terrain>,
+    q_jobs: Query<(Entity, &Job, &JobLocation), With<JobMine>>,
+) {
+    for (entity, job, job_location) in q_jobs.iter() {
+        if job.assignee.is_some() {
+            continue;
+        }
+
+        let [x, y, z] = job_location.pos;
+        let goals = vec![
+            [x + 1, y, z],
+            [x - 1, y, z],
+            [x, y, z + 1],
+            [x, y, z - 1],
+            [x + 1, y + 1, z],
+            [x - 1, y + 1, z],
+            [x, y + 1, z + 1],
+            [x, y + 1, z - 1],
+            [x + 1, y - 1, z],
+            [x - 1, y - 1, z],
+            [x, y - 1, z + 1],
+            [x, y - 1, z - 1],
+            [x, y - 2, z + 1],
+            [x, y - 2, z - 1],
+            [x - 1, y, z + 1],
+            [x - 1, y, z - 1],
+            [x + 1, y, z + 1],
+            [x + 1, y, z - 1],
+        ];
+
+        let is_accessible = goals
+            .iter()
+            .any(|g| terrain.get_partition_id_u32(g[0], g[1], g[2]) != Partition::NONE);
+
+        if is_accessible {
+            cmd.entity(entity).insert(IsJobAccessible);
+        } else {
+            cmd.entity(entity).remove::<IsJobAccessible>();
+        }
     }
 }

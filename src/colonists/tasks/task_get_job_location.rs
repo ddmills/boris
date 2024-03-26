@@ -1,13 +1,13 @@
 use bevy::ecs::{component::Component, query::With, system::Query};
 use task_derive::TaskBuilder;
 
-use crate::colonists::{Blackboard, Job, JobType, TaskBuilder, TaskState};
+use crate::colonists::{Blackboard, JobLocation, TaskBuilder, TaskState};
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskGetJobLocation;
 
 pub fn task_get_job_location(
-    q_jobs: Query<&Job>,
+    q_jobs: Query<&JobLocation>,
     mut q_behavior: Query<(&mut Blackboard, &mut TaskState), With<TaskGetJobLocation>>,
 ) {
     for (mut blackboard, mut state) in q_behavior.iter_mut() {
@@ -16,35 +16,33 @@ pub fn task_get_job_location(
             continue;
         };
 
-        let Ok(job) = q_jobs.get(job_entity) else {
+        let Ok(location) = q_jobs.get(job_entity) else {
             *state = TaskState::Failed;
             continue;
         };
 
-        match job.job_type {
-            JobType::Mine(pos) => {
-                blackboard.move_goals = vec![
-                    [pos[0] + 1, pos[1], pos[2]],
-                    [pos[0] - 1, pos[1], pos[2]],
-                    [pos[0], pos[1], pos[2] + 1],
-                    [pos[0], pos[1], pos[2] - 1],
-                    [pos[0] + 1, pos[1] + 1, pos[2]],
-                    [pos[0] - 1, pos[1] + 1, pos[2]],
-                    [pos[0], pos[1] + 1, pos[2] + 1],
-                    [pos[0], pos[1] + 1, pos[2] - 1],
-                    [pos[0] + 1, pos[1] - 1, pos[2]],
-                    [pos[0] - 1, pos[1] - 1, pos[2]],
-                    [pos[0], pos[1] - 1, pos[2] + 1],
-                    [pos[0], pos[1] - 1, pos[2] - 1],
-                    [pos[0], pos[1] - 2, pos[2] + 1],
-                    [pos[0], pos[1] - 2, pos[2] - 1],
-                    [pos[0] - 1, pos[1], pos[2] + 1],
-                    [pos[0] - 1, pos[1], pos[2] - 1],
-                    [pos[0] + 1, pos[1], pos[2] + 1],
-                    [pos[0] + 1, pos[1], pos[2] - 1],
-                ];
-            }
-        }
+        let pos = location.pos;
+
+        blackboard.move_goals = vec![
+            [pos[0] + 1, pos[1], pos[2]],
+            [pos[0] - 1, pos[1], pos[2]],
+            [pos[0], pos[1], pos[2] + 1],
+            [pos[0], pos[1], pos[2] - 1],
+            [pos[0] + 1, pos[1] + 1, pos[2]],
+            [pos[0] - 1, pos[1] + 1, pos[2]],
+            [pos[0], pos[1] + 1, pos[2] + 1],
+            [pos[0], pos[1] + 1, pos[2] - 1],
+            [pos[0] + 1, pos[1] - 1, pos[2]],
+            [pos[0] - 1, pos[1] - 1, pos[2]],
+            [pos[0], pos[1] - 1, pos[2] + 1],
+            [pos[0], pos[1] - 1, pos[2] - 1],
+            [pos[0], pos[1] - 2, pos[2] + 1],
+            [pos[0], pos[1] - 2, pos[2] - 1],
+            [pos[0] - 1, pos[1], pos[2] + 1],
+            [pos[0] - 1, pos[1], pos[2] - 1],
+            [pos[0] + 1, pos[1], pos[2] + 1],
+            [pos[0] + 1, pos[1], pos[2] - 1],
+        ];
 
         *state = TaskState::Success;
     }

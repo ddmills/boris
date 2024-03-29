@@ -275,7 +275,7 @@ pub fn get_partition_path(
         neighbors: |v| {
             if let Some(p) = graph.get_partition(v) {
                 return p
-                    .neighbors
+                    .neighbor_ids
                     .iter()
                     .filter(|n| {
                         graph.get_partition_flags(**n) & request.flags != NavigationFlags::NONE

@@ -1,5 +1,4 @@
 use bevy::{
-    core_pipeline::core_3d::graph,
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
@@ -8,10 +7,9 @@ use bevy::{
     },
     gizmos::gizmos::Gizmos,
     math::Vec3,
-    reflect::Reflect,
     render::color::Color,
     transform::components::Transform,
-    utils::{petgraph::Graph, HashMap, HashSet},
+    utils::{hashbrown::HashSet, HashMap},
 };
 use ndshape::AbstractShape;
 
@@ -83,19 +81,13 @@ impl PartitionExtents {
 pub struct Region {
     pub id: u16,
     pub flags: NavigationFlags,
-    pub partition_ids: Vec<u16>,
-    pub neighbor_ids: Vec<u16>,
-}
-
-impl Region {
-    pub fn is_empty(&self) -> bool {
-        self.partition_ids.is_empty()
-    }
+    pub partition_ids: HashSet<u16>,
+    pub neighbor_ids: HashSet<u16>,
 }
 
 pub struct Partition {
     pub id: u16,
-    pub neighbors: HashSet<u16>,
+    pub neighbor_ids: HashSet<u16>,
     pub is_computed: bool,
     pub chunk_idx: u32,
     pub blocks: Vec<u32>,
@@ -114,7 +106,7 @@ impl Partition {
     }
 
     pub fn remove_neighbor(&mut self, neighbor_id: &u16) {
-        self.neighbors.remove(neighbor_id);
+        self.neighbor_ids.remove(neighbor_id);
     }
 }
 
@@ -156,16 +148,17 @@ pub fn partition_debug(
             continue;
         }
 
-        let is_neighbor = partition.neighbors.contains(partition_id);
         let part = graph.get_partition(*partition_id).unwrap();
 
-        let color = if is_neighbor {
-            Color::FUCHSIA
-        } else {
-            Color::GRAY
-        };
+        debug_partition(part, &terrain, &mut gizmos, Color::GRAY, Color::GRAY);
+    }
 
-        debug_partition(part, &terrain, &mut gizmos, color, Color::GRAY);
+    for neighbor_reg in region.neighbor_ids.iter() {
+        let neighbor = graph.get_region(*neighbor_reg).unwrap();
+        for partition_id in neighbor.partition_ids.iter() {
+            let part = graph.get_partition(*partition_id).unwrap();
+            debug_partition(part, &terrain, &mut gizmos, Color::BLUE, Color::BLUE);
+        }
     }
 }
 
@@ -296,14 +289,16 @@ impl PartitionGraph {
         self.cur_partition_id += 1;
         let id = self.cur_partition_id;
 
-        let region_id = self.create_region(flags, vec![id]);
+        let mut p_ids = HashSet::new();
+        p_ids.insert(id);
+        let region_id = self.create_region(flags, p_ids);
 
         self.partitions.insert(
             id,
             Partition {
                 id,
                 chunk_idx,
-                neighbors: HashSet::new(),
+                neighbor_ids: HashSet::new(),
                 is_computed: false,
                 blocks: vec![],
                 flags,
@@ -316,7 +311,7 @@ impl PartitionGraph {
         id
     }
 
-    pub fn create_region(&mut self, flags: NavigationFlags, partition_ids: Vec<u16>) -> u16 {
+    pub fn create_region(&mut self, flags: NavigationFlags, partition_ids: HashSet<u16>) -> u16 {
         // let id = self.returned_region_ids.pop().unwrap_or_else(|| {
         //     self.cur_region_id += 1;
         //     self.cur_region_id
@@ -330,7 +325,7 @@ impl PartitionGraph {
                 id,
                 flags,
                 partition_ids,
-                neighbor_ids: vec![],
+                neighbor_ids: HashSet::new(),
             },
         );
 
@@ -360,7 +355,20 @@ impl PartitionGraph {
     }
 
     pub fn delete_region(&mut self, region_id: u16) -> Option<Region> {
-        self.regions.remove(&region_id)
+        let region = self.regions.remove(&region_id);
+
+        if let Some(r) = region {
+            for neighbor_id in r.neighbor_ids.iter() {
+                self.get_region_mut(*neighbor_id)
+                    .unwrap()
+                    .neighbor_ids
+                    .remove(&region_id);
+            }
+
+            return Some(r);
+        };
+
+        None
     }
 
     fn get_partition_ids_for_chunk(&self, chunk_idx: u32) -> Vec<u16> {
@@ -376,18 +384,6 @@ impl PartitionGraph {
             .collect()
     }
 
-    pub fn get_partition_neighbors(&self, partition_id: u16) -> Vec<&Partition> {
-        let Some(partition) = self.get_partition(partition_id) else {
-            return vec![];
-        };
-
-        partition
-            .neighbors
-            .iter()
-            .map(|n| self.get_partition(*n).unwrap())
-            .collect()
-    }
-
     pub fn delete_partitions_for_chunk(&mut self, chunk_idx: u32) -> Vec<Partition> {
         let partition_ids = self.get_partition_ids_for_chunk(chunk_idx);
         let mut cleanups: Vec<[u16; 2]> = vec![];
@@ -396,7 +392,7 @@ impl PartitionGraph {
         for partition_id in partition_ids.iter() {
             let partition = self.get_partition(*partition_id).unwrap();
 
-            for neighbor_id in partition.neighbors.iter() {
+            for neighbor_id in partition.neighbor_ids.iter() {
                 cleanups.push([*neighbor_id, *partition_id]);
             }
         }
@@ -421,7 +417,7 @@ impl PartitionGraph {
             let p = self.partitions.remove(id).unwrap();
 
             if let Some(region) = self.get_region_mut(p.region_id) {
-                region.partition_ids.retain(|p_id| p_id != id);
+                region.partition_ids.remove(id);
                 regions_to_flood.insert(region.id);
             }
 
@@ -439,64 +435,89 @@ impl PartitionGraph {
     /// flood the partitions in this region, deleting the region if
     /// it has none, or creating new regions for any unique islands.
     fn flood_region(&mut self, region_id: u16) {
-        println!("flooding region {}", region_id);
         let region = self.get_region(region_id).unwrap();
+        println!("flooding region {}, {}", region_id, region.flags);
         // delete if empty
         if region.partition_ids.is_empty() {
             println!("region is empty, deleting it.");
-            let deleted = self.delete_region(region_id).unwrap();
-            // remove it from any neighbors
-            for n_id in deleted.neighbor_ids.iter() {
-                let n_region = self.get_region_mut(*n_id).unwrap();
-                n_region.neighbor_ids.retain(|id| *id != region_id);
-            }
+            self.delete_region(region_id).unwrap();
             return;
         }
 
-        let mut open_list = region.partition_ids.clone();
+        let mut open_list = region.partition_ids.iter().collect::<Vec<_>>();
         let mut closed_list = vec![];
         let mut groups = vec![];
 
         println!("flooding filling through {} partition ids", open_list.len());
         while let Some(seed) = open_list.pop() {
-            let mut group = vec![];
+            let mut group = HashSet::new();
+            let mut neighbors = HashSet::new();
+
             flood_fill(
-                seed,
+                *seed,
                 |id| {
+                    let neighbor_partition = self.get_partition(id).unwrap();
+
+                    if neighbor_partition.flags != region.flags {
+                        closed_list.push(id);
+                        neighbors.insert(neighbor_partition.region_id);
+                        return false;
+                    }
+
                     if closed_list.contains(&id) {
                         return false;
                     }
-                    open_list.retain(|i| *i != id);
+
+                    open_list.retain(|i| **i != id);
                     closed_list.push(id);
-                    group.push(id);
+                    group.insert(id);
                     true
                 },
                 |id| {
                     self.get_partition(id)
                         .unwrap()
-                        .neighbors
+                        .neighbor_ids
                         .iter()
                         .copied()
                         .collect()
                 },
             );
-            groups.push(group);
+            groups.push((group, neighbors));
         }
 
         self.split_region(region_id, region.flags, groups);
     }
 
-    fn split_region(&mut self, region_id: u16, flags: NavigationFlags, groups: Vec<Vec<u16>>) {
+    fn split_region(
+        &mut self,
+        region_id: u16,
+        flags: NavigationFlags,
+        groups: Vec<(HashSet<u16>, HashSet<u16>)>,
+    ) {
         println!("region {} split into {} groups", region_id, groups.len());
-        for (idx, group) in groups.iter().enumerate() {
+        let region = self.get_region(region_id).unwrap();
+
+        for neighbor_id in region.neighbor_ids.clone().iter() {
+            self.remove_region_neighbors(region_id, *neighbor_id);
+        }
+
+        for (idx, (group, neighbors_ids)) in groups.iter().enumerate() {
             if idx == 0 {
-                self.get_region_mut(region_id).unwrap().partition_ids = group.clone();
+                for neighbor_id in neighbors_ids.iter() {
+                    self.set_region_neighbors(region_id, *neighbor_id);
+                }
 
                 for partition_id in group.iter() {
                     self.get_partition_mut(*partition_id).unwrap().region_id = region_id;
                 }
+
+                self.get_region_mut(region_id).unwrap().partition_ids = group.clone();
             } else {
                 let new_region_id = self.create_region(flags, group.clone());
+
+                for neighbor_id in neighbors_ids.iter() {
+                    self.set_region_neighbors(new_region_id, *neighbor_id);
+                }
 
                 for partition_id in group.iter() {
                     self.get_partition_mut(*partition_id).unwrap().region_id = new_region_id;
@@ -539,10 +560,26 @@ impl PartitionGraph {
 
     pub fn set_partition_neighbors(&mut self, a_id: u16, b_id: u16) {
         let a = self.partitions.get_mut(&a_id).unwrap();
-        a.neighbors.insert(b_id);
+        a.neighbor_ids.insert(b_id);
 
         let b = self.partitions.get_mut(&b_id).unwrap();
-        b.neighbors.insert(a_id);
+        b.neighbor_ids.insert(a_id);
+    }
+
+    pub fn set_region_neighbors(&mut self, a_id: u16, b_id: u16) {
+        let a = self.regions.get_mut(&a_id).unwrap();
+        a.neighbor_ids.insert(b_id);
+
+        let b = self.regions.get_mut(&b_id).unwrap();
+        b.neighbor_ids.insert(a_id);
+    }
+
+    pub fn remove_region_neighbors(&mut self, a_id: u16, b_id: u16) {
+        let a = self.regions.get_mut(&a_id).unwrap();
+        a.neighbor_ids.remove(&b_id);
+
+        let b = self.regions.get_mut(&b_id).unwrap();
+        b.neighbor_ids.remove(&a_id);
     }
 }
 
@@ -574,7 +611,7 @@ pub fn busy_work(
         .partition_ids
         .iter()
         .map(|partition_id| {
-            bigger_region.partition_ids.push(*partition_id);
+            bigger_region.partition_ids.insert(*partition_id);
             *partition_id
         })
         .collect::<Vec<_>>();
@@ -619,7 +656,7 @@ pub fn merge_partitions(
     // merge B into A
     let b_partition = graph.get_partition(b_id).unwrap();
     let block_idxs: Vec<u32> = b_partition.blocks.to_vec();
-    let neighbors_ids: Vec<u16> = b_partition.neighbors.iter().copied().collect();
+    let neighbors_ids: Vec<u16> = b_partition.neighbor_ids.iter().copied().collect();
     let b_computed = b_partition.is_computed;
     let a_partition = graph.get_partition(a_id).unwrap();
 
@@ -756,9 +793,13 @@ pub fn partition(
                         );
                     }
 
+                    let nregion_id = graph.get_region_for_partition(npartition_id).unwrap().id;
+
                     if !flag_diff {
-                        let b_region_id = graph.get_region_for_partition(npartition_id).unwrap().id;
-                        region_id = merge_regions(&mut graph, region_id, b_region_id);
+                        region_id = merge_regions(&mut graph, region_id, nregion_id);
+                    } else {
+                        // set regions as neighbors
+                        graph.set_region_neighbors(region_id, nregion_id);
                     }
 
                     // we are done flooding here, we will process this neighbor

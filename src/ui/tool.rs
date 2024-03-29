@@ -195,7 +195,7 @@ pub fn tool_system(
                         partition.region_id,
                         partition_id,
                         chunk_idx,
-                        partition.neighbors.len(),
+                        partition.neighbor_ids.len(),
                         flags,
                         partition.is_computed,
                         partition.extents.traversal_distance,

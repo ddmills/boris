@@ -647,6 +647,8 @@ pub fn merge_regions(
     big_region_id
 }
 
+/// Merge partition B into A
+/// Also merges the regions
 pub fn merge_partitions(
     graph: &mut ResMut<PartitionGraph>,
     terrain: &mut ResMut<Terrain>,
@@ -655,14 +657,13 @@ pub fn merge_partitions(
 ) -> u16 {
     // merge B into A
     let b_partition = graph.get_partition(b_id).unwrap();
+    let b_region_id = b_partition.region_id;
     let block_idxs: Vec<u32> = b_partition.blocks.to_vec();
     let neighbors_ids: Vec<u16> = b_partition.neighbor_ids.iter().copied().collect();
     let b_computed = b_partition.is_computed;
-    let a_partition = graph.get_partition(a_id).unwrap();
-
-    merge_regions(graph, a_partition.region_id, b_partition.region_id);
 
     let a_partition_mut = graph.get_partition_mut(a_id).unwrap();
+    let a_region_id = a_partition_mut.region_id;
     a_partition_mut.is_computed = a_partition_mut.is_computed && b_computed;
 
     for block_idx in block_idxs {
@@ -684,7 +685,20 @@ pub fn merge_partitions(
             // todo: fix regions here?
         }
     }
+
     graph.partitions.remove(&b_id);
+    let region_b = graph.get_region_mut(b_region_id).unwrap();
+    region_b.partition_ids.remove(&b_id);
+
+    if region_b.partition_ids.is_empty() {
+        graph.delete_region(b_region_id);
+    } else if b_region_id != a_region_id {
+        println!("doh regions are different!!!");
+    }
+
+    // if region b is empty, delete it,
+    // otherwise remove the partition, and merge with a
+    // otherwise, merge partitions
 
     a_id
 }
@@ -812,7 +826,9 @@ pub fn partition(
                         "these should be merged? {}, {}",
                         npartition_id, partition_id
                     );
-                    // merge_partitions(&mut graph, &mut terrain, partition_id, npartition_id);
+                    let nregion_id = graph.get_region_for_partition(npartition_id).unwrap().id;
+                    merge_partitions(&mut graph, &mut terrain, partition_id, npartition_id);
+                    // merge_regions(&mut graph, region_id, nregion_id);
                 }
 
                 // this block is navigable, it is in the same chunk, and it has

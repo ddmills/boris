@@ -15,20 +15,7 @@ A continous set of partitions with matching Navigation Flags.
 Regions track their neighboring regions as well.
 
 **Navigation Group**:
-A navigation group is a set of continous Regions that match the navigation flags defined for the group. Navigation groups can overlap.
+A navigation group is a set of connected Regions that match the navigation flags defined for the group. Navigation groups can overlap.
 
 **Navigation Graph**
 The navigation graph holds all of the partitions, regions, and navigation groups. It also provides methods for getting access to them.
-
-
-Before a chunk is being re-calculated, get all regions within it.
-
-delete all partitions
-
-any regions in the list with zero partitions should get deleted.
-loop over the regions, doing a flood fill on it's partitions
-Create new regions from any islands.
-
-recreate all partitions.
-
-profit???

@@ -189,6 +189,7 @@ pub fn tool_system(
                     partition_debug.show = true;
 
                     let flags = graph.get_partition_flags(partition_id);
+                    let region = graph.get_region(partition.region_id).unwrap();
 
                     println!(
                         "region id = {}, partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}, cost={}",
@@ -200,6 +201,15 @@ pub fn tool_system(
                         partition.is_computed,
                         partition.extents.traversal_distance,
                     );
+                    for group_id in region.navigation_group_ids.iter() {
+                        let group = graph.get_navigation_group(*group_id).unwrap();
+                        println!(
+                            "-> nav group {} ({} regions) - {}",
+                            group_id,
+                            group.region_ids.len(),
+                            group.flags
+                        );
+                    }
                 } else {
                     println!("no partition");
                 }

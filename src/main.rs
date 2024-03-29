@@ -50,7 +50,7 @@ fn main() {
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_event::<PartitionEvent>()
-        .init_resource::<PartitionGraph>()
+        .insert_resource(PartitionGraph::new())
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
         .add_plugins(ScorerPlugin)

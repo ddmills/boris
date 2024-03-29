@@ -78,9 +78,21 @@ impl PartitionExtents {
     }
 }
 
+pub struct NavigationGroup {
+    pub id: u16,
+    pub flags: NavigationFlags,
+    pub region_ids: HashSet<u16>,
+}
+
+impl NavigationGroup {
+    pub const COLONIST: NavigationFlags = NavigationFlags::COLONIST;
+    pub const CAT: NavigationFlags = NavigationFlags::CAT;
+}
+
 pub struct Region {
     pub id: u16,
     pub flags: NavigationFlags,
+    pub navigation_group_ids: HashSet<u16>,
     pub partition_ids: HashSet<u16>,
     pub neighbor_ids: HashSet<u16>,
 }
@@ -274,13 +286,28 @@ fn debug_partition(
 pub struct PartitionGraph {
     pub regions: HashMap<u16, Region>,
     pub partitions: HashMap<u16, Partition>,
+    pub navigation_groups: HashMap<u16, NavigationGroup>,
+    pub group_types: Vec<NavigationFlags>,
     cur_region_id: u16,
     cur_partition_id: u16,
+    cur_navigation_group_id: u16,
     // pub returned_partition_ids: Vec<u16>,
     // pub returned_region_ids: Vec<u16>,
 }
 
 impl PartitionGraph {
+    pub fn new() -> Self {
+        Self {
+            group_types: vec![NavigationFlags::COLONIST, NavigationFlags::CAT],
+            regions: HashMap::new(),
+            partitions: HashMap::new(),
+            navigation_groups: HashMap::new(),
+            cur_region_id: 0,
+            cur_partition_id: 0,
+            cur_navigation_group_id: 0,
+        }
+    }
+
     pub fn create_partition(&mut self, chunk_idx: u32, flags: NavigationFlags) -> u16 {
         // let id = self.returned_partition_ids.pop().unwrap_or_else(|| {
         //     self.cur_partition_id += 1;
@@ -319,6 +346,10 @@ impl PartitionGraph {
         self.cur_region_id += 1;
         let id = self.cur_region_id;
 
+        let mut region_ids = HashSet::new();
+        region_ids.insert(id);
+        let groups = self.create_navigation_groups(flags, region_ids);
+
         self.regions.insert(
             id,
             Region {
@@ -326,10 +357,35 @@ impl PartitionGraph {
                 flags,
                 partition_ids,
                 neighbor_ids: HashSet::new(),
+                navigation_group_ids: groups,
             },
         );
 
         id
+    }
+
+    pub fn create_navigation_groups(
+        &mut self,
+        region_flags: NavigationFlags,
+        region_ids: HashSet<u16>,
+    ) -> HashSet<u16> {
+        let mut group_ids = HashSet::new();
+
+        for group_type in self.group_types.iter() {
+            if region_flags.intersects(*group_type) {
+                self.cur_navigation_group_id += 1;
+                let id = self.cur_navigation_group_id;
+                let group = NavigationGroup {
+                    id,
+                    flags: *group_type,
+                    region_ids: region_ids.clone(),
+                };
+                self.navigation_groups.insert(id, group);
+                group_ids.insert(id);
+            }
+        }
+
+        group_ids
     }
 
     pub fn get_partition_mut(&mut self, partition_id: u16) -> Option<&mut Partition> {
@@ -346,6 +402,14 @@ impl PartitionGraph {
 
     pub fn get_region(&self, region_id: u16) -> Option<&Region> {
         self.regions.get(&region_id)
+    }
+
+    pub fn get_navigation_group_mut(&mut self, group_id: u16) -> Option<&mut NavigationGroup> {
+        self.navigation_groups.get_mut(&group_id)
+    }
+
+    pub fn get_navigation_group(&self, group_id: u16) -> Option<&NavigationGroup> {
+        self.navigation_groups.get(&group_id)
     }
 
     pub fn get_region_for_partition(&self, partition_id: u16) -> Option<&Region> {
@@ -365,7 +429,34 @@ impl PartitionGraph {
                     .remove(&region_id);
             }
 
+            for group_id in r.navigation_group_ids.iter() {
+                let group = self.get_navigation_group_mut(*group_id).unwrap();
+                group.region_ids.remove(&region_id);
+
+                if group.region_ids.is_empty() {
+                    println!("Deleting empty navigation group {}", group_id);
+                    self.delete_navigation_group(*group_id);
+                }
+            }
+
             return Some(r);
+        };
+
+        None
+    }
+
+    pub fn delete_navigation_group(&mut self, group_id: u16) -> Option<NavigationGroup> {
+        let group = self.navigation_groups.remove(&group_id);
+
+        if let Some(g) = group {
+            for region_id in g.region_ids.iter() {
+                self.get_region_mut(*region_id)
+                    .unwrap()
+                    .navigation_group_ids
+                    .remove(&group_id);
+            }
+
+            return Some(g);
         };
 
         None
@@ -572,6 +663,62 @@ impl PartitionGraph {
 
         let b = self.regions.get_mut(&b_id).unwrap();
         b.neighbor_ids.insert(a_id);
+
+        self.merge_navigation_groups_for_regions(a_id, b_id);
+    }
+
+    pub fn merge_navigation_groups_for_regions(&mut self, region_a_id: u16, region_b_id: u16) {
+        let region_a = self.get_region(region_a_id).unwrap();
+        let region_b = self.get_region(region_b_id).unwrap();
+
+        let a_groups = region_a
+            .navigation_group_ids
+            .iter()
+            .map(|g_id| {
+                let g = self.get_navigation_group(*g_id).unwrap();
+                (*g_id, g.flags)
+            })
+            .collect::<Vec<_>>();
+        let b_groups = region_b
+            .navigation_group_ids
+            .iter()
+            .map(|g_id| {
+                let g = self.get_navigation_group(*g_id).unwrap();
+                (*g_id, g.flags)
+            })
+            .collect::<Vec<_>>();
+
+        for (a_group_id, a_group_flags) in a_groups.iter() {
+            if let Some((matching_group_id, matching_group_flags)) =
+                b_groups.iter().find(|(b_group_id, b_group_flags)| {
+                    b_group_id != a_group_id && b_group_flags == a_group_flags
+                })
+            {
+                println!(
+                    "MERGE NAV GROUPS {}, {} ({})",
+                    a_group_id, matching_group_id, matching_group_flags
+                );
+                let result = self.merge_navigation_groups(*a_group_id, *matching_group_id);
+                println!("MERGE RESULT {}", result);
+            }
+        }
+    }
+
+    fn merge_navigation_groups(&mut self, group_a_id: u16, group_b_id: u16) -> u16 {
+        let (big_group_id, small_group_id, region_ids) =
+            busy_work_groups(self, group_a_id, group_b_id);
+
+        self.delete_navigation_group(small_group_id);
+
+        for r_id in region_ids {
+            self.regions
+                .get_mut(&r_id)
+                .unwrap()
+                .navigation_group_ids
+                .insert(big_group_id);
+        }
+
+        big_group_id
     }
 
     pub fn remove_region_neighbors(&mut self, a_id: u16, b_id: u16) {
@@ -589,7 +736,37 @@ pub struct PartitionEvent {
     pub refresh: bool,
 }
 
-pub fn busy_work(
+fn busy_work_groups(
+    graph: &mut PartitionGraph,
+    a_group_id: u16,
+    b_group_id: u16,
+) -> (u16, u16, Vec<u16>) {
+    let [a_group, b_group] = graph
+        .navigation_groups
+        .get_many_mut([&a_group_id, &b_group_id])
+        .unwrap();
+
+    let (smaller_group, bigger_group) = {
+        if a_group.region_ids.len() > b_group.region_ids.len() {
+            (b_group, a_group)
+        } else {
+            (a_group, b_group)
+        }
+    };
+
+    let region_ids = smaller_group
+        .region_ids
+        .iter()
+        .map(|region_id| {
+            bigger_group.region_ids.insert(*region_id);
+            *region_id
+        })
+        .collect::<Vec<_>>();
+
+    (bigger_group.id, smaller_group.id, region_ids)
+}
+
+fn busy_work(
     graph: &mut ResMut<PartitionGraph>,
     a_region_id: u16,
     b_region_id: u16,
@@ -715,7 +892,6 @@ pub fn partition(
 
         if ev.refresh {
             let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
-            println!("done deleting partitions for chunk {}", chunk_idx);
 
             for mut p in cleanups {
                 for b in p.blocks.iter() {
@@ -723,8 +899,6 @@ pub fn partition(
                     items.append(&mut p.items);
                 }
             }
-
-            println!("done cleaning up partitions for chunk {}", chunk_idx);
         }
 
         println!("partitioning chunk {}", chunk_idx);
@@ -809,11 +983,10 @@ pub fn partition(
 
                     let nregion_id = graph.get_region_for_partition(npartition_id).unwrap().id;
 
-                    if !flag_diff {
-                        region_id = merge_regions(&mut graph, region_id, nregion_id);
-                    } else {
-                        // set regions as neighbors
+                    if flag_diff {
                         graph.set_region_neighbors(region_id, nregion_id);
+                    } else {
+                        region_id = merge_regions(&mut graph, region_id, nregion_id);
                     }
 
                     // we are done flooding here, we will process this neighbor
@@ -822,13 +995,7 @@ pub fn partition(
                 }
 
                 if npartition_id != Partition::NONE && npartition_id != partition_id {
-                    println!(
-                        "these should be merged? {}, {}",
-                        npartition_id, partition_id
-                    );
-                    let nregion_id = graph.get_region_for_partition(npartition_id).unwrap().id;
                     merge_partitions(&mut graph, &mut terrain, partition_id, npartition_id);
-                    // merge_regions(&mut graph, region_id, nregion_id);
                 }
 
                 // this block is navigable, it is in the same chunk, and it has

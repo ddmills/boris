@@ -15,7 +15,7 @@ use crate::{
     colonists::{
         get_partition_path, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior,
         BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job, JobLocation,
-        JobMine, Partition, PartitionFlags, PartitionGraph, PartitionPathRequest, Score,
+        JobMine, NavigationFlags, Partition, PartitionGraph, PartitionPathRequest, Score,
         ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
         TaskUnassignJob,
     },
@@ -108,7 +108,7 @@ pub fn score_mine(
             let request = PartitionPathRequest {
                 start: pos,
                 goals,
-                flags: PartitionFlags::TALL | PartitionFlags::LADDER,
+                flags: NavigationFlags::TALL | NavigationFlags::LADDER,
             };
 
             // generate path

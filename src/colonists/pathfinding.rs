@@ -16,7 +16,7 @@ use crate::{
     Terrain,
 };
 
-use super::{get_block_flags, PartitionFlags, PartitionGraph};
+use super::{get_block_flags, NavigationFlags, PartitionGraph};
 
 #[derive(Component)]
 pub struct BlockMove {
@@ -29,7 +29,7 @@ pub struct Path {
     pub partition_path: Vec<u16>,
     pub goals: Vec<[u32; 3]>,
     pub current_partition_idx: usize,
-    pub flags: PartitionFlags,
+    pub flags: NavigationFlags,
     pub blocks: Vec<[i32; 3]>,
     pub current_block_idx: usize,
 }
@@ -38,7 +38,7 @@ pub struct Path {
 pub struct PartitionPathRequest {
     pub start: [u32; 3],
     pub goals: Vec<[u32; 3]>,
-    pub flags: PartitionFlags,
+    pub flags: NavigationFlags,
 }
 
 pub fn block_move_system(
@@ -70,12 +70,12 @@ pub struct GranularPathRequest {
     pub start: [u32; 3],
     pub goals: Vec<[u32; 3]>,
     pub goal_partition_id: u16,
-    pub flags: PartitionFlags,
+    pub flags: NavigationFlags,
 }
 
 pub struct GranularPath {
     pub blocks: Vec<[i32; 3]>,
-    pub flags: PartitionFlags,
+    pub flags: NavigationFlags,
     pub goals: Vec<[u32; 3]>,
     pub goal_partition_id: u16,
 }
@@ -151,13 +151,13 @@ pub fn get_granular_path(
 
             let f_clear = get_block_flags(terrain, forward[0], forward[1], forward[2])
                 & request.flags
-                != PartitionFlags::NONE;
+                != NavigationFlags::NONE;
             let r_clear = get_block_flags(terrain, right[0], right[1], right[2]) & request.flags
-                != PartitionFlags::NONE;
+                != NavigationFlags::NONE;
             let l_clear = get_block_flags(terrain, left[0], left[1], left[2]) & request.flags
-                != PartitionFlags::NONE;
+                != NavigationFlags::NONE;
             let b_clear = get_block_flags(terrain, back[0], back[1], back[2]) & request.flags
-                != PartitionFlags::NONE;
+                != NavigationFlags::NONE;
 
             if f_clear && l_clear {
                 edges.push(forward_left);
@@ -178,9 +178,9 @@ pub fn get_granular_path(
                     let [chunk_idx, block_idx] =
                         terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
                     let partition_id = terrain.get_partition_id(chunk_idx, block_idx);
-                    let part_flags = graph.get_flags(partition_id);
+                    let part_flags = graph.get_partition_flags(partition_id);
 
-                    if part_flags & request.flags != PartitionFlags::NONE {
+                    if part_flags & request.flags != NavigationFlags::NONE {
                         Some(*p)
                     } else {
                         None
@@ -204,63 +204,6 @@ pub fn get_granular_path(
     })
 }
 
-pub fn is_reachable(
-    start_id: u16,
-    goal_ids: Vec<u16>,
-    graph: PartitionGraph,
-    flags: PartitionFlags,
-) -> bool {
-    if goal_ids.contains(&start_id) {
-        return true;
-    }
-
-    let partition_path = astar(AStarSettings {
-        start: start_id,
-        is_goal: |p| goal_ids.contains(&p),
-        max_depth: 2000,
-        neighbors: |v| {
-            if let Some(p) = graph.get_partition(v) {
-                return p
-                    .neighbors
-                    .iter()
-                    .filter(|n| graph.get_flags(**n) & flags != PartitionFlags::NONE)
-                    .copied()
-                    .collect();
-            }
-            vec![]
-        },
-        heuristic: |a| {
-            let [ax, ay, az] = graph.get_partition(a).unwrap().extents.center();
-
-            goal_ids
-                .iter()
-                .filter_map(|g_id| {
-                    if let Some(g) = graph.get_center(*g_id) {
-                        return Some(OrderedFloat(Distance::diagonal(
-                            [ax as i32, ay as i32, az as i32],
-                            [g[0] as i32, g[1] as i32, g[2] as i32],
-                        )));
-                    }
-                    None
-                })
-                .min()
-                .unwrap()
-                .0
-        },
-        cost: |a, b| {
-            let [ax, ay, az] = graph.get_partition(a).unwrap().extents.center();
-            let [bx, by, bz] = graph.get_partition(b).unwrap().extents.center();
-
-            Distance::diagonal(
-                [ax as i32, ay as i32, az as i32],
-                [bx as i32, by as i32, bz as i32],
-            )
-        },
-    });
-
-    partition_path.is_success
-}
-
 impl Path {
     pub fn next_partition_id(&self) -> Option<&u16> {
         if self.current_partition_idx > 0 {
@@ -282,7 +225,7 @@ impl Path {
 pub struct PartitionPath {
     pub path: Vec<u16>,
     pub goals: Vec<[u32; 3]>,
-    pub flags: PartitionFlags,
+    pub flags: NavigationFlags,
 }
 
 pub fn get_partition_path(
@@ -334,7 +277,9 @@ pub fn get_partition_path(
                 return p
                     .neighbors
                     .iter()
-                    .filter(|n| graph.get_flags(**n) & request.flags != PartitionFlags::NONE)
+                    .filter(|n| {
+                        graph.get_partition_flags(**n) & request.flags != NavigationFlags::NONE
+                    })
                     .copied()
                     .collect();
             }

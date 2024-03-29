@@ -1,4 +1,5 @@
 use bevy::{
+    core_pipeline::core_3d::graph,
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
@@ -7,18 +8,19 @@ use bevy::{
     },
     gizmos::gizmos::Gizmos,
     math::Vec3,
+    reflect::Reflect,
     render::color::Color,
     transform::components::Transform,
-    utils::{HashMap, HashSet},
+    utils::{petgraph::Graph, HashMap, HashSet},
 };
 use ndshape::AbstractShape;
 
 use crate::{
-    common::{flood_fill, max_3, Distance},
+    common::{flood_fill, flood_fill_i32, max_3, Distance},
     Block, Terrain,
 };
 
-use super::{Item, PartitionFlags};
+use super::{Item, NavigationFlags};
 
 #[derive(Default)]
 pub struct PartitionExtents {
@@ -78,27 +80,41 @@ impl PartitionExtents {
     }
 }
 
+pub struct Region {
+    pub id: u16,
+    pub flags: NavigationFlags,
+    pub partition_ids: Vec<u16>,
+    pub neighbor_ids: Vec<u16>,
+}
+
+impl Region {
+    pub fn is_empty(&self) -> bool {
+        self.partition_ids.is_empty()
+    }
+}
+
 pub struct Partition {
-    id: u16,
+    pub id: u16,
     pub neighbors: HashSet<u16>,
     pub is_computed: bool,
     pub chunk_idx: u32,
     pub blocks: Vec<u32>,
-    pub flags: PartitionFlags,
+    pub flags: NavigationFlags,
     pub extents: PartitionExtents,
     pub items: Vec<Entity>,
+    pub region_id: u16,
 }
 
 impl Partition {
     pub const NONE: u16 = 0;
 
-    pub fn add_block(&mut self, block_idx: u32, block_pos: [u32; 3]) {
+    pub fn assign_block(&mut self, block_idx: u32, block_pos: [u32; 3]) {
         self.blocks.push(block_idx);
         self.extents.extend(block_pos);
     }
 
-    pub fn remove_neighbor(&mut self, neighbor_id: u16) {
-        self.neighbors.remove(&neighbor_id);
+    pub fn remove_neighbor(&mut self, neighbor_id: &u16) {
+        self.neighbors.remove(neighbor_id);
     }
 }
 
@@ -111,25 +127,45 @@ pub struct PartitionDebug {
 pub fn partition_debug(
     terrain: Res<Terrain>,
     graph: Res<PartitionGraph>,
-    debug: Res<PartitionDebug>,
+    mut debug: ResMut<PartitionDebug>,
     mut gizmos: Gizmos,
 ) {
-    if !debug.show {
+    if !debug.show || debug.id == Partition::NONE {
         return;
     }
 
-    if let Some(partition) = graph.partitions.get(&debug.id) {
-        debug_partition(
-            partition,
-            &terrain,
-            &mut gizmos,
-            Color::OLIVE,
-            Color::ORANGE,
-        );
-    }
+    let Some(partition) = graph.partitions.get(&debug.id) else {
+        println!("Partition ID does not exist!");
+        debug.id = Partition::NONE;
+        debug.show = false;
+        return;
+    };
 
-    for neighbor in graph.get_neighbors(debug.id) {
-        debug_partition(neighbor, &terrain, &mut gizmos, Color::GRAY, Color::GRAY);
+    debug_partition(
+        partition,
+        &terrain,
+        &mut gizmos,
+        Color::OLIVE,
+        Color::ORANGE,
+    );
+
+    let region = graph.get_region(partition.region_id).unwrap();
+
+    for partition_id in region.partition_ids.iter() {
+        if *partition_id == debug.id {
+            continue;
+        }
+
+        let is_neighbor = partition.neighbors.contains(partition_id);
+        let part = graph.get_partition(*partition_id).unwrap();
+
+        let color = if is_neighbor {
+            Color::FUCHSIA
+        } else {
+            Color::GRAY
+        };
+
+        debug_partition(part, &terrain, &mut gizmos, color, Color::GRAY);
     }
 }
 
@@ -243,39 +279,62 @@ fn debug_partition(
 
 #[derive(Resource, Default)]
 pub struct PartitionGraph {
+    pub regions: HashMap<u16, Region>,
     pub partitions: HashMap<u16, Partition>,
-    cur_id: u16,
-    pub returned_ids: Vec<u16>,
+    cur_region_id: u16,
+    cur_partition_id: u16,
+    // pub returned_partition_ids: Vec<u16>,
+    // pub returned_region_ids: Vec<u16>,
 }
 
 impl PartitionGraph {
-    pub fn create_partition(&mut self, chunk_idx: u32) -> u16 {
-        let id = self.returned_ids.pop().unwrap_or_else(|| {
-            self.cur_id += 1;
-            self.cur_id
-        });
-        let p = Partition {
-            id,
-            chunk_idx,
-            neighbors: HashSet::new(),
-            is_computed: false,
-            blocks: vec![],
-            flags: PartitionFlags::NONE,
-            extents: PartitionExtents::default(),
-            items: vec![],
-        };
+    pub fn create_partition(&mut self, chunk_idx: u32, flags: NavigationFlags) -> u16 {
+        // let id = self.returned_partition_ids.pop().unwrap_or_else(|| {
+        //     self.cur_partition_id += 1;
+        //     self.cur_partition_id
+        // });
+        self.cur_partition_id += 1;
+        let id = self.cur_partition_id;
 
-        self.partitions.insert(p.id, p);
+        let region_id = self.create_region(flags, vec![id]);
+
+        self.partitions.insert(
+            id,
+            Partition {
+                id,
+                chunk_idx,
+                neighbors: HashSet::new(),
+                is_computed: false,
+                blocks: vec![],
+                flags,
+                extents: PartitionExtents::default(),
+                items: vec![],
+                region_id,
+            },
+        );
 
         id
     }
 
-    pub fn get_center(&self, partition_id: u16) -> Option<[u32; 3]> {
-        if let Some(p) = self.partitions.get(&partition_id) {
-            return Some(p.extents.center());
-        }
+    pub fn create_region(&mut self, flags: NavigationFlags, partition_ids: Vec<u16>) -> u16 {
+        // let id = self.returned_region_ids.pop().unwrap_or_else(|| {
+        //     self.cur_region_id += 1;
+        //     self.cur_region_id
+        // });
+        self.cur_region_id += 1;
+        let id = self.cur_region_id;
 
-        None
+        self.regions.insert(
+            id,
+            Region {
+                id,
+                flags,
+                partition_ids,
+                neighbor_ids: vec![],
+            },
+        );
+
+        id
     }
 
     pub fn get_partition_mut(&mut self, partition_id: u16) -> Option<&mut Partition> {
@@ -284,6 +343,24 @@ impl PartitionGraph {
 
     pub fn get_partition(&self, partition_id: u16) -> Option<&Partition> {
         self.partitions.get(&partition_id)
+    }
+
+    pub fn get_region_mut(&mut self, region_id: u16) -> Option<&mut Region> {
+        self.regions.get_mut(&region_id)
+    }
+
+    pub fn get_region(&self, region_id: u16) -> Option<&Region> {
+        self.regions.get(&region_id)
+    }
+
+    pub fn get_region_for_partition(&self, partition_id: u16) -> Option<&Region> {
+        let partition = self.get_partition(partition_id)?;
+
+        self.get_region(partition.region_id)
+    }
+
+    pub fn delete_region(&mut self, region_id: u16) -> Option<Region> {
+        self.regions.remove(&region_id)
     }
 
     fn get_partition_ids_for_chunk(&self, chunk_idx: u32) -> Vec<u16> {
@@ -299,7 +376,7 @@ impl PartitionGraph {
             .collect()
     }
 
-    pub fn get_neighbors(&self, partition_id: u16) -> Vec<&Partition> {
+    pub fn get_partition_neighbors(&self, partition_id: u16) -> Vec<&Partition> {
         let Some(partition) = self.get_partition(partition_id) else {
             return vec![];
         };
@@ -314,12 +391,13 @@ impl PartitionGraph {
     pub fn delete_partitions_for_chunk(&mut self, chunk_idx: u32) -> Vec<Partition> {
         let partition_ids = self.get_partition_ids_for_chunk(chunk_idx);
         let mut cleanups: Vec<[u16; 2]> = vec![];
+        let mut regions_to_flood = HashSet::new();
 
-        for partition_id in partition_ids.clone() {
-            let partition = self.get_partition(partition_id).unwrap();
+        for partition_id in partition_ids.iter() {
+            let partition = self.get_partition(*partition_id).unwrap();
 
             for neighbor_id in partition.neighbors.iter() {
-                cleanups.push([*neighbor_id, partition_id]);
+                cleanups.push([*neighbor_id, *partition_id]);
             }
         }
 
@@ -329,16 +407,104 @@ impl PartitionGraph {
         for [neighbor_id, remove_id] in cleanups {
             self.get_partition_mut(neighbor_id)
                 .unwrap()
-                .remove_neighbor(remove_id);
+                .remove_neighbor(&remove_id);
             removed.push(remove_id);
         }
 
-        for id in partition_ids {
-            partitions.push(self.partitions.remove(&id).unwrap());
-            self.returned_ids.push(id);
+        println!(
+            "deleting {} partition ids for chunk {}",
+            partition_ids.len(),
+            chunk_idx
+        );
+
+        for id in partition_ids.iter() {
+            let p = self.partitions.remove(id).unwrap();
+
+            if let Some(region) = self.get_region_mut(p.region_id) {
+                region.partition_ids.retain(|p_id| p_id != id);
+                regions_to_flood.insert(region.id);
+            }
+
+            partitions.push(p);
+        }
+
+        println!("flooding {} regions", regions_to_flood.len());
+        for region_to_flood in regions_to_flood.iter() {
+            self.flood_region(*region_to_flood);
         }
 
         partitions
+    }
+
+    /// flood the partitions in this region, deleting the region if
+    /// it has none, or creating new regions for any unique islands.
+    fn flood_region(&mut self, region_id: u16) {
+        println!("flooding region {}", region_id);
+        let region = self.get_region(region_id).unwrap();
+        // delete if empty
+        if region.partition_ids.is_empty() {
+            println!("region is empty, deleting it.");
+            let deleted = self.delete_region(region_id).unwrap();
+            // remove it from any neighbors
+            for n_id in deleted.neighbor_ids.iter() {
+                let n_region = self.get_region_mut(*n_id).unwrap();
+                n_region.neighbor_ids.retain(|id| *id != region_id);
+            }
+            return;
+        }
+
+        let mut open_list = region.partition_ids.clone();
+        let mut closed_list = vec![];
+        let mut groups = vec![];
+
+        println!("flooding filling through {} partition ids", open_list.len());
+        while let Some(seed) = open_list.pop() {
+            let mut group = vec![];
+            flood_fill(
+                seed,
+                |id| {
+                    if closed_list.contains(&id) {
+                        return false;
+                    }
+                    open_list.retain(|i| *i != id);
+                    closed_list.push(id);
+                    group.push(id);
+                    true
+                },
+                |id| {
+                    self.get_partition(id)
+                        .unwrap()
+                        .neighbors
+                        .iter()
+                        .copied()
+                        .collect()
+                },
+            );
+            groups.push(group);
+        }
+
+        self.split_region(region_id, region.flags, groups);
+    }
+
+    fn split_region(&mut self, region_id: u16, flags: NavigationFlags, groups: Vec<Vec<u16>>) {
+        println!("region {} split into {} groups", region_id, groups.len());
+        for (idx, group) in groups.iter().enumerate() {
+            if idx == 0 {
+                self.get_region_mut(region_id).unwrap().partition_ids = group.clone();
+
+                for partition_id in group.iter() {
+                    self.get_partition_mut(*partition_id).unwrap().region_id = region_id;
+                }
+            } else {
+                let new_region_id = self.create_region(flags, group.clone());
+
+                for partition_id in group.iter() {
+                    self.get_partition_mut(*partition_id).unwrap().region_id = new_region_id;
+                }
+            }
+        }
+
+        println!("done splitting region {}", region_id);
     }
 
     pub fn is_partition_computed(&self, id: u16) -> bool {
@@ -348,17 +514,11 @@ impl PartitionGraph {
         false
     }
 
-    pub fn get_flags(&self, id: u16) -> PartitionFlags {
+    pub fn get_partition_flags(&self, id: u16) -> NavigationFlags {
         if let Some(p) = self.get_partition(id) {
             return p.flags;
         }
-        PartitionFlags::NONE
-    }
-
-    pub fn set_flags(&mut self, id: u16, flags: PartitionFlags) {
-        if let Some(p) = self.get_partition_mut(id) {
-            p.flags = flags;
-        }
+        NavigationFlags::NONE
     }
 
     pub fn set_partition_computed(&mut self, id: u16, value: bool) {
@@ -371,13 +531,13 @@ impl PartitionGraph {
         }
     }
 
-    pub fn set_block(&mut self, partition_id: u16, block_idx: u32, block_pos: [u32; 3]) {
+    pub fn assign_block(&mut self, partition_id: u16, block_idx: u32, block_pos: [u32; 3]) {
         if let Some(p) = self.get_partition_mut(partition_id) {
-            p.add_block(block_idx, block_pos);
+            p.assign_block(block_idx, block_pos);
         }
     }
 
-    pub fn set_neighbors(&mut self, a_id: u16, b_id: u16) {
+    pub fn set_partition_neighbors(&mut self, a_id: u16, b_id: u16) {
         let a = self.partitions.get_mut(&a_id).unwrap();
         a.neighbors.insert(b_id);
 
@@ -392,6 +552,64 @@ pub struct PartitionEvent {
     pub refresh: bool,
 }
 
+pub fn busy_work(
+    graph: &mut ResMut<PartitionGraph>,
+    a_region_id: u16,
+    b_region_id: u16,
+) -> (u16, u16, Vec<u16>) {
+    let [a_region, b_region] = graph
+        .regions
+        .get_many_mut([&a_region_id, &b_region_id])
+        .unwrap();
+
+    let (smaller_region, bigger_region) = {
+        if a_region.partition_ids.len() > b_region.partition_ids.len() {
+            (b_region, a_region)
+        } else {
+            (a_region, b_region)
+        }
+    };
+
+    let partition_ids = smaller_region
+        .partition_ids
+        .iter()
+        .map(|partition_id| {
+            bigger_region.partition_ids.push(*partition_id);
+            *partition_id
+        })
+        .collect::<Vec<_>>();
+
+    println!(
+        "merging {} partitions from region {} into {}",
+        partition_ids.len(),
+        smaller_region.id,
+        bigger_region.id,
+    );
+
+    (bigger_region.id, smaller_region.id, partition_ids)
+}
+
+pub fn merge_regions(
+    graph: &mut ResMut<PartitionGraph>,
+    a_region_id: u16,
+    b_region_id: u16,
+) -> u16 {
+    if a_region_id == b_region_id {
+        return a_region_id;
+    }
+
+    let (big_region_id, small_region_id, partition_ids) =
+        busy_work(graph, a_region_id, b_region_id);
+
+    graph.delete_region(small_region_id);
+
+    for p_id in partition_ids {
+        graph.partitions.get_mut(&p_id).unwrap().region_id = big_region_id;
+    }
+
+    big_region_id
+}
+
 pub fn merge_partitions(
     graph: &mut ResMut<PartitionGraph>,
     terrain: &mut ResMut<Terrain>,
@@ -403,16 +621,20 @@ pub fn merge_partitions(
     let block_idxs: Vec<u32> = b_partition.blocks.to_vec();
     let neighbors_ids: Vec<u16> = b_partition.neighbors.iter().copied().collect();
     let b_computed = b_partition.is_computed;
-    let a_partition = graph.get_partition_mut(a_id).unwrap();
-    a_partition.is_computed = a_partition.is_computed && b_computed;
+    let a_partition = graph.get_partition(a_id).unwrap();
+
+    merge_regions(graph, a_partition.region_id, b_partition.region_id);
+
+    let a_partition_mut = graph.get_partition_mut(a_id).unwrap();
+    a_partition_mut.is_computed = a_partition_mut.is_computed && b_computed;
 
     for block_idx in block_idxs {
-        let block_pos = terrain.get_block_world_pos(a_partition.chunk_idx, block_idx);
-        a_partition.add_block(block_idx, block_pos);
-        terrain.set_partition_id(a_partition.chunk_idx, block_idx, a_id);
+        let block_pos = terrain.get_block_world_pos(a_partition_mut.chunk_idx, block_idx);
+        a_partition_mut.assign_block(block_idx, block_pos);
+        terrain.set_partition_id(a_partition_mut.chunk_idx, block_idx, a_id);
     }
 
-    a_partition.extents.update_traversal_distance();
+    a_partition_mut.extents.update_traversal_distance();
 
     for neighor_id in neighbors_ids {
         if neighor_id == a_id {
@@ -420,11 +642,11 @@ pub fn merge_partitions(
         }
 
         if let Some(neighbor) = graph.get_partition_mut(neighor_id) {
-            neighbor.remove_neighbor(b_id);
-            graph.set_neighbors(a_id, neighor_id);
+            neighbor.remove_neighbor(&b_id);
+            graph.set_partition_neighbors(a_id, neighor_id);
+            // todo: fix regions here?
         }
     }
-
     graph.partitions.remove(&b_id);
 
     a_id
@@ -442,12 +664,16 @@ pub fn partition(
 
         if ev.refresh {
             let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
+            println!("done deleting partitions for chunk {}", chunk_idx);
+
             for mut p in cleanups {
                 for b in p.blocks.iter() {
                     terrain.set_partition_id(p.chunk_idx, *b, Partition::NONE);
                     items.append(&mut p.items);
                 }
             }
+
+            println!("done cleaning up partitions for chunk {}", chunk_idx);
         }
 
         println!("partitioning chunk {}", chunk_idx);
@@ -457,7 +683,7 @@ pub fn partition(
             let seed_flags = get_block_flags(&terrain, x as i32, y as i32, z as i32);
 
             // don't partition empty space
-            if seed_flags == PartitionFlags::NONE {
+            if seed_flags == NavigationFlags::NONE {
                 continue;
             }
 
@@ -467,8 +693,7 @@ pub fn partition(
                 // if we are here, that means the block is navigable,
                 // and it is not assigned to a partition yet. We must
                 // create a new partition and assign it
-                partition_id = graph.create_partition(chunk_idx);
-                graph.set_flags(partition_id, seed_flags);
+                partition_id = graph.create_partition(chunk_idx, seed_flags);
             }
 
             // if the block is already in a computed partition, it has
@@ -477,9 +702,11 @@ pub fn partition(
                 continue;
             }
 
+            let mut region_id = graph.get_region_for_partition(partition_id).unwrap().id;
+
             // next, flood fill from the block, looking for other
             // navigable blocks to add the current partition
-            flood_fill([x as i32, y as i32, z as i32], |[nx, ny, nz]| {
+            flood_fill_i32([x as i32, y as i32, z as i32], |[nx, ny, nz]| {
                 if terrain.is_oob(nx, ny, nz) {
                     return false;
                 }
@@ -487,7 +714,7 @@ pub fn partition(
                 let [nchunk_idx, nblock_idx] =
                     terrain.get_block_indexes(nx as u32, ny as u32, nz as u32);
 
-                let npartition_id = terrain.get_partition_id(nchunk_idx, nblock_idx);
+                let mut npartition_id = terrain.get_partition_id(nchunk_idx, nblock_idx);
 
                 // if this block is already assigned to our partition,
                 // it means we have already visited it, and we should
@@ -499,48 +726,59 @@ pub fn partition(
                 let nblock_flags = get_block_flags(&terrain, nx, ny, nz);
 
                 // this block is not navigable and won't fit in any partition
-                if nblock_flags == PartitionFlags::NONE {
+                if nblock_flags == NavigationFlags::NONE {
                     return false;
                 }
 
-                let npartition_flags = graph.get_flags(partition_id);
+                let npartition_flags = graph.get_partition_flags(partition_id);
+
+                let flag_diff = nblock_flags != npartition_flags;
+                let chunk_diff = nchunk_idx != chunk_idx;
 
                 // if we are in a different chunk, or if the flags do not match,
                 // we must determine which partition this block belongs to, and
-                // aassign it as a neighbor
-                if nblock_flags != npartition_flags || nchunk_idx != chunk_idx {
+                // assign it as a neighbor
+                if flag_diff || chunk_diff {
                     if npartition_id != Partition::NONE {
                         // a partition already exists, add it as a neighbor
-                        graph.set_neighbors(partition_id, npartition_id);
+                        graph.set_partition_neighbors(partition_id, npartition_id);
                     } else {
                         // a partition does not exist, create a new one, assign the
                         // block to it, and add it as a neighbor
-                        let npartition_id = graph.create_partition(nchunk_idx);
-                        graph.set_neighbors(partition_id, npartition_id);
+                        npartition_id = graph.create_partition(nchunk_idx, nblock_flags);
+                        graph.set_partition_neighbors(partition_id, npartition_id);
 
                         terrain.set_partition_id(nchunk_idx, nblock_idx, npartition_id);
-                        graph.set_block(
+                        graph.assign_block(
                             npartition_id,
                             nblock_idx,
                             [nx as u32, ny as u32, nz as u32],
                         );
-                        graph.set_flags(npartition_id, nblock_flags);
                     }
 
-                    // we are done flooding here, as we will process this neighbor
+                    if !flag_diff {
+                        let b_region_id = graph.get_region_for_partition(npartition_id).unwrap().id;
+                        region_id = merge_regions(&mut graph, region_id, b_region_id);
+                    }
+
+                    // we are done flooding here, we will process this neighbor
                     // partition later.
                     return false;
                 }
 
                 if npartition_id != Partition::NONE && npartition_id != partition_id {
-                    merge_partitions(&mut graph, &mut terrain, partition_id, npartition_id);
+                    println!(
+                        "these should be merged? {}, {}",
+                        npartition_id, partition_id
+                    );
+                    // merge_partitions(&mut graph, &mut terrain, partition_id, npartition_id);
                 }
 
                 // this block is navigable, it is in the same chunk, and it has
                 // matching flags, so we can assign it to the partition and
                 // continue flooding.
                 terrain.set_partition_id(nchunk_idx, nblock_idx, partition_id);
-                graph.set_block(partition_id, nblock_idx, [nx as u32, ny as u32, nz as u32]);
+                graph.assign_block(partition_id, nblock_idx, [nx as u32, ny as u32, nz as u32]);
 
                 true
             });
@@ -577,32 +815,32 @@ pub fn partition(
     }
 }
 
-pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> PartitionFlags {
+pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationFlags {
     let block = terrain.get_block_i32(x, y, z);
 
-    let mut flags = PartitionFlags::NONE;
+    let mut flags = NavigationFlags::NONE;
 
     if block == Block::LADDER {
-        return PartitionFlags::LADDER;
+        return NavigationFlags::LADDER;
     }
 
     if !block.is_empty() {
-        return PartitionFlags::NONE;
+        return NavigationFlags::NONE;
     }
 
     let nblock_below = terrain.get_block_i32(x, y - 1, z);
 
     if nblock_below == Block::LADDER {
-        return PartitionFlags::LADDER;
+        return NavigationFlags::LADDER;
     }
 
     if nblock_below.is_walkable() {
-        flags |= PartitionFlags::SOLID_GROUND;
+        flags |= NavigationFlags::SOLID_GROUND;
 
         let nblock_above = terrain.get_block_i32(x, y + 1, z);
 
         if nblock_above.is_empty() {
-            flags |= PartitionFlags::TALL;
+            flags |= NavigationFlags::TALL;
         }
     }
 
@@ -612,11 +850,11 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> PartitionFl
 pub fn partition_setup(terrain: Res<Terrain>, mut partition_chunk_ev: EventWriter<PartitionEvent>) {
     println!("partitioning world..");
 
-    for chunk_idx in 0..terrain.chunk_count {
-        partition_chunk_ev.send(PartitionEvent {
-            chunk_idx,
-            refresh: false,
-        });
-    }
+    // for chunk_idx in 0..terrain.chunk_count {
+    //     partition_chunk_ev.send(PartitionEvent {
+    //         chunk_idx,
+    //         refresh: false,
+    //     });
+    // }
     println!("..done partitioning world");
 }

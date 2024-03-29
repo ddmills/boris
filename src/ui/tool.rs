@@ -188,10 +188,11 @@ pub fn tool_system(
                     partition_debug.id = partition_id;
                     partition_debug.show = true;
 
-                    let flags = graph.get_flags(partition_id);
+                    let flags = graph.get_partition_flags(partition_id);
 
                     println!(
-                        "partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}, cost={}",
+                        "region id = {}, partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}, cost={}",
+                        partition.region_id,
                         partition_id,
                         chunk_idx,
                         partition.neighbors.len(),

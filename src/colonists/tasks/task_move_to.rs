@@ -11,8 +11,8 @@ use task_derive::TaskBuilder;
 use crate::{
     colonists::{
         get_block_flags, get_granular_path, get_partition_path, Actor, ActorRef, Blackboard,
-        BlockMove, GranularPathRequest, PartitionFlags, PartitionGraph, PartitionPathRequest, Path,
-        TaskBuilder, TaskState,
+        BlockMove, GranularPathRequest, NavigationFlags, PartitionGraph, PartitionPathRequest,
+        Path, TaskBuilder, TaskState,
     },
     Terrain,
 };
@@ -57,7 +57,7 @@ pub fn task_move_to(
             let request = PartitionPathRequest {
                 start: pos,
                 goals: blackboard.move_goals.clone(),
-                flags: PartitionFlags::TALL | PartitionFlags::LADDER,
+                flags: NavigationFlags::TALL | NavigationFlags::LADDER,
             };
 
             // generate path
@@ -137,7 +137,7 @@ pub fn task_move_to(
 
         let block_flags = get_block_flags(&terrain, next_block[0], next_block[1], next_block[2]);
 
-        if block_flags & path.flags == PartitionFlags::NONE {
+        if block_flags & path.flags == NavigationFlags::NONE {
             println!("Path block flags have changed? Retrying pathfinding.");
             cmd.entity(*actor).remove::<Path>();
             continue;

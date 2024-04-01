@@ -89,50 +89,6 @@ pub fn behavior_pick_system(
     }
 }
 
-pub fn get_behavior(fatigue: &Fatigue) -> Behavior {
-    // if fatigue.value > 75. {
-    //     return Behavior::new(
-    //         "Sleep",
-    //         BehaviorNode::Sequence(vec![
-    //             BehaviorNode::Task(Arc::new(TaskFindBed)),
-    //             BehaviorNode::Task(Arc::new(TaskSleep)),
-    //         ]),
-    //     );
-    // }
-
-    // if let Some(job) = jobs.remove() {
-    //     return match job {
-    //         Mine(pos) => Behavior::new(
-    //             "Mine",
-    //             BehaviorNode::Try(
-    //                 Box::new(BehaviorNode::Sequence(vec![
-    //                     BehaviorNode::Task(Arc::new(TaskSetJob(job))),
-    //                     tree_aquire_item(vec![ItemTag::PickAxe]),
-    //                     BehaviorNode::Sequence(vec![
-    //                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
-    //                         BehaviorNode::Task(Arc::new(TaskMoveTo)),
-    //                         BehaviorNode::Task(Arc::new(TaskMineBlock { pos, progress: 0. })),
-    //                     ]),
-    //                 ])),
-    //                 Box::new(BehaviorNode::Task(Arc::new(TaskReturnJob))),
-    //             ),
-    //         ),
-    //     };
-    // }
-
-    Behavior::new(
-        "Wander",
-        BehaviorNode::Sequence(vec![
-            BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
-            BehaviorNode::Task(Arc::new(TaskMoveTo)),
-            BehaviorNode::Task(Arc::new(TaskIdle {
-                duration_s: 1.,
-                progress: 0.,
-            })),
-        ]),
-    )
-}
-
 pub fn tree_aquire_item(tags: Vec<ItemTag>) -> BehaviorNode {
     BehaviorNode::Try(
         Box::new(BehaviorNode::Task(Arc::new(TaskCheckHasItem(tags.clone())))),

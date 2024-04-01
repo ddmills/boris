@@ -13,9 +13,9 @@ use bevy::{
 
 use crate::{
     colonists::{
-        get_partition_path, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior,
+        get_partition_path, partition, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior,
         BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job, JobLocation,
-        JobMine, Partition, PartitionFlags, PartitionGraph, PartitionPathRequest, Score,
+        JobMine, NavigationFlags, Partition, PartitionGraph, PartitionPathRequest, Score,
         ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
         TaskUnassignJob,
     },
@@ -105,20 +105,47 @@ pub fn score_mine(
                 [x + 1, y, z + 1],
                 [x + 1, y, z - 1],
             ];
-            let request = PartitionPathRequest {
-                start: pos,
-                goals,
-                flags: PartitionFlags::TALL | PartitionFlags::LADDER,
-            };
 
-            // generate path
-            // this could be cached on the behavior
-            let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
-                // job is not reachable. we should cooldown this score checker
+            let start_partition_id = terrain.get_partition_id_u32(pos[0], pos[1], pos[2]);
+            let Some(start_group_id) =
+                graph.get_navigation_group_id(start_partition_id, NavigationFlags::COLONIST)
+            else {
                 continue;
             };
 
-            best = Some(e);
+            let mut visited_partitions = vec![];
+            for goal in goals {
+                let partition_id = terrain.get_partition_id_u32(goal[0], goal[1], goal[2]);
+                if visited_partitions.contains(&partition_id) {
+                    continue;
+                }
+
+                visited_partitions.push(partition_id);
+
+                let Some(group_id) =
+                    graph.get_navigation_group_id(partition_id, NavigationFlags::COLONIST)
+                else {
+                    continue;
+                };
+
+                if group_id == start_group_id {
+                    best = Some(e);
+                    break;
+                }
+            }
+
+            // let request = PartitionPathRequest {
+            //     start: pos,
+            //     goals,
+            //     flags: NavigationFlags::TALL | NavigationFlags::LADDER,
+            // };
+
+            // generate path
+            // this could be cached on the behavior
+            // let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
+            //     // job is not reachable. we should cooldown this score checker
+            //     continue;
+            // };
         }
 
         if best.is_none() {

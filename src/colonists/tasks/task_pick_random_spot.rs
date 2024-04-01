@@ -43,10 +43,10 @@ pub fn task_pick_random_spot(
             return;
         };
 
-        let target_partition_id = if current_partition.neighbors.is_empty() {
+        let target_partition_id = if current_partition.neighbor_ids.is_empty() {
             current_partition_id
         } else {
-            let neighbors: Vec<u16> = current_partition.neighbors.iter().copied().collect();
+            let neighbors: Vec<u16> = current_partition.neighbor_ids.iter().copied().collect();
             rand.pick(&neighbors)
         };
 

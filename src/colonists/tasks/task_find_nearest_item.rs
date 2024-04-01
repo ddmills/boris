@@ -118,7 +118,7 @@ pub fn find_nearest(
             return Some(matching_items);
         }
 
-        for neighbor_id in partition.neighbors.iter() {
+        for neighbor_id in partition.neighbor_ids.iter() {
             if !visited.contains(neighbor_id) {
                 queue.push_back(*neighbor_id)
             }

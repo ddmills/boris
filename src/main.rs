@@ -30,7 +30,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Terrain::new(3, 2, 3, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
@@ -50,7 +50,7 @@ fn main() {
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_event::<PartitionEvent>()
-        .init_resource::<PartitionGraph>()
+        .insert_resource(PartitionGraph::new())
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
         .add_plugins(ScorerPlugin)

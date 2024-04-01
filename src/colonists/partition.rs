@@ -292,7 +292,8 @@ pub struct PartitionGraph {
     cur_partition_id: u16,
     cur_navigation_group_id: u16,
     // pub returned_partition_ids: Vec<u16>,
-    // pub returned_region_ids: Vec<u16>,
+    pub returned_region_ids: Vec<u16>,
+    pub returned_navigation_group_ids: Vec<u16>,
 }
 
 impl PartitionGraph {
@@ -305,6 +306,8 @@ impl PartitionGraph {
             cur_region_id: 0,
             cur_partition_id: 0,
             cur_navigation_group_id: 0,
+            returned_navigation_group_ids: vec![],
+            returned_region_ids: vec![],
         }
     }
 
@@ -339,12 +342,10 @@ impl PartitionGraph {
     }
 
     pub fn create_region(&mut self, flags: NavigationFlags, partition_ids: HashSet<u16>) -> u16 {
-        // let id = self.returned_region_ids.pop().unwrap_or_else(|| {
-        //     self.cur_region_id += 1;
-        //     self.cur_region_id
-        // });
-        self.cur_region_id += 1;
-        let id = self.cur_region_id;
+        let id = self.returned_region_ids.pop().unwrap_or_else(|| {
+            self.cur_region_id += 1;
+            self.cur_region_id
+        });
 
         let mut region_ids = HashSet::new();
         region_ids.insert(id);
@@ -369,8 +370,11 @@ impl PartitionGraph {
         flags: NavigationFlags,
         region_ids: HashSet<u16>,
     ) -> u16 {
-        self.cur_navigation_group_id += 1;
-        let id = self.cur_navigation_group_id;
+        let id = self.returned_navigation_group_ids.pop().unwrap_or_else(|| {
+            self.cur_navigation_group_id += 1;
+            self.cur_navigation_group_id
+        });
+
         let group = NavigationGroup {
             id,
             flags,
@@ -390,8 +394,10 @@ impl PartitionGraph {
 
         for group_type in self.group_types.iter() {
             if region_flags.intersects(*group_type) {
-                self.cur_navigation_group_id += 1;
-                let id = self.cur_navigation_group_id;
+                let id = self.returned_navigation_group_ids.pop().unwrap_or_else(|| {
+                    self.cur_navigation_group_id += 1;
+                    self.cur_navigation_group_id
+                });
                 let group = NavigationGroup {
                     id,
                     flags: *group_type,
@@ -417,6 +423,27 @@ impl PartitionGraph {
         self.regions.get_mut(&region_id)
     }
 
+    pub fn get_navigation_group_id(
+        &self,
+        partition_id: u16,
+        group_flags: NavigationFlags,
+    ) -> Option<u16> {
+        let partition = self.get_partition(partition_id)?;
+        let region = self.get_region(partition.region_id)?;
+
+        for group_id in region.navigation_group_ids.iter() {
+            let Some(group) = self.get_navigation_group(*group_id) else {
+                continue;
+            };
+
+            if group.flags == group_flags {
+                return Some(*group_id);
+            }
+        }
+
+        None
+    }
+
     pub fn get_region(&self, region_id: u16) -> Option<&Region> {
         self.regions.get(&region_id)
     }
@@ -437,9 +464,11 @@ impl PartitionGraph {
 
     pub fn delete_region(&mut self, region_id: u16) -> Option<Region> {
         let region = self.regions.remove(&region_id);
+        println!("Deleting region {}", region_id);
 
         if let Some(r) = region {
             for neighbor_id in r.neighbor_ids.iter() {
+                println!("removing neighbor {} from {}", neighbor_id, region_id);
                 self.get_region_mut(*neighbor_id)
                     .unwrap()
                     .neighbor_ids
@@ -529,7 +558,6 @@ impl PartitionGraph {
             partitions.push(p);
         }
 
-        println!("flooding {} regions", regions_to_flood.len());
         for region_to_flood in regions_to_flood.iter() {
             self.flood_region(*region_to_flood);
         }
@@ -628,7 +656,7 @@ impl PartitionGraph {
     /// it has none, or creating new regions for any unique islands.
     fn flood_region(&mut self, region_id: u16) {
         let region = self.get_region(region_id).unwrap();
-        println!("flooding region {}, {}", region_id, region.flags);
+
         // delete if empty
         if region.partition_ids.is_empty() {
             println!("region is empty, deleting it.");
@@ -640,7 +668,6 @@ impl PartitionGraph {
         let mut closed_list = vec![];
         let mut islands = vec![];
 
-        println!("flooding filling through {} partition ids", open_list.len());
         while let Some(seed) = open_list.pop() {
             let mut island = HashSet::new();
             let mut neighbors = HashSet::new();
@@ -655,6 +682,13 @@ impl PartitionGraph {
                     let neighbor_partition = self.get_partition(id).unwrap();
 
                     if neighbor_partition.flags != region.flags {
+                        println!(
+                            "Flags do not match! region {},{} = {}, {}",
+                            region_id,
+                            neighbor_partition.region_id,
+                            neighbor_partition.flags,
+                            region.flags
+                        );
                         closed_list.push(id);
                         neighbors.insert(neighbor_partition.region_id);
                         return false;
@@ -686,7 +720,6 @@ impl PartitionGraph {
         flags: NavigationFlags,
         islands: Vec<(HashSet<u16>, HashSet<u16>)>,
     ) {
-        println!("region {} split into {} islands", region_id, islands.len());
         let region = self.get_region(region_id).unwrap();
 
         for neighbor_id in region.neighbor_ids.clone().iter() {
@@ -696,6 +729,9 @@ impl PartitionGraph {
         for (idx, (island, neighbors_ids)) in islands.iter().enumerate() {
             if idx == 0 {
                 for neighbor_id in neighbors_ids.iter() {
+                    if *neighbor_id == region_id {
+                        println!("DUPE NEIGHBOR {}", region_id);
+                    }
                     self.set_region_neighbors(region_id, *neighbor_id);
                 }
 
@@ -708,6 +744,9 @@ impl PartitionGraph {
                 let new_region_id = self.create_region(flags, island.clone());
 
                 for neighbor_id in neighbors_ids.iter() {
+                    if *neighbor_id == region_id {
+                        println!("DUPE NEIGHBOR 2 {}", region_id);
+                    }
                     self.set_region_neighbors(new_region_id, *neighbor_id);
                 }
 
@@ -716,8 +755,6 @@ impl PartitionGraph {
                 }
             }
         }
-
-        println!("done splitting region {}", region_id);
     }
 
     pub fn is_partition_computed(&self, id: u16) -> bool {
@@ -759,6 +796,10 @@ impl PartitionGraph {
     }
 
     pub fn set_region_neighbors(&mut self, a_id: u16, b_id: u16) {
+        if a_id == b_id {
+            // println!("merging neighbor with self! {}, {}", a_id, b_id);
+            panic!("merging neighbor with self! {}, {}", a_id, b_id);
+        }
         let a = self.regions.get_mut(&a_id).unwrap();
         a.neighbor_ids.insert(b_id);
 
@@ -1016,6 +1057,7 @@ pub fn partition(
                 continue;
             }
 
+            let partition_flags = graph.get_partition_flags(partition_id);
             let mut region_id = graph.get_region_for_partition(partition_id).unwrap().id;
 
             // next, flood fill from the block, looking for other
@@ -1044,9 +1086,7 @@ pub fn partition(
                     return false;
                 }
 
-                let npartition_flags = graph.get_partition_flags(partition_id);
-
-                let flag_diff = nblock_flags != npartition_flags;
+                let flag_diff = nblock_flags != partition_flags;
                 let chunk_diff = nchunk_idx != chunk_idx;
 
                 // if we are in a different chunk, or if the flags do not match,
@@ -1073,7 +1113,15 @@ pub fn partition(
                     let nregion_id = graph.get_region_for_partition(npartition_id).unwrap().id;
 
                     if flag_diff {
-                        graph.set_region_neighbors(region_id, nregion_id);
+                        if region_id != nregion_id {
+                            graph.set_region_neighbors(region_id, nregion_id);
+                        } else {
+                            let rflags = graph.get_region(region_id).unwrap().flags;
+                            println!(
+                                "FLAG DIFF ADDING NEIGHBORS {} {} != {}. Actual={}",
+                                region_id, nblock_flags, partition_flags, rflags
+                            );
+                        }
                     } else {
                         region_id = merge_regions(&mut graph, region_id, nregion_id);
                     }

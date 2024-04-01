@@ -438,8 +438,6 @@ impl PartitionGraph {
     pub fn delete_region(&mut self, region_id: u16) -> Option<Region> {
         let region = self.regions.remove(&region_id);
 
-        println!("DELETING REGION {}", region_id);
-
         if let Some(r) = region {
             for neighbor_id in r.neighbor_ids.iter() {
                 self.get_region_mut(*neighbor_id)
@@ -449,8 +447,6 @@ impl PartitionGraph {
             }
 
             for group_id in r.navigation_group_ids.iter() {
-                println!("I NEED TO CHECK GROUP {}", group_id);
-
                 let group = self.get_navigation_group_mut(*group_id).unwrap();
                 group.region_ids.remove(&region_id);
 
@@ -543,10 +539,8 @@ impl PartitionGraph {
 
     fn flood_nav_group(&mut self, nav_group_id: u16) {
         let group = self.get_navigation_group(nav_group_id).unwrap();
-        println!("flooding group {}", nav_group_id);
 
         if group.region_ids.is_empty() {
-            println!("nav group is empty, deleting it. {}", nav_group_id);
             self.delete_navigation_group(nav_group_id);
             return;
         }
@@ -796,17 +790,12 @@ impl PartitionGraph {
             .collect::<Vec<_>>();
 
         for (a_group_id, a_group_flags) in a_groups.iter() {
-            if let Some((matching_group_id, matching_group_flags)) =
+            if let Some((matching_group_id, _)) =
                 b_groups.iter().find(|(b_group_id, b_group_flags)| {
                     b_group_id != a_group_id && b_group_flags == a_group_flags
                 })
             {
-                println!(
-                    "MERGE NAV GROUPS {}, {} ({})",
-                    a_group_id, matching_group_id, matching_group_flags
-                );
-                let result = self.merge_navigation_groups(*a_group_id, *matching_group_id);
-                println!("MERGE RESULT {}", result);
+                self.merge_navigation_groups(*a_group_id, *matching_group_id);
             }
         }
     }
@@ -899,13 +888,6 @@ fn busy_work(
             *partition_id
         })
         .collect::<Vec<_>>();
-
-    println!(
-        "merging {} partitions from region {} into {}",
-        partition_ids.len(),
-        smaller_region.id,
-        bigger_region.id,
-    );
 
     (bigger_region.id, smaller_region.id, partition_ids)
 }

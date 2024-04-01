@@ -364,6 +364,23 @@ impl PartitionGraph {
         id
     }
 
+    pub fn create_navigation_group(
+        &mut self,
+        flags: NavigationFlags,
+        region_ids: HashSet<u16>,
+    ) -> u16 {
+        self.cur_navigation_group_id += 1;
+        let id = self.cur_navigation_group_id;
+        let group = NavigationGroup {
+            id,
+            flags,
+            region_ids,
+        };
+        self.navigation_groups.insert(id, group);
+
+        id
+    }
+
     pub fn create_navigation_groups(
         &mut self,
         region_flags: NavigationFlags,
@@ -421,6 +438,8 @@ impl PartitionGraph {
     pub fn delete_region(&mut self, region_id: u16) -> Option<Region> {
         let region = self.regions.remove(&region_id);
 
+        println!("DELETING REGION {}", region_id);
+
         if let Some(r) = region {
             for neighbor_id in r.neighbor_ids.iter() {
                 self.get_region_mut(*neighbor_id)
@@ -430,13 +449,12 @@ impl PartitionGraph {
             }
 
             for group_id in r.navigation_group_ids.iter() {
+                println!("I NEED TO CHECK GROUP {}", group_id);
+
                 let group = self.get_navigation_group_mut(*group_id).unwrap();
                 group.region_ids.remove(&region_id);
 
-                if group.region_ids.is_empty() {
-                    println!("Deleting empty navigation group {}", group_id);
-                    self.delete_navigation_group(*group_id);
-                }
+                self.flood_nav_group(*group_id);
             }
 
             return Some(r);
@@ -523,6 +541,95 @@ impl PartitionGraph {
         partitions
     }
 
+    fn flood_nav_group(&mut self, nav_group_id: u16) {
+        let group = self.get_navigation_group(nav_group_id).unwrap();
+        println!("flooding group {}", nav_group_id);
+
+        if group.region_ids.is_empty() {
+            println!("nav group is empty, deleting it. {}", nav_group_id);
+            self.delete_navigation_group(nav_group_id);
+            return;
+        }
+
+        let mut open_list = group.region_ids.iter().collect::<Vec<_>>();
+        let mut closed_list = vec![];
+        let mut islands = vec![];
+
+        while let Some(seed) = open_list.pop() {
+            let mut island = HashSet::new();
+
+            flood_fill(
+                *seed,
+                |id| {
+                    if closed_list.contains(&id) {
+                        return false;
+                    }
+
+                    let neighbor_region = self.get_region(id).unwrap();
+
+                    if !neighbor_region.flags.intersects(group.flags) {
+                        closed_list.push(id);
+                        return false;
+                    }
+
+                    open_list.retain(|i| **i != id);
+                    closed_list.push(id);
+                    island.insert(id);
+                    true
+                },
+                |id| {
+                    self.get_region(id)
+                        .unwrap()
+                        .neighbor_ids
+                        .iter()
+                        .copied()
+                        .collect()
+                },
+            );
+
+            islands.push(island);
+        }
+
+        self.split_navigation_group(nav_group_id, group.flags, islands);
+    }
+
+    fn split_navigation_group(
+        &mut self,
+        navigation_group_id: u16,
+        flags: NavigationFlags,
+        islands: Vec<HashSet<u16>>,
+    ) {
+        println!(
+            "nav group {} split into {} islands {}",
+            navigation_group_id,
+            islands.len(),
+            flags
+        );
+
+        for (idx, island) in islands.iter().enumerate() {
+            if idx == 0 {
+                for region_id in island.iter() {
+                    self.get_region_mut(*region_id)
+                        .unwrap()
+                        .navigation_group_ids
+                        .insert(navigation_group_id);
+                }
+
+                self.get_navigation_group_mut(navigation_group_id)
+                    .unwrap()
+                    .region_ids = island.clone();
+            } else {
+                let new_navigation_group_id = self.create_navigation_group(flags, island.clone());
+
+                for region_id in island.iter() {
+                    let rmut = self.get_region_mut(*region_id).unwrap();
+                    rmut.navigation_group_ids.remove(&navigation_group_id);
+                    rmut.navigation_group_ids.insert(new_navigation_group_id);
+                }
+            }
+        }
+    }
+
     /// flood the partitions in this region, deleting the region if
     /// it has none, or creating new regions for any unique islands.
     fn flood_region(&mut self, region_id: u16) {
@@ -537,16 +644,20 @@ impl PartitionGraph {
 
         let mut open_list = region.partition_ids.iter().collect::<Vec<_>>();
         let mut closed_list = vec![];
-        let mut groups = vec![];
+        let mut islands = vec![];
 
         println!("flooding filling through {} partition ids", open_list.len());
         while let Some(seed) = open_list.pop() {
-            let mut group = HashSet::new();
+            let mut island = HashSet::new();
             let mut neighbors = HashSet::new();
 
             flood_fill(
                 *seed,
                 |id| {
+                    if closed_list.contains(&id) {
+                        return false;
+                    }
+
                     let neighbor_partition = self.get_partition(id).unwrap();
 
                     if neighbor_partition.flags != region.flags {
@@ -555,13 +666,9 @@ impl PartitionGraph {
                         return false;
                     }
 
-                    if closed_list.contains(&id) {
-                        return false;
-                    }
-
                     open_list.retain(|i| **i != id);
                     closed_list.push(id);
-                    group.insert(id);
+                    island.insert(id);
                     true
                 },
                 |id| {
@@ -573,44 +680,44 @@ impl PartitionGraph {
                         .collect()
                 },
             );
-            groups.push((group, neighbors));
+            islands.push((island, neighbors));
         }
 
-        self.split_region(region_id, region.flags, groups);
+        self.split_region(region_id, region.flags, islands);
     }
 
     fn split_region(
         &mut self,
         region_id: u16,
         flags: NavigationFlags,
-        groups: Vec<(HashSet<u16>, HashSet<u16>)>,
+        islands: Vec<(HashSet<u16>, HashSet<u16>)>,
     ) {
-        println!("region {} split into {} groups", region_id, groups.len());
+        println!("region {} split into {} islands", region_id, islands.len());
         let region = self.get_region(region_id).unwrap();
 
         for neighbor_id in region.neighbor_ids.clone().iter() {
             self.remove_region_neighbors(region_id, *neighbor_id);
         }
 
-        for (idx, (group, neighbors_ids)) in groups.iter().enumerate() {
+        for (idx, (island, neighbors_ids)) in islands.iter().enumerate() {
             if idx == 0 {
                 for neighbor_id in neighbors_ids.iter() {
                     self.set_region_neighbors(region_id, *neighbor_id);
                 }
 
-                for partition_id in group.iter() {
+                for partition_id in island.iter() {
                     self.get_partition_mut(*partition_id).unwrap().region_id = region_id;
                 }
 
-                self.get_region_mut(region_id).unwrap().partition_ids = group.clone();
+                self.get_region_mut(region_id).unwrap().partition_ids = island.clone();
             } else {
-                let new_region_id = self.create_region(flags, group.clone());
+                let new_region_id = self.create_region(flags, island.clone());
 
                 for neighbor_id in neighbors_ids.iter() {
                     self.set_region_neighbors(new_region_id, *neighbor_id);
                 }
 
-                for partition_id in group.iter() {
+                for partition_id in island.iter() {
                     self.get_partition_mut(*partition_id).unwrap().region_id = new_region_id;
                 }
             }

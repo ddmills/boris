@@ -14,8 +14,8 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        test_item_tags, Actor, ActorRef, Blackboard, Item, ItemTag, Partition, PartitionGraph,
-        TaskBuilder, TaskState,
+        test_item_tags, Actor, ActorRef, Blackboard, Item, ItemTag, NavigationGraph, TaskBuilder,
+        TaskState,
     },
     Terrain,
 };
@@ -25,7 +25,7 @@ pub struct TaskFindNearestItem(pub Vec<ItemTag>);
 
 pub fn task_find_nearest_item(
     terrain: Res<Terrain>,
-    graph: Res<PartitionGraph>,
+    graph: Res<NavigationGraph>,
     q_items: Query<(&Transform, &Item)>,
     q_actors: Query<&Transform, With<Actor>>,
     mut q_behavior: Query<(
@@ -47,15 +47,13 @@ pub fn task_find_nearest_item(
         let actor_y = transform.translation.y as u32;
         let actor_z = transform.translation.z as u32;
 
-        let start_id = terrain.get_partition_id_u32(actor_x, actor_y, actor_z);
-
-        if start_id == Partition::NONE {
+        let Some(start_id) = terrain.get_partition_id_u32(actor_x, actor_y, actor_z) else {
             println!("Item cannot be found because seeker is not in a partition!");
             *state = TaskState::Failed;
             continue;
         };
 
-        let Some(items) = find_nearest(start_id, task.0.clone(), &graph, &q_items) else {
+        let Some(items) = find_nearest(*start_id, task.0.clone(), &graph, &q_items) else {
             println!("No nearby item with matching tags");
             *state = TaskState::Failed;
             continue;
@@ -84,9 +82,9 @@ pub fn task_find_nearest_item(
 }
 
 pub fn find_nearest(
-    start_id: u16,
+    start_id: u32,
     tags: Vec<ItemTag>,
-    graph: &PartitionGraph,
+    graph: &NavigationGraph,
     q_items: &Query<(&Transform, &Item)>,
 ) -> Option<Vec<Entity>> {
     let mut visited = HashSet::new();
@@ -97,7 +95,7 @@ pub fn find_nearest(
     while let Some(partition_id) = queue.pop_front() {
         visited.insert(partition_id);
 
-        let Some(partition) = graph.get_partition(partition_id) else {
+        let Some(partition) = graph.get_partition(&partition_id) else {
             continue;
         };
 
@@ -118,7 +116,7 @@ pub fn find_nearest(
             return Some(matching_items);
         }
 
-        for neighbor_id in partition.neighbors.iter() {
+        for neighbor_id in partition.neighbor_ids.iter() {
             if !visited.contains(neighbor_id) {
                 queue.push_back(*neighbor_id)
             }

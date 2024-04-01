@@ -2,7 +2,7 @@ use bevy::{
     ecs::{
         event::EventWriter,
         query::With,
-        system::{Command, Commands, Local, Query, Res, ResMut},
+        system::{Commands, Local, Query, Res, ResMut},
     },
     input::{mouse::MouseButton, ButtonInput},
     math::Vec3,
@@ -11,8 +11,7 @@ use bevy::{
 
 use crate::{
     colonists::{
-        Job, JobLocation, JobMine, JobType, Partition, PartitionDebug, PartitionGraph,
-        SpawnColonistEvent,
+        Job, JobLocation, JobMine, JobType, NavigationGraph, PartitionDebug, SpawnColonistEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -44,7 +43,7 @@ pub fn tool_system(
     mut cmd: Commands,
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
-    graph: Res<PartitionGraph>,
+    graph: Res<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut state: Local<ToolState>,
@@ -181,26 +180,26 @@ pub fn tool_system(
                     raycast.adj_pos[1],
                     raycast.adj_pos[2],
                 );
-                let partition_id = terrain.get_partition_id(chunk_idx, block_idx);
 
-                if partition_id != Partition::NONE {
-                    let partition = graph.partitions.get(&partition_id).unwrap();
-                    partition_debug.id = partition_id;
-                    partition_debug.show = true;
-
-                    let flags = graph.get_flags(partition_id);
-
-                    println!(
-                        "partition id={}, chunk={}, neighbors={}, flags={}, is_computed={}, cost={}",
-                        partition_id,
-                        chunk_idx,
-                        partition.neighbors.len(),
-                        flags,
-                        partition.is_computed,
-                        partition.extents.traversal_distance,
-                    );
-                } else {
+                let Some(partition_id) = terrain.get_partition_id(chunk_idx, block_idx) else {
                     println!("no partition");
+                    return;
+                };
+
+                let partition = graph.get_partition(partition_id).unwrap();
+                partition_debug.id = *partition_id;
+                partition_debug.show = true;
+
+                println!(
+                    "partition_id={}, region_id={}, flags={}",
+                    partition_id, partition.region_id, partition.flags
+                );
+
+                let region = graph.get_region(&partition.region_id).unwrap();
+
+                for group_id in region.group_ids.iter() {
+                    let group = graph.get_group(group_id).unwrap();
+                    println!("--> group {} = {}", group_id, group.flags);
                 }
             }
         }

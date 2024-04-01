@@ -1,7 +1,6 @@
 use bevy::{
     ecs::{
         component::Component,
-        entity::Entity,
         query::With,
         system::{Commands, Query, Res, ResMut},
     },
@@ -11,8 +10,8 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        Actor, ActorRef, Blackboard, InInventory, Inventory, Item, Partition, PartitionGraph,
-        TaskBuilder, TaskState,
+        Actor, ActorRef, Blackboard, InInventory, Inventory, Item, NavigationGraph, TaskBuilder,
+        TaskState,
     },
     Terrain,
 };
@@ -23,7 +22,7 @@ pub struct TaskPickUpItem;
 pub fn task_pick_up_item(
     mut cmd: Commands,
     terrain: Res<Terrain>,
-    mut graph: ResMut<PartitionGraph>,
+    mut graph: ResMut<NavigationGraph>,
     q_items: Query<&Transform, With<Item>>,
     mut q_actors: Query<&mut Inventory, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut Blackboard), With<TaskPickUpItem>>,
@@ -51,17 +50,16 @@ pub fn task_pick_up_item(
         let item_y = item_transform.translation.y as u32;
         let item_z = item_transform.translation.z as u32;
 
-        let partition_id = terrain.get_partition_id_u32(item_x, item_y, item_z);
+        let Some(partition_id) = terrain.get_partition_id_u32(item_x, item_y, item_z) else {
+            panic!("Missing partition_id?");
+        };
 
-        if partition_id != Partition::NONE {
-            let Some(partition) = graph.get_partition_mut(partition_id) else {
-                println!("Missing partition!?");
-                continue;
-            };
+        let Some(partition) = graph.get_partition_mut(partition_id) else {
+            panic!("Missing partition!? {}", partition_id);
+        };
 
-            println!("Removing item from partition");
-            partition.items.retain(|i| *i != item);
-        }
+        println!("Removing item from partition");
+        partition.items.retain(|i| *i != item);
 
         println!("Item is now in inventory");
         inventory.items.push(item);

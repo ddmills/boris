@@ -17,7 +17,7 @@ pub struct BlockBuffer {
     pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
     pub light: Box<[u8]>,
-    pub nav: Box<[u16]>,
+    pub partitions: Box<[u32]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -32,7 +32,7 @@ impl BlockBuffer {
         Self {
             blocks: vec![Block::EMPTY; shape.size() as usize].into_boxed_slice(),
             light: vec![0; shape.size() as usize].into_boxed_slice(),
-            nav: vec![0; shape.size() as usize].into_boxed_slice(),
+            partitions: vec![0; shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -68,16 +68,12 @@ impl BlockBuffer {
         ]
     }
 
-    pub fn set_partition(&mut self, block_idx: u32, value: u16) {
-        self.nav[block_idx as usize] = value;
+    pub fn set_partition_id(&mut self, block_idx: u32, value: u32) {
+        self.partitions[block_idx as usize] = value;
     }
 
-    pub fn get_partition(&self, block_idx: u32) -> u16 {
-        if let Some(value) = self.nav.get(block_idx as usize) {
-            return *value;
-        }
-
-        0
+    pub fn get_partition_id(&self, block_idx: u32) -> Option<&u32> {
+        self.partitions.get(block_idx as usize)
     }
 
     pub fn get_sunlight(&self, block_idx: u32) -> u8 {

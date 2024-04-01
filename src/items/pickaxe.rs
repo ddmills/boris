@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Item, ItemTag, Partition, PartitionGraph},
+    colonists::{Item, ItemTag, NavigationGraph},
     Terrain,
 };
 
@@ -23,7 +23,7 @@ pub struct SpawnPickaxeEvent {
 pub fn on_spawn_pickaxe(
     mut cmd: Commands,
     terrain: Res<Terrain>,
-    mut graph: ResMut<PartitionGraph>,
+    mut graph: ResMut<NavigationGraph>,
     mut ev_spawn_pickaxe: EventReader<SpawnPickaxeEvent>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
@@ -50,15 +50,17 @@ pub fn on_spawn_pickaxe(
             ))
             .id();
 
-        let partition_id = terrain.get_partition_id_u32(ev.pos[0], ev.pos[1], ev.pos[2]);
+        let Some(partition_id) = terrain.get_partition_id_u32(ev.pos[0], ev.pos[1], ev.pos[2])
+        else {
+            println!("Missing partition_id trying to insert item!");
+            continue;
+        };
 
-        if partition_id != Partition::NONE {
-            let Some(partition) = graph.get_partition_mut(partition_id) else {
-                println!("Missing partition trying to insert item! {}", partition_id);
-                continue;
-            };
+        let Some(partition) = graph.get_partition_mut(partition_id) else {
+            println!("Missing partition trying to insert item! {}", partition_id);
+            continue;
+        };
 
-            partition.items.push(entity);
-        }
+        partition.items.insert(entity);
     }
 }

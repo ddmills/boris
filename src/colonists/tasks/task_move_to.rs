@@ -11,8 +11,8 @@ use task_derive::TaskBuilder;
 use crate::{
     colonists::{
         get_block_flags, get_granular_path, get_partition_path, Actor, ActorRef, Blackboard,
-        BlockMove, GranularPathRequest, PartitionFlags, PartitionGraph, PartitionPathRequest, Path,
-        TaskBuilder, TaskState,
+        BlockMove, GranularPathRequest, NavigationFlags, NavigationGraph, PartitionPathRequest,
+        Path, TaskBuilder, TaskState,
     },
     Terrain,
 };
@@ -23,7 +23,7 @@ pub struct TaskMoveTo;
 pub fn task_move_to(
     mut cmd: Commands,
     terrain: Res<Terrain>,
-    graph: Res<PartitionGraph>,
+    graph: Res<NavigationGraph>,
     mut q_paths: Query<&mut Path, With<Actor>>,
     q_movers: Query<&BlockMove, With<Actor>>,
     q_transforms: Query<&Transform, With<Actor>>,
@@ -57,7 +57,7 @@ pub fn task_move_to(
             let request = PartitionPathRequest {
                 start: pos,
                 goals: blackboard.move_goals.clone(),
-                flags: PartitionFlags::TALL | PartitionFlags::LADDER,
+                flags: NavigationFlags::TALL | NavigationFlags::LADDER,
             };
 
             // generate path
@@ -93,8 +93,14 @@ pub fn task_move_to(
 
         // what partition are we standing in? if it's not part of the predetermined path, we stay course.
         // if it is part of the path, we set our current index to be the path idx
-        let partition_id = terrain.get_partition_id_u32(pos[0], pos[1], pos[2]);
-        let partition_path_idx = path.partition_path.iter().position(|p| *p == partition_id);
+        let Some(partition_id) = terrain.get_partition_id_u32(pos[0], pos[1], pos[2]) else {
+            println!("Not standing in a partition, cannot path!");
+            cmd.entity(*actor).remove::<Path>();
+            *state = TaskState::Failed;
+            continue;
+        };
+
+        let partition_path_idx = path.partition_path.iter().position(|p| p == partition_id);
 
         if let Some(idx) = partition_path_idx {
             path.current_partition_idx = idx;
@@ -137,7 +143,7 @@ pub fn task_move_to(
 
         let block_flags = get_block_flags(&terrain, next_block[0], next_block[1], next_block[2]);
 
-        if block_flags & path.flags == PartitionFlags::NONE {
+        if block_flags & path.flags == NavigationFlags::NONE {
             println!("Path block flags have changed? Retrying pathfinding.");
             cmd.entity(*actor).remove::<Path>();
             continue;

@@ -15,9 +15,8 @@ use crate::{
     colonists::{
         get_partition_path, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior,
         BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job, JobLocation,
-        JobMine, Partition, PartitionFlags, PartitionGraph, PartitionPathRequest, Score,
-        ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
-        TaskUnassignJob,
+        JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest, Score, ScorerBuilder,
+        TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo, TaskUnassignJob,
     },
     Terrain,
 };
@@ -58,7 +57,7 @@ impl ScorerBuilder for ScorerMine {
 
 pub fn score_mine(
     terrain: Res<Terrain>,
-    graph: Res<PartitionGraph>,
+    graph: Res<NavigationGraph>,
     q_jobs: Query<(Entity, &Job, &JobLocation), (With<JobMine>, With<IsJobAccessible>)>,
     q_items: Query<&Item>,
     q_free_items: Query<&Item, Without<InInventory>>,
@@ -108,7 +107,7 @@ pub fn score_mine(
             let request = PartitionPathRequest {
                 start: pos,
                 goals,
-                flags: PartitionFlags::TALL | PartitionFlags::LADDER,
+                flags: NavigationFlags::TALL | NavigationFlags::LADDER,
             };
 
             // generate path
@@ -185,7 +184,7 @@ pub fn mine_job_checker(
 
         let is_accessible = goals
             .iter()
-            .any(|g| terrain.get_partition_id_u32(g[0], g[1], g[2]) != Partition::NONE);
+            .any(|g| terrain.get_partition_id_u32(g[0], g[1], g[2]).is_some());
 
         if is_accessible {
             cmd.entity(entity).insert(IsJobAccessible);

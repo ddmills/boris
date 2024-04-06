@@ -84,11 +84,8 @@ pub fn get_granular_path(
     terrain: &Terrain,
     request: &GranularPathRequest,
 ) -> Option<GranularPath> {
-    let Some(current_partition_id) =
-        terrain.get_partition_id_u32(request.start[0], request.start[1], request.start[2])
-    else {
-        return None;
-    };
+    let current_partition_id =
+        terrain.get_partition_id_u32(request.start[0], request.start[1], request.start[2])?;
     let is_last_partition = request.goal_partition_id == *current_partition_id;
     let goal_partition = graph.get_partition(&request.goal_partition_id)?;
 

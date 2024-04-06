@@ -9,10 +9,10 @@ pub struct NavigationGroup {
 }
 
 impl NavigationGroup {
-    pub fn new(id: u32) -> Self {
+    pub fn new(id: u32, flags: NavigationFlags) -> Self {
         Self {
             id,
-            flags: NavigationFlags::NONE,
+            flags,
             region_ids: HashSet::new(),
         }
     }

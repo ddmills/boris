@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::system::{Res, Resource},
+    ecs::system::{Res, ResMut, Resource},
     gizmos::gizmos::Gizmos,
     math::Vec3,
     render::color::Color,
@@ -7,42 +7,56 @@ use bevy::{
 
 use crate::Terrain;
 
-use super::{NavigationGraph, Partition};
+use super::{partition, region, NavigationGraph, Partition};
 
 #[derive(Resource, Default)]
 pub struct PartitionDebug {
-    pub id: u32,
-    pub show: bool,
+    pub partition_id: Option<u32>,
 }
 
 pub fn partition_debug(
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
-    debug: Res<PartitionDebug>,
+    mut debug: ResMut<PartitionDebug>,
     mut gizmos: Gizmos,
 ) {
-    if !debug.show {
+    let Some(debug_partition_id) = debug.partition_id else {
         return;
-    }
-
-    let Some(partition) = graph.get_partition(&debug.id) else {
-        panic!("BAD DEBUG PARTITION ID");
     };
 
-    debug_partition(
-        partition,
-        &terrain,
-        &mut gizmos,
-        Color::OLIVE,
-        Color::ORANGE,
-    );
+    let Some(partition) = graph.get_partition(&debug_partition_id) else {
+        debug.partition_id = None;
+        return;
+    };
 
-    for neighbor_id in partition.neighbor_ids.iter() {
-        let Some(neighbor) = graph.get_partition(neighbor_id) else {
-            panic!("BAD NEIGHBOR ID");
-        };
+    let Some(region) = graph.get_region(&partition.region_id) else {
+        panic!("No region declared for partition! {}", partition.id);
+    };
 
-        debug_partition(neighbor, &terrain, &mut gizmos, Color::GRAY, Color::GRAY);
+    for partition_id in region.partition_ids.iter() {
+        if *partition_id == debug_partition_id {
+            debug_partition(
+                partition,
+                &terrain,
+                &mut gizmos,
+                Color::OLIVE,
+                Color::ORANGE,
+            );
+            continue;
+        }
+
+        let part = graph.get_partition(partition_id).unwrap();
+
+        debug_partition(part, &terrain, &mut gizmos, Color::GRAY, Color::GRAY);
+    }
+
+    for neighbor_id in region.neighbor_ids.iter() {
+        let neighbor = graph.get_region(neighbor_id).unwrap();
+
+        for partition_id in neighbor.partition_ids.iter() {
+            let part = graph.get_partition(partition_id).unwrap();
+            debug_partition(part, &terrain, &mut gizmos, Color::BLUE, Color::BLUE);
+        }
     }
 }
 

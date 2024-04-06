@@ -161,6 +161,7 @@ pub fn partition(
 
             let partition = graph.get_partition_mut(&partition_id).unwrap();
             partition.is_computed = true;
+            partition.extents.update_traversal_distance();
         }
     }
 }

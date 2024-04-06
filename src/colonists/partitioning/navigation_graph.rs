@@ -1,4 +1,7 @@
-use bevy::{ecs::system::Resource, utils::hashbrown::HashMap};
+use bevy::{
+    ecs::system::Resource,
+    utils::hashbrown::{HashMap, HashSet},
+};
 
 use crate::Terrain;
 
@@ -9,6 +12,8 @@ pub struct NavigationGraph {
     partitions: HashMap<u32, Partition>,
     regions: HashMap<u32, Region>,
     groups: HashMap<u32, NavigationGroup>,
+
+    group_types: HashSet<NavigationFlags>,
 
     cur_partition_id: u32,
     cur_region_id: u32,
@@ -21,6 +26,7 @@ impl Default for NavigationGraph {
             partitions: HashMap::new(),
             regions: HashMap::new(),
             groups: HashMap::new(),
+            group_types: HashSet::from([NavigationFlags::COLONIST, NavigationFlags::CAT]),
             cur_partition_id: 0,
             cur_region_id: 0,
             cur_group_id: 0,
@@ -36,20 +42,49 @@ impl NavigationGraph {
         flags: NavigationFlags,
     ) -> u32 {
         self.cur_partition_id += 1;
-        let id = self.cur_partition_id;
-        let partition = Partition::new(id, region_id, chunk_idx, flags);
-        self.partitions.insert(id, partition);
+        let partition_id = self.cur_partition_id;
+        let partition = Partition::new(partition_id, region_id, chunk_idx, flags);
+        self.partitions.insert(partition_id, partition);
         let region = self.get_region_mut(&region_id).unwrap();
-        region.partition_ids.insert(id);
-        id
+        region.partition_ids.insert(partition_id);
+        partition_id
     }
 
     pub fn create_region(&mut self, flags: NavigationFlags) -> u32 {
         self.cur_region_id += 1;
-        let id = self.cur_region_id;
-        let region = Region::new(id, flags);
-        self.regions.insert(id, region);
-        id
+        let region_id = self.cur_region_id;
+        let group_ids = self.create_navigation_groups_for_region(flags, &region_id);
+
+        let mut region = Region::new(region_id, flags);
+        region.group_ids = group_ids;
+        self.regions.insert(region_id, region);
+
+        region_id
+    }
+
+    fn create_navigation_groups_for_region(
+        &mut self,
+        flags: NavigationFlags,
+        region_id: &u32,
+    ) -> HashSet<u32> {
+        let mut group_ids = HashSet::new();
+
+        for group_type in self.group_types.iter() {
+            if !flags.intersects(*group_type) {
+                continue;
+            }
+
+            self.cur_group_id += 1;
+            let group_id = self.cur_group_id;
+
+            let mut group = NavigationGroup::new(group_id, *group_type);
+            group.region_ids.insert(*region_id);
+            self.groups.insert(group_id, group);
+
+            group_ids.insert(group_id);
+        }
+
+        group_ids
     }
 
     pub fn get_partition(&self, id: &u32) -> Option<&Partition> {

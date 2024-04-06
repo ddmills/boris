@@ -76,6 +76,12 @@ impl NavigationGraph {
         self.groups.get_mut(id)
     }
 
+    pub fn get_region_id_for_partition(&self, partition_id: &u32) -> Option<&u32> {
+        let partition = self.get_partition(partition_id)?;
+
+        Some(&partition.region_id)
+    }
+
     pub fn set_partition_neighbors(&mut self, a_id: &u32, b_id: &u32) {
         let a = self.get_partition_mut(a_id).unwrap();
         a.neighbor_ids.insert(*b_id);
@@ -147,5 +153,41 @@ impl NavigationGraph {
         }
 
         *a_id
+    }
+
+    /// merge the two given regions into one, and returns the new region id.
+    /// The smaller region (in terms of partition_ids) will be merged into
+    /// the bigger region. This also updates the partition ids within the
+    /// regions.
+    pub fn merge_regions(&mut self, a_id: &u32, b_id: &u32) -> u32 {
+        if a_id == b_id {
+            return *a_id;
+        }
+
+        let (small_id, big_id) = self.compare_regions(a_id, b_id);
+
+        let [small_region, big_region] = self.regions.get_many_mut([&small_id, &big_id]).unwrap();
+
+        for partition_id in small_region.partition_ids.iter() {
+            self.partitions.get_mut(partition_id).unwrap().region_id = big_id;
+            big_region.partition_ids.insert(*partition_id);
+        }
+
+        *a_id
+    }
+
+    /// Compares the number of partitions in the given regions, and returns (smaller_id, bigger_id)
+    fn compare_regions(&mut self, a_id: &u32, b_id: &u32) -> (u32, u32) {
+        let [a_region, b_region] = self.regions.get_many_mut([a_id, b_id]).unwrap();
+
+        let (smaller_region, bigger_region) = {
+            if a_region.partition_ids.len() > b_region.partition_ids.len() {
+                (b_region, a_region)
+            } else {
+                (a_region, b_region)
+            }
+        };
+
+        (smaller_region.id, bigger_region.id)
     }
 }

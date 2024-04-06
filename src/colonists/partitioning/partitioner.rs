@@ -2,7 +2,7 @@ use bevy::ecs::{event::EventReader, system::ResMut};
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::{get_block_flags, PartitionEvent},
+    colonists::{get_block_flags, partitioning::region, PartitionEvent},
     common::flood_fill,
     Terrain,
 };
@@ -85,18 +85,28 @@ pub fn partition(
                     let flag_diff = nblock_flags != block_flags;
                     let chunk_diff = nchunk_idx != chunk_idx;
 
-                    if flag_diff || chunk_diff {
-                        // add neighbor
-                        graph.set_partition_neighbors(&partition_id, &npartition_id);
+                    let nregion_id = &graph
+                        .get_region_id_for_partition(&npartition_id)
+                        .unwrap()
+                        .clone();
 
-                        if !flag_diff {
-                            // todo: merge regions
+                    if flag_diff {
+                        if nregion_id != &region_id {
+                            graph.set_region_neighbors(&region_id, nregion_id);
                         }
+
+                        graph.set_partition_neighbors(&partition_id, &npartition_id);
 
                         return false;
                     }
 
-                    println!("merge partitions {} {}", partition_id, npartition_id);
+                    // same flags, just different chunks. need to merge regions
+                    if chunk_diff {
+                        graph.set_partition_neighbors(&partition_id, &npartition_id);
+                        region_id = graph.merge_regions(&region_id, nregion_id);
+                        return false;
+                    }
+
                     partition_id =
                         graph.merge_partitions(&partition_id, &npartition_id, &mut terrain);
                     region_id = graph.get_partition(&partition_id).unwrap().region_id;

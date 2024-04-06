@@ -343,9 +343,7 @@ impl Terrain {
     }
 
     pub fn get_partition_id(&self, chunk_idx: u32, block_idx: u32) -> Option<&u32> {
-        let Some(chunk) = self.get_chunk(chunk_idx) else {
-            return None;
-        };
+        let chunk = self.get_chunk(chunk_idx)?;
 
         return chunk.get_partition_id(block_idx);
     }
@@ -353,9 +351,7 @@ impl Terrain {
     pub fn get_partition_id_u32(&self, x: u32, y: u32, z: u32) -> Option<&u32> {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
-        let Some(chunk) = self.get_chunk(chunk_idx) else {
-            return None;
-        };
+        let chunk = self.get_chunk(chunk_idx)?;
 
         chunk.get_partition_id(block_idx)
     }

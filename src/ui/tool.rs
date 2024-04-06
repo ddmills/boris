@@ -186,6 +186,8 @@ pub fn tool_system(
                     return;
                 };
 
+                println!("debug partition {}", partition_id);
+
                 let partition = graph.get_partition(partition_id).unwrap();
                 partition_debug.id = *partition_id;
                 partition_debug.show = true;

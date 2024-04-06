@@ -64,11 +64,7 @@ pub fn spawn_scorers(
                     .spawn((ActorRef(actor), ScoreBuilderRef(idx), Score(0.)))
                     .id();
                 let mut e_cmd = cmd.entity(scorer);
-                println!(
-                    "inserting score builder to actor {} for scorer {}",
-                    actor.index(),
-                    scorer.index()
-                );
+
                 builder.insert(&mut e_cmd);
                 scorer
             })

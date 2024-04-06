@@ -73,7 +73,9 @@ impl BlockBuffer {
     }
 
     pub fn get_partition_id(&self, block_idx: u32) -> Option<&u32> {
-        self.partitions.get(block_idx as usize)
+        self.partitions
+            .get(block_idx as usize)
+            .and_then(|id| if *id == 0 { None } else { Some(id) })
     }
 
     pub fn get_sunlight(&self, block_idx: u32) -> u8 {

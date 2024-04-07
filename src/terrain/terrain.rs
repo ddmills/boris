@@ -336,6 +336,12 @@ impl Terrain {
         self.get_block_detail(x as u32, y as u32, z as u32)
     }
 
+    pub fn unset_partition_id(&mut self, chunk_idx: u32, block_idx: u32) {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.unset_partition_id(block_idx);
+        }
+    }
+
     pub fn set_partition_id(&mut self, chunk_idx: u32, block_idx: u32, value: u32) {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             chunk.set_partition_id(block_idx, value);

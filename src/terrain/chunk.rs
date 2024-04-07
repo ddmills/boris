@@ -72,6 +72,10 @@ impl BlockBuffer {
         self.partitions[block_idx as usize] = value;
     }
 
+    pub fn unset_partition_id(&mut self, block_idx: u32) {
+        self.partitions[block_idx as usize] = 0;
+    }
+
     pub fn get_partition_id(&self, block_idx: u32) -> Option<&u32> {
         self.partitions
             .get(block_idx as usize)

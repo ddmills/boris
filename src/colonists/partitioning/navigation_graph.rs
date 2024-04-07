@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::Terrain;
 
-use super::{NavigationFlags, NavigationGroup, Partition, Region};
+use super::{partition, region, NavigationFlags, NavigationGroup, Partition, Region};
 
 #[derive(Resource)]
 pub struct NavigationGraph {
@@ -111,26 +111,90 @@ impl NavigationGraph {
         self.groups.get_mut(id)
     }
 
-    pub fn get_region_id_for_partition(&self, partition_id: &u32) -> Option<&u32> {
-        let partition = self.get_partition(partition_id)?;
+    /// Set partitions A and B as neighbors. It also makes the regions neighbors
+    /// if applicable, or merges regions if applicable. If the regions are
+    /// merged, the new region ID will be returned.
+    pub fn set_partition_neighbors(&mut self, a_id: &u32, b_id: &u32) -> Option<u32> {
+        let [a_partition, b_partition] = self.partitions.get_many_mut([a_id, b_id]).unwrap();
+        a_partition.neighbor_ids.insert(*b_id);
+        b_partition.neighbor_ids.insert(*a_id);
 
-        Some(&partition.region_id)
+        let a_region_id = a_partition.region_id;
+        let b_region_id = b_partition.region_id;
+
+        if a_region_id != b_region_id {
+            if a_partition.flags == b_partition.flags {
+                let region_id = self.merge_regions(&a_region_id, &b_region_id);
+                return Some(region_id);
+            } else {
+                self.set_region_neighbors(&a_region_id, &b_region_id);
+            }
+        }
+
+        None
     }
 
-    pub fn set_partition_neighbors(&mut self, a_id: &u32, b_id: &u32) {
-        let a = self.get_partition_mut(a_id).unwrap();
-        a.neighbor_ids.insert(*b_id);
-
-        let b = self.get_partition_mut(b_id).unwrap();
-        b.neighbor_ids.insert(*a_id);
-    }
-
+    /// Set regions A and B as neighbors. Also merge any navigation groups if
+    /// applicable.
     pub fn set_region_neighbors(&mut self, a_id: &u32, b_id: &u32) {
-        let a = self.get_region_mut(a_id).unwrap();
-        a.neighbor_ids.insert(*b_id);
+        let [a_region, b_region] = self.regions.get_many_mut([a_id, b_id]).unwrap();
 
-        let b = self.get_region_mut(b_id).unwrap();
-        b.neighbor_ids.insert(*a_id);
+        a_region.neighbor_ids.insert(*b_id);
+        b_region.neighbor_ids.insert(*a_id);
+
+        self.merge_navigation_groups_for_regions(a_id, b_id);
+    }
+
+    pub fn merge_navigation_groups_for_regions(&mut self, a_region_id: &u32, b_region_id: &u32) {
+        let a_region = self.get_region(a_region_id).unwrap();
+        let b_region = self.get_region(b_region_id).unwrap();
+
+        let a_groups = a_region
+            .group_ids
+            .iter()
+            .map(|group_id| {
+                let group = self.get_group(group_id).unwrap();
+                (*group_id, group.flags)
+            })
+            .collect::<Vec<_>>();
+        let b_groups = b_region
+            .group_ids
+            .iter()
+            .map(|group_id| {
+                let group = self.get_group(group_id).unwrap();
+                (*group_id, group.flags)
+            })
+            .collect::<Vec<_>>();
+
+        for (a_group_id, a_group_flags) in a_groups.iter() {
+            if let Some((matching_group_id, _)) =
+                b_groups.iter().find(|(b_group_id, b_group_flags)| {
+                    b_group_id != a_group_id && b_group_flags == a_group_flags
+                })
+            {
+                self.merge_groups(a_group_id, matching_group_id);
+            }
+        }
+    }
+
+    pub fn merge_groups(&mut self, a_group_id: &u32, b_group_id: &u32) -> u32 {
+        let (small_group_id, big_group_id) = self.compare_groups(a_group_id, b_group_id);
+
+        let [small_group, big_group] = self
+            .groups
+            .get_many_mut([&small_group_id, &big_group_id])
+            .unwrap();
+
+        for region_id in small_group.region_ids.iter() {
+            big_group.region_ids.insert(*region_id);
+            let group_ids = &mut self.regions.get_mut(region_id).unwrap().group_ids;
+            group_ids.insert(big_group_id);
+            group_ids.remove(&small_group_id);
+        }
+
+        self.delete_group(&small_group_id);
+
+        big_group_id
     }
 
     pub fn assign_block(
@@ -145,16 +209,97 @@ impl NavigationGraph {
         terrain.set_partition_id(partition.chunk_idx, block_idx, *partition_id);
     }
 
-    pub fn delete_region(&mut self, region_id: &u32) {
-        self.regions.remove(region_id);
+    pub fn delete_group(&mut self, group_id: &u32) {
+        self.groups.remove(group_id);
     }
 
-    pub fn merge_partitions(&mut self, a_id: &u32, b_id: &u32, terrain: &mut Terrain) -> u32 {
+    pub fn delete_region(&mut self, region_id: &u32) {
+        let region = self.regions.remove(region_id).unwrap();
+
+        // remove this region from neighbors
+        for neighbor_id in region.neighbor_ids.iter() {
+            let neighbor = self.get_region_mut(neighbor_id).unwrap();
+            neighbor.neighbor_ids.remove(region_id);
+        }
+
+        // remove this region from nav groups
+        for group_id in region.group_ids.iter() {
+            let group = self.get_group_mut(group_id).unwrap();
+            group.region_ids.remove(region_id);
+
+            // delete the region if it's empty, otherwise flood it to check
+            // if it's still contiguous
+            if group.region_ids.is_empty() {
+                self.delete_group(group_id);
+            } else {
+                // todo: flood group
+                println!("flood group {}", group_id);
+            }
+        }
+    }
+
+    pub fn delete_partition(&mut self, partition_id: &u32) -> Partition {
+        let partition = self.partitions.remove(partition_id).unwrap();
+
+        // Remove this partition from neighbors
+        for neighbor_id in partition.neighbor_ids.iter() {
+            let neighbor = self.get_partition_mut(neighbor_id).unwrap();
+            neighbor.neighbor_ids.remove(partition_id);
+        }
+
+        // Remove this partition from the region
+        let region = self.get_region_mut(&partition.region_id).unwrap();
+        let region_id = region.id;
+
+        region.partition_ids.remove(partition_id);
+
+        // Delete the region if it's empty, otherwise flood it to check if it's
+        // still contigous
+        if region.partition_ids.is_empty() {
+            self.delete_region(&region_id);
+        } else {
+            // TODO: flood the region to see if it's still contigous
+            println!("flood region {}", region_id);
+        }
+
+        partition
+    }
+
+    fn get_partition_ids_for_chunk(&self, chunk_idx: u32) -> Vec<u32> {
+        self.partitions
+            .iter()
+            .filter_map(|(partition_id, partition)| {
+                if partition.chunk_idx == chunk_idx {
+                    Some(*partition_id)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
+    pub fn delete_partitions_for_chunk(&mut self, chunk_idx: u32) -> Vec<Partition> {
+        let partition_ids = self.get_partition_ids_for_chunk(chunk_idx);
+
+        partition_ids
+            .iter()
+            .map(|partition_id| self.delete_partition(partition_id))
+            .collect::<Vec<_>>()
+    }
+
+    /// merge partition B into partition A. Returns the resulting partition id and region id
+    pub fn merge_partitions(
+        &mut self,
+        a_id: &u32,
+        b_id: &u32,
+        terrain: &mut Terrain,
+    ) -> (u32, u32) {
         let b_partition = self.partitions.remove(b_id).unwrap();
         let b_region_id = b_partition.region_id;
         let b_neighbor_ids = b_partition.neighbor_ids;
         let block_idxs = b_partition.blocks.clone();
         let a_partition = self.get_partition_mut(a_id).unwrap();
+        let a_region_id = a_partition.region_id;
 
         a_partition.is_computed = a_partition.is_computed && b_partition.is_computed;
 
@@ -183,17 +328,17 @@ impl NavigationGraph {
         b_region.partition_ids.remove(b_id);
 
         if b_region.partition_ids.is_empty() {
-            println!("deleting region {}", b_region_id);
             self.delete_region(&b_region_id);
+        } else if b_region_id != a_region_id {
+            println!("merge regions? {} {}", a_region_id, b_region_id);
         }
 
-        *a_id
+        (*a_id, a_region_id)
     }
 
-    /// merge the two given regions into one, and returns the new region id.
-    /// The smaller region (in terms of partition_ids) will be merged into
-    /// the bigger region. This also updates the partition ids within the
-    /// regions.
+    /// merge the smaller region (in terms of partition_ids) into the bigger region.
+    /// This also updates the partition ids within the regions. Returns the bigger
+    /// region id
     pub fn merge_regions(&mut self, a_id: &u32, b_id: &u32) -> u32 {
         if a_id == b_id {
             return *a_id;
@@ -208,12 +353,31 @@ impl NavigationGraph {
             big_region.partition_ids.insert(*partition_id);
         }
 
-        *a_id
+        self.delete_region(&small_id);
+
+        big_id
+    }
+
+    /// Compares the number of partitions in the given groups, and returns (smaller_id, bigger_id)
+    fn compare_groups(&self, a_id: &u32, b_id: &u32) -> (u32, u32) {
+        let a_group = self.get_group(a_id).unwrap();
+        let b_group = self.get_group(b_id).unwrap();
+
+        let (smaller_group, bigger_group) = {
+            if a_group.region_ids.len() > b_group.region_ids.len() {
+                (b_group, a_group)
+            } else {
+                (a_group, b_group)
+            }
+        };
+
+        (smaller_group.id, bigger_group.id)
     }
 
     /// Compares the number of partitions in the given regions, and returns (smaller_id, bigger_id)
-    fn compare_regions(&mut self, a_id: &u32, b_id: &u32) -> (u32, u32) {
-        let [a_region, b_region] = self.regions.get_many_mut([a_id, b_id]).unwrap();
+    fn compare_regions(&self, a_id: &u32, b_id: &u32) -> (u32, u32) {
+        let a_region = self.get_region(a_id).unwrap();
+        let b_region = self.get_region(b_id).unwrap();
 
         let (smaller_region, bigger_region) = {
             if a_region.partition_ids.len() > b_region.partition_ids.len() {

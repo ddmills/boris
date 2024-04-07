@@ -3,7 +3,7 @@ use bevy::{
     utils::hashbrown::{HashMap, HashSet},
 };
 
-use crate::Terrain;
+use crate::{common::flood_fill, Terrain};
 
 use super::{partition, region, NavigationFlags, NavigationGroup, Partition, Region};
 
@@ -253,16 +253,115 @@ impl NavigationGraph {
 
         region.partition_ids.remove(partition_id);
 
-        // Delete the region if it's empty, otherwise flood it to check if it's
-        // still contigous
-        if region.partition_ids.is_empty() {
-            self.delete_region(&region_id);
-        } else {
-            // TODO: flood the region to see if it's still contigous
-            println!("flood region {}", region_id);
-        }
+        // TODO: do we need to flood the region, or do we need to flood the
+        // nav groups for the region?
+        // perhaps flood nav groups afterward?
+        self.flood_region(&region_id);
 
         partition
+    }
+
+    /// Flood the partitions in this region, deleting the region if
+    /// it has none, or creating new regions for any unique islands.
+    fn flood_region(&mut self, region_id: &u32) {
+        println!("flood region {}", region_id);
+        let region = self.get_region(region_id).unwrap();
+
+        if region.partition_ids.is_empty() {
+            self.delete_region(region_id);
+            return;
+        }
+
+        let mut open_list = region.partition_ids.iter().collect::<Vec<_>>();
+        let mut closed_list = vec![];
+        let mut islands = vec![];
+
+        while let Some(seed) = open_list.pop() {
+            let mut island = HashSet::new();
+            let mut neighbors = HashSet::new();
+
+            flood_fill(
+                seed,
+                |id| {
+                    if closed_list.contains(&id) {
+                        return false;
+                    }
+
+                    let neighbor_partition = self.get_partition(id).unwrap();
+                    closed_list.push(id);
+
+                    if neighbor_partition.flags != region.flags {
+                        neighbors.insert(neighbor_partition.region_id);
+                        return false;
+                    }
+
+                    open_list.retain(|i| *i != id);
+                    island.insert(*id);
+                    true
+                },
+                |id| {
+                    self.get_partition(id)
+                        .unwrap()
+                        .neighbor_ids
+                        .iter()
+                        .collect()
+                },
+            );
+            islands.push((island, neighbors));
+        }
+
+        self.split_region(region_id, region.flags, islands);
+    }
+
+    fn split_region(
+        &mut self,
+        region_id: &u32,
+        flags: NavigationFlags,
+        islands: Vec<(HashSet<u32>, HashSet<u32>)>,
+    ) {
+        // TODO: split up the NAV GROUPs after
+
+        let region_mut = self.get_region_mut(region_id).unwrap();
+        let current_neighbors = region_mut.neighbor_ids.clone();
+        region_mut.neighbor_ids.clear();
+        for neighbor_id in current_neighbors.iter() {
+            // self.remove_region_neighbors(region_id, *neighbor_id);
+            let neighbor = self.get_region_mut(neighbor_id).unwrap();
+            neighbor.neighbor_ids.remove(region_id);
+        }
+
+        // let region = self.get_region(region_id).unwrap();
+        for (idx, (island, neighbors_ids)) in islands.iter().enumerate() {
+            if idx == 0 {
+                for neighbor_id in neighbors_ids.iter() {
+                    if neighbor_id == region_id {
+                        println!("DUPE NEIGHBOR {}", region_id);
+                    }
+                    self.set_region_neighbors(region_id, neighbor_id);
+                }
+
+                for partition_id in island.iter() {
+                    self.get_partition_mut(partition_id).unwrap().region_id = *region_id;
+                }
+
+                self.get_region_mut(region_id).unwrap().partition_ids = island.clone();
+            } else {
+                let new_region_id = self.create_region(flags);
+                let new_region = self.get_region_mut(&new_region_id).unwrap();
+                new_region.partition_ids = island.clone();
+
+                for neighbor_id in neighbors_ids.iter() {
+                    if neighbor_id == region_id {
+                        println!("DUPE NEIGHBOR 2 {}", region_id);
+                    }
+                    self.set_region_neighbors(&new_region_id, neighbor_id);
+                }
+
+                for partition_id in island.iter() {
+                    self.get_partition_mut(partition_id).unwrap().region_id = new_region_id;
+                }
+            }
+        }
     }
 
     fn get_partition_ids_for_chunk(&self, chunk_idx: u32) -> Vec<u32> {

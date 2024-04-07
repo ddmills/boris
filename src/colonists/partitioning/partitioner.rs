@@ -3,7 +3,7 @@ use ndshape::AbstractShape;
 
 use crate::{
     colonists::{get_block_flags, PartitionEvent},
-    common::flood_fill,
+    common::flood_fill_i32,
     Terrain,
 };
 
@@ -63,7 +63,7 @@ pub fn partition(
 
             let mut region_id = graph.get_partition(&partition_id).unwrap().region_id;
 
-            flood_fill([x as i32, y as i32, z as i32], |[nx, ny, nz]| {
+            flood_fill_i32([x as i32, y as i32, z as i32], |[nx, ny, nz]| {
                 if terrain.is_oob(nx, ny, nz) {
                     return false;
                 }

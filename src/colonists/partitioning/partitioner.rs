@@ -1,8 +1,17 @@
-use bevy::ecs::{event::EventReader, system::ResMut};
+use bevy::{
+    ecs::{
+        entity::Entity,
+        event::EventReader,
+        query::With,
+        system::{Query, ResMut},
+    },
+    transform::components::Transform,
+    utils::hashbrown::HashSet,
+};
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::{get_block_flags, PartitionEvent},
+    colonists::{get_block_flags, Item, PartitionEvent},
     common::flood_fill_i32,
     Terrain,
 };
@@ -13,19 +22,20 @@ pub fn partition(
     mut partition_ev: EventReader<PartitionEvent>,
     mut graph: ResMut<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
+    q_items: Query<&Transform, With<Item>>,
 ) {
     for ev in partition_ev.read() {
         let chunk_idx = ev.chunk_idx;
+        let mut items: HashSet<Entity> = HashSet::new();
 
         let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
 
-        for cleanup in cleanups.iter() {
+        for cleanup in cleanups {
             for block_cleanup_idx in cleanup.blocks.iter() {
                 terrain.unset_partition_id(chunk_idx, *block_cleanup_idx);
             }
+            items.extend(cleanup.items);
         }
-
-        println!("partition chunk {}", chunk_idx);
 
         for block_idx in 0..terrain.chunk_shape.size() {
             let [x, y, z] = terrain.get_block_world_pos(chunk_idx, block_idx);
@@ -157,6 +167,27 @@ pub fn partition(
             let partition = graph.get_partition_mut(&partition_id).unwrap();
             partition.is_computed = true;
             partition.extents.update_traversal_distance();
+        }
+
+        for item in items {
+            let Ok(transform) = q_items.get(item) else {
+                println!("Item was supposed to be in this chunk.");
+                continue;
+            };
+
+            let x = transform.translation.x as u32;
+            let y = transform.translation.y as u32;
+            let z = transform.translation.z as u32;
+
+            let Some(item_partition_id) = terrain.get_partition_id_u32(x, y, z) else {
+                println!("Item is not in a valid partition! Teleport it?");
+                continue;
+            };
+
+            let partition = graph.get_partition_mut(item_partition_id).unwrap();
+
+            println!("updated item to be in new partition!");
+            partition.items.insert(item);
         }
     }
 }

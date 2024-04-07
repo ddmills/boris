@@ -7,7 +7,9 @@ use bevy::{
     math::vec3,
     time::Time,
     transform::components::Transform,
+    utils::hashbrown::HashSet,
 };
+use itertools::Itertools;
 use ordered_float::*;
 
 use crate::{
@@ -235,6 +237,42 @@ pub struct PartitionPath {
     pub path: Vec<u32>,
     pub goals: Vec<[u32; 3]>,
     pub flags: NavigationFlags,
+}
+
+pub fn is_reachable(
+    request: &PartitionPathRequest,
+    terrain: &Terrain,
+    graph: &NavigationGraph,
+) -> bool {
+    let Some(partition_id) =
+        terrain.get_partition_id_u32(request.start[0], request.start[1], request.start[2])
+    else {
+        return false;
+    };
+
+    let start_group_ids = graph
+        .get_groups_for_partition(partition_id)
+        .iter()
+        .filter_map(|group| {
+            if group.flags.intersects(request.flags) {
+                Some(group.id)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    request
+        .goals
+        .iter()
+        .filter_map(|goal| terrain.get_partition_id_u32(goal[0], goal[1], goal[2]))
+        .unique()
+        .any(|goal_partition_id| {
+            graph
+                .get_group_ids_for_partition(goal_partition_id)
+                .iter()
+                .any(|goal_group_ids| start_group_ids.contains(goal_group_ids))
+        })
 }
 
 pub fn get_partition_path(

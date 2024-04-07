@@ -34,8 +34,6 @@ pub fn behavior_pick_system(
     for (actor, scorers, thinker) in q_actors.iter() {
         // let behavior = get_behavior(fatigue, &mut jobs);
 
-        println!("pick behavior");
-
         let mut high_score = 0.;
         // let mut high_score_builder: Option<ScorerBuilder> = None;
         // let mut high_score_builder: Option<Box<&dyn ScorerBuilder>> = None;
@@ -70,7 +68,7 @@ pub fn behavior_pick_system(
         // let builder = thinker.score_builders.get(high_scorer_idx).unwrap();
         let builder = high_score_builder.unwrap();
 
-        println!("==== START {}, Score({})", builder.label(), high_score);
+        // println!("==== START {}, Score({})", builder.label(), high_score);
         // println!("pick behavior");
 
         let behavior = builder.build();

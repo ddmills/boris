@@ -1216,6 +1216,7 @@ dependencies = [
  "bevy_obj",
  "bitflags 2.4.2",
  "fastnoise-lite",
+ "itertools",
  "ndshape",
  "ordered-float",
  "rand",

@@ -111,6 +111,25 @@ impl NavigationGraph {
         self.groups.get_mut(id)
     }
 
+    pub fn get_group_ids_for_partition(&self, partition_id: &u32) -> HashSet<u32> {
+        let Some(partition) = self.get_partition(partition_id) else {
+            return HashSet::new();
+        };
+
+        let Some(region) = self.get_region(&partition.region_id) else {
+            return HashSet::new();
+        };
+
+        region.group_ids.clone()
+    }
+
+    pub fn get_groups_for_partition(&self, partition_id: &u32) -> HashSet<&NavigationGroup> {
+        self.get_group_ids_for_partition(partition_id)
+            .iter()
+            .filter_map(|group_id| self.get_group(group_id))
+            .collect::<HashSet<_>>()
+    }
+
     /// Set partitions A and B as neighbors. It also makes the regions neighbors
     /// if applicable, or merges regions if applicable. If the regions are
     /// merged, the new region ID will be returned.
@@ -232,8 +251,8 @@ impl NavigationGraph {
             if group.region_ids.is_empty() {
                 self.delete_group(group_id);
             } else {
-                // todo: flood group
-                println!("flood group {}", group_id);
+                // todo: flood group?
+                // println!("flood group {} len {}", group_id, group.region_ids.len());
             }
         }
     }
@@ -264,7 +283,6 @@ impl NavigationGraph {
     /// Flood the partitions in this region, deleting the region if
     /// it has none, or creating new regions for any unique islands.
     fn flood_region(&mut self, region_id: &u32) {
-        println!("flood region {}", region_id);
         let region = self.get_region(region_id).unwrap();
 
         if region.partition_ids.is_empty() {
@@ -324,19 +342,15 @@ impl NavigationGraph {
         let region_mut = self.get_region_mut(region_id).unwrap();
         let current_neighbors = region_mut.neighbor_ids.clone();
         region_mut.neighbor_ids.clear();
+
         for neighbor_id in current_neighbors.iter() {
-            // self.remove_region_neighbors(region_id, *neighbor_id);
             let neighbor = self.get_region_mut(neighbor_id).unwrap();
             neighbor.neighbor_ids.remove(region_id);
         }
 
-        // let region = self.get_region(region_id).unwrap();
         for (idx, (island, neighbors_ids)) in islands.iter().enumerate() {
             if idx == 0 {
                 for neighbor_id in neighbors_ids.iter() {
-                    if neighbor_id == region_id {
-                        println!("DUPE NEIGHBOR {}", region_id);
-                    }
                     self.set_region_neighbors(region_id, neighbor_id);
                 }
 
@@ -351,9 +365,6 @@ impl NavigationGraph {
                 new_region.partition_ids = island.clone();
 
                 for neighbor_id in neighbors_ids.iter() {
-                    if neighbor_id == region_id {
-                        println!("DUPE NEIGHBOR 2 {}", region_id);
-                    }
                     self.set_region_neighbors(&new_region_id, neighbor_id);
                 }
 

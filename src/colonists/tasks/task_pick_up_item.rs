@@ -1,6 +1,7 @@
 use bevy::{
     ecs::{
         component::Component,
+        entity::Entity,
         query::With,
         system::{Commands, Query, Res, ResMut},
     },
@@ -27,7 +28,7 @@ pub fn task_pick_up_item(
     mut q_actors: Query<&mut Inventory, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut Blackboard), With<TaskPickUpItem>>,
 ) {
-    for (ActorRef(actor), mut state, mut blackboard) in q_behavior.iter_mut() {
+    for (ActorRef(actor), mut state, blackboard) in q_behavior.iter_mut() {
         let Some(item) = blackboard.item else {
             println!("No item assign in blackboard, cannot pick anything up!");
             *state = TaskState::Failed;
@@ -59,7 +60,11 @@ pub fn task_pick_up_item(
         };
 
         println!("Removing item from partition");
-        partition.items.retain(|i| *i != item);
+        if !partition.items.remove(&item) {
+            println!("Item not here!");
+            *state = TaskState::Failed;
+            return;
+        }
 
         println!("Item is now in inventory");
         inventory.items.push(item);

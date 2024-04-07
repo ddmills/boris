@@ -13,11 +13,13 @@ use bevy::{
 
 use crate::{
     colonists::{
-        get_partition_path, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior,
-        BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job, JobLocation,
-        JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest, Score, ScorerBuilder,
-        TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo, TaskUnassignJob,
+        get_partition_path, is_reachable, test_item_tags, tree_aquire_item, Actor, ActorRef,
+        Behavior, BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job,
+        JobLocation, JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest, Score,
+        ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
+        TaskUnassignJob,
     },
+    common::Distance,
     Terrain,
 };
 
@@ -40,7 +42,7 @@ impl ScorerBuilder for ScorerMine {
             "Mine",
             BehaviorNode::Try(
                 Box::new(BehaviorNode::Sequence(vec![
-                    BehaviorNode::Task(Arc::new(TaskDebug("Mining task!".to_string()))),
+                    // BehaviorNode::Task(Arc::new(TaskDebug("Mining task!".to_string()))),
                     BehaviorNode::Task(Arc::new(TaskAssignJob(self.job.unwrap()))),
                     tree_aquire_item(vec![ItemTag::PickAxe]),
                     BehaviorNode::Sequence(vec![
@@ -77,6 +79,7 @@ pub fn score_mine(
         ];
 
         let mut best = None;
+        let mut best_dist = 100000.;
 
         for (e, job, job_location) in q_jobs.iter() {
             if job.assignee.is_some() {
@@ -110,14 +113,26 @@ pub fn score_mine(
                 flags: NavigationFlags::TALL | NavigationFlags::LADDER,
             };
 
-            // generate path
-            // this could be cached on the behavior
-            let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
-                // job is not reachable. we should cooldown this score checker
+            if !is_reachable(&request, &terrain, &graph) {
                 continue;
-            };
+            }
 
-            best = Some(e);
+            let job_distance = Distance::manhattan(
+                [
+                    job_location.pos[0] as i32,
+                    job_location.pos[1] as i32,
+                    job_location.pos[2] as i32,
+                ],
+                [pos[0] as i32, pos[1] as i32, pos[2] as i32],
+            );
+
+            if job_distance < best_dist {
+                best = Some(e);
+                best_dist = job_distance;
+                if job_distance < 2. {
+                    break;
+                }
+            }
         }
 
         if best.is_none() {

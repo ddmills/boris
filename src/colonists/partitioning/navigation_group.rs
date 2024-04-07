@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use bevy::utils::hashbrown::HashSet;
 
 use super::NavigationFlags;
@@ -15,5 +17,19 @@ impl NavigationGroup {
             flags,
             region_ids: HashSet::new(),
         }
+    }
+}
+
+impl PartialEq for NavigationGroup {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for NavigationGroup {}
+
+impl Hash for NavigationGroup {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
     }
 }

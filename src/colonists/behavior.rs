@@ -152,7 +152,6 @@ impl BehaviorNodeState {
             BehaviorNodeState::Task(s, task) => match *s {
                 NodeState::NotStarted => {
                     task.insert(cmd);
-                    println!("{} => {}", cmd.id().index(), task.label());
                     *s = NodeState::Executing;
                     NodeState::Executing
                 }
@@ -364,17 +363,17 @@ pub fn behavior_system(
             cmd.entity(entity).despawn();
         }
 
-        if node_state == NodeState::Failed {
-            println!("Behavior {} failed!", behavior.label);
-            println!("==== FAILED {}", behavior.label);
-        }
-        if node_state == NodeState::Success {
-            println!("Behavior {} Success!", behavior.label);
-            println!("==== SUCCESS {}", behavior.label);
-        }
-        if node_state == NodeState::NotStarted {
-            println!("Behavior {} Not Started?", behavior.label);
-            println!("==== NOT_STARTED {}", behavior.label);
-        }
+        // if node_state == NodeState::Failed {
+        //     println!("Behavior {} failed!", behavior.label);
+        //     println!("==== FAILED {}", behavior.label);
+        // }
+        // if node_state == NodeState::Success {
+        //     println!("Behavior {} Success!", behavior.label);
+        //     println!("==== SUCCESS {}", behavior.label);
+        // }
+        // if node_state == NodeState::NotStarted {
+        //     println!("Behavior {} Not Started?", behavior.label);
+        //     println!("==== NOT_STARTED {}", behavior.label);
+        // }
     }
 }

@@ -71,7 +71,6 @@ pub fn score_mine(
             *score = Score(0.);
             continue;
         };
-        println!("scoring! {}", actor.index());
 
         let pos = [
             transform.translation.x as u32,

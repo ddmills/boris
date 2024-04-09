@@ -7,7 +7,6 @@ use bevy::{
     math::vec3,
     time::Time,
     transform::components::Transform,
-    utils::hashbrown::HashSet,
 };
 use itertools::Itertools;
 use ordered_float::*;

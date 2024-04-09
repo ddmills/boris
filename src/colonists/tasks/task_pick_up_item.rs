@@ -5,6 +5,7 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res, ResMut},
     },
+    render::view::Visibility,
     transform::components::Transform,
 };
 use task_derive::TaskBuilder;
@@ -68,6 +69,7 @@ pub fn task_pick_up_item(
 
         println!("Item is now in inventory");
         inventory.items.push(item);
+        cmd.entity(item).insert(Visibility::Hidden);
         cmd.entity(item).insert(InInventory { holder: *actor });
 
         *state = TaskState::Success;

@@ -8,6 +8,7 @@ pub struct Inventory {
 #[derive(Component)]
 pub struct Item {
     pub tags: Vec<ItemTag>,
+    pub reserved: Option<Entity>,
 }
 
 #[derive(Component)]
@@ -17,7 +18,7 @@ pub struct InInventory {
 
 #[derive(Clone, PartialEq)]
 pub enum ItemTag {
-    PickAxe,
+    Pickaxe,
 }
 
 pub fn test_item_tags(all: &Vec<ItemTag>, test: &Vec<ItemTag>) -> bool {

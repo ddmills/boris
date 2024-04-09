@@ -45,7 +45,8 @@ pub fn on_spawn_pickaxe(
                     ..default()
                 },
                 Item {
-                    tags: vec![ItemTag::PickAxe],
+                    tags: vec![ItemTag::Pickaxe],
+                    reserved: None,
                 },
             ))
             .id();

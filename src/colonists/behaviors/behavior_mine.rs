@@ -14,10 +14,10 @@ use bevy::{
 use crate::{
     colonists::{
         get_partition_path, is_reachable, test_item_tags, tree_aquire_item, Actor, ActorRef,
-        Behavior, BehaviorNode, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job,
-        JobLocation, JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest, Score,
-        ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
-        TaskUnassignJob,
+        Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible, Item,
+        ItemTag, Job, JobLocation, JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest,
+        Score, ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock,
+        TaskMoveTo, TaskUnassignJob,
     },
     common::Distance,
     Terrain,
@@ -44,7 +44,7 @@ impl ScorerBuilder for ScorerMine {
                 Box::new(BehaviorNode::Sequence(vec![
                     // BehaviorNode::Task(Arc::new(TaskDebug("Mining task!".to_string()))),
                     BehaviorNode::Task(Arc::new(TaskAssignJob(self.job.unwrap()))),
-                    tree_aquire_item(vec![ItemTag::PickAxe]),
+                    tree_aquire_item(vec![ItemTag::Pickaxe]),
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo)),
@@ -62,8 +62,8 @@ pub fn score_mine(
     graph: Res<NavigationGraph>,
     q_jobs: Query<(Entity, &Job, &JobLocation), (With<JobMine>, With<IsJobAccessible>)>,
     q_items: Query<&Item>,
-    q_free_items: Query<&Item, Without<InInventory>>,
-    q_actors: Query<(&Inventory, &Transform), With<Actor>>,
+    q_free_items: Query<(&Item, &Transform), Without<InInventory>>,
+    q_actors: Query<(&Inventory, &Transform), (With<Actor>, Without<HasBehavior>)>,
     mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerMine)>,
 ) {
     for (ActorRef(actor), mut score, mut scorer) in q_behaviors.iter_mut() {
@@ -71,6 +71,7 @@ pub fn score_mine(
             *score = Score(0.);
             continue;
         };
+        println!("scoring! {}", actor.index());
 
         let pos = [
             transform.translation.x as u32,
@@ -110,7 +111,7 @@ pub fn score_mine(
             let request = PartitionPathRequest {
                 start: pos,
                 goals,
-                flags: NavigationFlags::TALL | NavigationFlags::LADDER,
+                flags: NavigationFlags::COLONIST,
             };
 
             if !is_reachable(&request, &terrain, &graph) {
@@ -147,7 +148,7 @@ pub fn score_mine(
                 return false;
             };
 
-            test_item_tags(&item.tags, &vec![ItemTag::PickAxe])
+            test_item_tags(&item.tags, &vec![ItemTag::Pickaxe])
         });
 
         // if we have a pickaxe, score is higher
@@ -156,12 +157,28 @@ pub fn score_mine(
             continue;
         }
 
-        if q_free_items.is_empty() {
-            *score = Score(0.0);
+        // check if any of the items are unreserved and accessible
+        if q_free_items.iter().any(|(i, t)| {
+            i.reserved.is_none()
+                && is_reachable(
+                    &PartitionPathRequest {
+                        start: pos,
+                        goals: vec![[
+                            t.translation.x as u32,
+                            t.translation.y as u32,
+                            t.translation.z as u32,
+                        ]],
+                        flags: NavigationFlags::COLONIST,
+                    },
+                    &terrain,
+                    &graph,
+                )
+        }) {
+            *score = Score(0.2);
             continue;
+        } else {
+            *score = Score(0.0);
         }
-
-        *score = Score(0.2);
     }
 }
 

@@ -42,7 +42,6 @@ pub fn score_wander(
     mut q_behaviors: Query<(&ActorRef, &mut Score, &ScorerWander)>,
 ) {
     for (ActorRef(actor), mut score, wander) in q_behaviors.iter_mut() {
-        // let Ok()
         *score = Score(0.1);
     }
 }

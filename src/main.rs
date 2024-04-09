@@ -30,7 +30,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Terrain::new(6, 4, 6, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {

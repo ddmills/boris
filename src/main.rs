@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
@@ -30,7 +28,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(6, 4, 6, 16))
+        .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
@@ -97,10 +95,12 @@ fn main() {
         .add_systems(Update, mine_job_checker)
         .add_systems(Update, fatigue_system)
         .add_systems(Update, block_move_system)
-        .add_systems(Update, behavior_pick_system)
         .add_systems(PreUpdate, behavior_system)
-        .add_systems(Update, score_wander)
-        .add_systems(Update, score_mine)
+        .add_systems(Update, behavior_pick_system)
+        .add_systems(
+            Update,
+            (score_wander, score_mine).before(behavior_pick_system),
+        )
         .add_systems(Update, task_assign_job)
         .add_systems(Update, task_find_bed)
         .add_systems(Update, task_sleep)

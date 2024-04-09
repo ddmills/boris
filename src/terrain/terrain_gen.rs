@@ -5,12 +5,12 @@ use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
     let seed = 1;
-    let mut height = FractalNoise::new(seed, 0.007, 8);
+    let mut height = FractalNoise::new(seed, 0.006, 8);
     let mut caverns = FractalNoise::new(seed + 1, 0.01, 4);
     let mut caves = FractalNoise::new(seed + 1, 0.02, 3);
 
     let top = terrain.world_size_y() - 1;
-    let mountain_height = min(top - 4, 42);
+    let mountain_height = min(top - 4, 49);
     let magma_level = 3;
     let dirt_depth = 3;
     let cavern_depth = 0.35;

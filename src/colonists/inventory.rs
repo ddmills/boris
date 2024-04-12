@@ -19,6 +19,7 @@ pub struct InInventory {
 #[derive(Clone, PartialEq)]
 pub enum ItemTag {
     Pickaxe,
+    Stone,
 }
 
 pub fn test_item_tags(all: &Vec<ItemTag>, test: &Vec<ItemTag>) -> bool {

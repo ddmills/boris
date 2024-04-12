@@ -4,15 +4,15 @@ use bevy_obj::ObjPlugin;
 use colonists::{
     behavior_pick_system, behavior_system, block_move_system, fatigue_system,
     fix_colonist_positions, mine_job_checker, on_spawn_colonist, partition, partition_debug,
-    partition_setup, score_mine, score_wander, task_assign_job, task_check_has_item, task_debug,
-    task_find_bed, task_find_nearest_item, task_get_job_location, task_idle, task_mine_block,
-    task_move_to, task_pick_random_spot, task_pick_up_item, task_sleep, task_unassign_job,
-    NavigationGraph, PartitionDebug, PartitionEvent, ScorerPlugin, SpawnColonistEvent,
+    score_mine, score_wander, task_assign_job, task_check_has_item, task_debug, task_find_bed,
+    task_find_nearest_item, task_get_job_location, task_idle, task_mine_block, task_move_to,
+    task_pick_random_spot, task_pick_up_item, task_sleep, task_unassign_job, update_item_partition,
+    MovedEvent, NavigationGraph, PartitionDebug, PartitionEvent, ScorerPlugin, SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
-use items::{on_spawn_pickaxe, SpawnPickaxeEvent};
+use items::{on_spawn_pickaxe, on_spawn_stone, SpawnPickaxeEvent, SpawnStoneEvent};
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -46,6 +46,8 @@ fn main() {
         })
         .add_event::<SpawnColonistEvent>()
         .add_event::<SpawnPickaxeEvent>()
+        .add_event::<SpawnStoneEvent>()
+        .add_event::<MovedEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_event::<PartitionEvent>()
         .init_resource::<NavigationGraph>()
@@ -69,7 +71,6 @@ fn main() {
                 setup_terrain,
                 setup_terrain_slice,
                 setup_chunk_meshes,
-                partition_setup,
                 setup_camera,
                 setup_block_toolbar_ui,
             )
@@ -89,8 +90,10 @@ fn main() {
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)
+        .add_systems(Update, on_spawn_stone)
         .add_systems(Update, partition)
         .add_systems(Update, partition_debug)
+        .add_systems(Update, update_item_partition)
         .add_systems(Update, fix_colonist_positions)
         .add_systems(Update, mine_job_checker)
         .add_systems(Update, fatigue_system)

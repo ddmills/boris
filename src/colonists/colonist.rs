@@ -13,7 +13,9 @@ use bevy::{
     transform::components::Transform,
 };
 
-use super::{Actor, Fatigue, Inventory, ScorerMine, ScorerWander, Thinker};
+use super::{
+    Actor, Faller, Fatigue, Inventory, NavigationFlags, ScorerMine, ScorerWander, Thinker,
+};
 
 #[derive(Component, Default)]
 pub struct Colonist {}
@@ -30,34 +32,39 @@ pub fn on_spawn_colonist(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for ev in ev_spawn_colonist.read() {
-        let texture: Handle<Image> = asset_server.load("textures/colonist.png");
-        let mesh: Handle<Mesh> = asset_server.load("meshes/basemesh.obj");
-        let material = materials.add(StandardMaterial {
-            base_color_texture: Some(texture),
-            unlit: true,
-            ..default()
-        });
-        cmd.spawn((
-            MaterialMeshBundle {
-                mesh: mesh.clone(),
-                material: material.clone(),
-                transform: Transform::from_xyz(
-                    ev.pos[0] as f32,
-                    ev.pos[1] as f32,
-                    ev.pos[2] as f32,
-                ),
+        for i in 0..10 {
+            let texture: Handle<Image> = asset_server.load("textures/colonist.png");
+            let mesh: Handle<Mesh> = asset_server.load("meshes/basemesh.obj");
+            let material = materials.add(StandardMaterial {
+                base_color_texture: Some(texture),
+                unlit: true,
                 ..default()
-            },
-            Fatigue {
-                value: 30.,
-                per_second: 5.,
-            },
-            Actor,
-            Inventory::default(),
-            Colonist::default(),
-            Thinker {
-                score_builders: vec![Arc::new(ScorerWander), Arc::new(ScorerMine::default())],
-            },
-        ));
+            });
+
+            cmd.spawn((
+                MaterialMeshBundle {
+                    mesh: mesh.clone(),
+                    material: material.clone(),
+                    transform: Transform::from_xyz(
+                        ev.pos[0] as f32 + 0.5,
+                        ev.pos[1] as f32,
+                        ev.pos[2] as f32 + 0.5,
+                    ),
+                    ..default()
+                },
+                Fatigue {
+                    value: 30.,
+                    per_second: 5.,
+                },
+                Actor,
+                Inventory::default(),
+                Colonist::default(),
+                Thinker {
+                    score_builders: vec![Arc::new(ScorerWander), Arc::new(ScorerMine::default())],
+                },
+                Faller,
+                NavigationFlags::COLONIST,
+            ));
+        }
     }
 }

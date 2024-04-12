@@ -1,7 +1,4 @@
-use bevy::ecs::{
-    event::{Event, EventWriter},
-    system::Res,
-};
+use bevy::ecs::event::Event;
 
 use crate::{Block, Terrain};
 
@@ -43,16 +40,4 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationF
     }
 
     flags
-}
-
-pub fn partition_setup(terrain: Res<Terrain>, mut partition_chunk_ev: EventWriter<PartitionEvent>) {
-    println!("partitioning world..");
-
-    // for chunk_idx in 0..terrain.chunk_count {
-    //     partition_chunk_ev.send(PartitionEvent {
-    //         chunk_idx,
-    //         refresh: false,
-    //     });
-    // }
-    println!("..done partitioning world");
 }

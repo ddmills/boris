@@ -13,11 +13,10 @@ use bevy::{
 
 use crate::{
     colonists::{
-        get_partition_path, is_reachable, test_item_tags, tree_aquire_item, Actor, ActorRef,
-        Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible, Item,
-        ItemTag, Job, JobLocation, JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest,
-        Score, ScorerBuilder, TaskAssignJob, TaskDebug, TaskGetJobLocation, TaskMineBlock,
-        TaskMoveTo, TaskUnassignJob,
+        is_reachable, test_item_tags, tree_aquire_item, Actor, ActorRef, Behavior, BehaviorNode,
+        HasBehavior, InInventory, Inventory, IsJobAccessible, Item, ItemTag, Job, JobLocation,
+        JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest, Score, ScorerBuilder,
+        TaskAssignJob, TaskGetJobLocation, TaskMineBlock, TaskMoveTo, TaskUnassignJob,
     },
     common::Distance,
     Terrain,
@@ -42,7 +41,6 @@ impl ScorerBuilder for ScorerMine {
             "Mine",
             BehaviorNode::Try(
                 Box::new(BehaviorNode::Sequence(vec![
-                    // BehaviorNode::Task(Arc::new(TaskDebug("Mining task!".to_string()))),
                     BehaviorNode::Task(Arc::new(TaskAssignJob(self.job.unwrap()))),
                     tree_aquire_item(vec![ItemTag::Pickaxe]),
                     BehaviorNode::Sequence(vec![
@@ -142,12 +140,14 @@ pub fn score_mine(
 
         scorer.job = best;
 
+        let item_tags = &vec![ItemTag::Pickaxe];
+
         let has_pickaxe = inventory.items.iter().any(|e| {
             let Ok(item) = q_items.get(*e) else {
                 return false;
             };
 
-            test_item_tags(&item.tags, &vec![ItemTag::Pickaxe])
+            test_item_tags(&item.tags, item_tags)
         });
 
         // if we have a pickaxe, score is higher
@@ -158,7 +158,8 @@ pub fn score_mine(
 
         // check if any of the items are unreserved and accessible
         if q_free_items.iter().any(|(i, t)| {
-            i.reserved.is_none()
+            test_item_tags(&i.tags, item_tags)
+                && i.reserved.is_none()
                 && is_reachable(
                     &PartitionPathRequest {
                         start: pos,

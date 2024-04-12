@@ -1,9 +1,10 @@
 use std::fmt::{Display, Formatter};
 
+use bevy::ecs::component::Component;
 use bitflags::bitflags;
 
 bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Component)]
     pub struct NavigationFlags: u8 {
         const NONE = 0;
         const SOLID_GROUND = 1;

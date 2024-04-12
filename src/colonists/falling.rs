@@ -1,28 +1,52 @@
 use bevy::{
     ecs::{
+        component::Component,
         entity::Entity,
         query::{With, Without},
-        system::{Commands, Query, Res},
+        system::{Commands, Query, Res, ResMut},
     },
     transform::components::Transform,
 };
 
 use crate::{colonists::BlockMove, Terrain};
 
-use super::{get_block_flags, Actor, NavigationFlags};
+use super::{get_block_flags, partition, InPartition, NavigationFlags, NavigationGraph};
+
+#[derive(Component)]
+pub struct Faller;
 
 pub fn fix_colonist_positions(
     mut cmd: Commands,
     terrain: Res<Terrain>,
-    mut q_colonists: Query<(Entity, &mut Transform), (With<Actor>, Without<BlockMove>)>,
+    mut graph: ResMut<NavigationGraph>,
+    q_fallers: Query<
+        (
+            Entity,
+            &Transform,
+            Option<&InPartition>,
+            Option<&NavigationFlags>,
+        ),
+        (With<Faller>, Without<BlockMove>),
+    >,
 ) {
-    for (entity, mut transform) in q_colonists.iter_mut() {
+    for (entity, transform, opt_in_partition, opt_flags) in q_fallers.iter() {
         let x = transform.translation.x as u32;
         let y = transform.translation.y as u32;
         let z = transform.translation.z as u32;
 
         if terrain.get_partition_id_u32(x, y, z).is_some() {
             continue;
+        }
+
+        let mut ecmd = cmd.entity(entity);
+
+        // remove the item from whatever partition it is in
+        if let Some(in_partition) = opt_in_partition {
+            let partition_id = in_partition.partition_id;
+            if let Some(partition) = graph.get_partition_mut(&partition_id) {
+                partition.items.remove(&entity);
+            }
+            ecmd.remove::<InPartition>();
         }
 
         let world_y = terrain.world_size_y();
@@ -34,27 +58,49 @@ pub fn fix_colonist_positions(
 
             if delta_y < y {
                 let sub_y = y - delta_y;
-                let below = get_block_flags(&terrain, x as i32, sub_y as i32, z as i32);
-                println!("below {} {}", sub_y, below);
-                if below.intersects(NavigationFlags::COLONIST) {
-                    cmd.entity(entity).insert(BlockMove {
-                        speed: 12.,
-                        target: [x as i32, sub_y as i32, z as i32],
-                    });
-                    break;
+                let mut flag_ok = true;
+
+                if let Some(partition_id) = terrain.get_partition_id_u32(x, sub_y, z) {
+                    if let Some(partition) = graph.get_partition(partition_id) {
+                        if let Some(flags) = opt_flags {
+                            if !partition.flags.intersects(*flags) {
+                                flag_ok = false;
+                            }
+                        }
+
+                        if flag_ok {
+                            ecmd.insert(BlockMove {
+                                speed: 12.,
+                                target: [x as i32, sub_y as i32, z as i32],
+                                look_at: false,
+                            });
+                            break;
+                        }
+                    }
                 }
             }
 
             if delta_y < world_y {
                 let add_y = y + delta_y;
-                let above = get_block_flags(&terrain, x as i32, add_y as i32, z as i32);
-                println!("above {} {}", add_y, above);
-                if above.intersects(NavigationFlags::COLONIST) {
-                    cmd.entity(entity).insert(BlockMove {
-                        speed: 12.,
-                        target: [x as i32, add_y as i32, z as i32],
-                    });
-                    break;
+                let mut flag_ok = true;
+
+                if let Some(partition_id) = terrain.get_partition_id_u32(x, add_y, z) {
+                    if let Some(partition) = graph.get_partition(partition_id) {
+                        if let Some(flags) = opt_flags {
+                            if !partition.flags.intersects(*flags) {
+                                flag_ok = false;
+                            }
+                        }
+
+                        if flag_ok {
+                            ecmd.insert(BlockMove {
+                                speed: 12.,
+                                target: [x as i32, add_y as i32 + 1, z as i32],
+                                look_at: false,
+                            });
+                            break;
+                        }
+                    }
                 }
             } else {
                 println!("no good spot to land {}", delta_y);

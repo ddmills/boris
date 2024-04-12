@@ -152,6 +152,7 @@ pub fn task_move_to(
         cmd.entity(*actor).insert(BlockMove {
             speed: 8.,
             target: path.blocks[path.current_block_idx],
+            look_at: true,
         });
     }
 }

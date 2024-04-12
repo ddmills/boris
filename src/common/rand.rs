@@ -39,4 +39,8 @@ impl Rand {
     pub fn random(&mut self) -> f32 {
         self.r.gen()
     }
+
+    pub fn bool(&mut self, chance: f32) -> bool {
+        self.random() < chance
+    }
 }

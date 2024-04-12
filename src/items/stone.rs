@@ -16,26 +16,26 @@ use crate::{
 };
 
 #[derive(Event)]
-pub struct SpawnPickaxeEvent {
+pub struct SpawnStoneEvent {
     pub pos: [u32; 3],
 }
 
-pub fn on_spawn_pickaxe(
+pub fn on_spawn_stone(
     mut cmd: Commands,
     terrain: Res<Terrain>,
     mut graph: ResMut<NavigationGraph>,
-    mut ev_spawn_pickaxe: EventReader<SpawnPickaxeEvent>,
+    mut ev_spawn_stone: EventReader<SpawnStoneEvent>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
     let mesh: Handle<Mesh> = asset_server.load("meshes/sphere.obj");
     let material = materials.add(StandardMaterial {
-        base_color: Color::CYAN,
+        base_color: Color::GRAY,
         unlit: true,
         ..default()
     });
 
-    for ev in ev_spawn_pickaxe.read() {
+    for ev in ev_spawn_stone.read() {
         let entity = cmd
             .spawn((
                 MaterialMeshBundle {
@@ -49,7 +49,7 @@ pub fn on_spawn_pickaxe(
                     ..default()
                 },
                 Item {
-                    tags: vec![ItemTag::Pickaxe],
+                    tags: vec![ItemTag::Stone],
                     reserved: None,
                 },
                 Faller,

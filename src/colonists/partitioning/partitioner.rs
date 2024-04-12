@@ -1,9 +1,10 @@
 use bevy::{
     ecs::{
+        component::Component,
         entity::Entity,
         event::EventReader,
         query::With,
-        system::{Query, ResMut},
+        system::{Commands, Query, ResMut},
     },
     transform::components::Transform,
     utils::hashbrown::HashSet,
@@ -18,7 +19,13 @@ use crate::{
 
 use super::NavigationGraph;
 
+#[derive(Component)]
+pub struct InPartition {
+    pub partition_id: u32,
+}
+
 pub fn partition(
+    mut cmd: Commands,
     mut partition_ev: EventReader<PartitionEvent>,
     mut graph: ResMut<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
@@ -171,13 +178,17 @@ pub fn partition(
 
         for item in items {
             let Ok(transform) = q_items.get(item) else {
-                println!("Item was supposed to be in this chunk.");
+                println!("Item does not exist anymore.");
                 continue;
             };
 
             let x = transform.translation.x as u32;
             let y = transform.translation.y as u32;
             let z = transform.translation.z as u32;
+
+            let mut ecmd = cmd.entity(item);
+
+            ecmd.remove::<InPartition>();
 
             let Some(item_partition_id) = terrain.get_partition_id_u32(x, y, z) else {
                 println!("Item is not in a valid partition! Teleport it?");
@@ -188,6 +199,9 @@ pub fn partition(
 
             println!("updated item to be in new partition!");
             partition.items.insert(item);
+            ecmd.insert(InPartition {
+                partition_id: *item_partition_id,
+            });
         }
     }
 }

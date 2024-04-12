@@ -12,8 +12,8 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        Actor, ActorRef, Blackboard, InInventory, Inventory, Item, NavigationGraph, TaskBuilder,
-        TaskState,
+        Actor, ActorRef, Blackboard, InInventory, InPartition, Inventory, Item, NavigationGraph,
+        TaskBuilder, TaskState,
     },
     Terrain,
 };
@@ -67,10 +67,13 @@ pub fn task_pick_up_item(
             return;
         }
 
+        let mut ecmd = cmd.entity(item);
+        ecmd.remove::<InPartition>();
+
         println!("Item is now in inventory");
         inventory.items.push(item);
-        cmd.entity(item).insert(Visibility::Hidden);
-        cmd.entity(item).insert(InInventory { holder: *actor });
+        ecmd.insert(Visibility::Hidden);
+        ecmd.insert(InInventory { holder: *actor });
 
         *state = TaskState::Success;
     }

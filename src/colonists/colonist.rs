@@ -9,7 +9,7 @@ use bevy::{
     },
     pbr::{MaterialMeshBundle, StandardMaterial},
     prelude::default,
-    render::{color::Color, mesh::Mesh},
+    render::{color::Color, mesh::Mesh, texture::Image},
     transform::components::Transform,
 };
 
@@ -29,10 +29,14 @@ pub fn on_spawn_colonist(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh: Handle<Mesh> = asset_server.load("meshes/colonist.obj");
-    let material = materials.add(Color::ORANGE);
-
     for ev in ev_spawn_colonist.read() {
+        let texture: Handle<Image> = asset_server.load("textures/colonist.png");
+        let mesh: Handle<Mesh> = asset_server.load("meshes/basemesh.obj");
+        let material = materials.add(StandardMaterial {
+            base_color_texture: Some(texture),
+            unlit: true,
+            ..default()
+        });
         cmd.spawn((
             MaterialMeshBundle {
                 mesh: mesh.clone(),

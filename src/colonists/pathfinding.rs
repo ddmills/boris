@@ -18,12 +18,6 @@ use crate::{
 
 use super::{get_block_flags, NavigationFlags, NavigationGraph};
 
-#[derive(Component)]
-pub struct BlockMove {
-    pub speed: f32,
-    pub target: [i32; 3],
-}
-
 #[derive(Component, Default)]
 pub struct Path {
     pub partition_path: Vec<u32>,
@@ -39,31 +33,6 @@ pub struct PartitionPathRequest {
     pub start: [u32; 3],
     pub goals: Vec<[u32; 3]>,
     pub flags: NavigationFlags,
-}
-
-pub fn block_move_system(
-    mut cmd: Commands,
-    time: Res<Time>,
-    mut query: Query<(Entity, &BlockMove, &mut Transform)>,
-) {
-    for (entity, block_move, mut transform) in query.iter_mut() {
-        let pos = vec3(
-            block_move.target[0] as f32,
-            block_move.target[1] as f32,
-            block_move.target[2] as f32,
-        );
-
-        let direction = (pos - transform.translation).normalize();
-        let distance = transform.translation.distance(pos);
-        let move_dist = time.delta_seconds() * block_move.speed;
-
-        if distance < move_dist {
-            transform.translation = pos;
-            cmd.entity(entity).remove::<BlockMove>();
-        } else {
-            transform.translation += direction * move_dist;
-        }
-    }
 }
 
 pub struct GranularPathRequest {

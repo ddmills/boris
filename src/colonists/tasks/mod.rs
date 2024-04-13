@@ -1,4 +1,5 @@
 mod task_assign_job;
+mod task_build;
 mod task_check_has_item;
 mod task_debug;
 mod task_find_bed;
@@ -13,6 +14,7 @@ mod task_sleep;
 mod task_unassign_job;
 
 pub use task_assign_job::*;
+pub use task_build::*;
 pub use task_check_has_item::*;
 pub use task_debug::*;
 pub use task_find_bed::*;

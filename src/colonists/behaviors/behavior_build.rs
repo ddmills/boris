@@ -2,11 +2,10 @@ use std::sync::Arc;
 
 use bevy::{
     ecs::{
-        self,
         component::Component,
         entity::Entity,
         query::{With, Without},
-        system::{Query, Res},
+        system::{EntityCommands, Query, Res},
     },
     transform::components::Transform,
 };
@@ -15,39 +14,42 @@ use crate::{
     colonists::{
         is_reachable, job_access_points, test_item_tags, tree_aquire_item, Actor, ActorRef,
         Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible, Item,
-        ItemTag, Job, JobLocation, JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest,
-        Score, ScorerBuilder, TaskAssignJob, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
-        TaskUnassignJob,
+        ItemTag, Job, JobBuild, JobLocation, NavigationFlags, NavigationGraph,
+        PartitionPathRequest, Score, ScorerBuilder, TaskAssignJob, TaskBuildBlock,
+        TaskGetJobLocation, TaskMoveTo, TaskUnassignJob,
     },
     common::Distance,
-    Terrain,
+    Block, Terrain,
 };
 
 #[derive(Component, Clone, Default)]
-pub struct ScorerMine {
+pub struct ScorerBuild {
     job: Option<Entity>,
 }
 
-impl ScorerBuilder for ScorerMine {
-    fn insert(&self, cmd: &mut ecs::system::EntityCommands) {
+impl ScorerBuilder for ScorerBuild {
+    fn insert(&self, cmd: &mut EntityCommands) {
         cmd.insert(self.clone());
     }
 
     fn label(&self) -> String {
-        "Mine".to_string()
+        "Build".to_string()
     }
 
     fn build(&self) -> Behavior {
         Behavior::new(
-            "Mine",
+            "Build",
             BehaviorNode::Try(
                 Box::new(BehaviorNode::Sequence(vec![
                     BehaviorNode::Task(Arc::new(TaskAssignJob(self.job.unwrap()))),
-                    tree_aquire_item(vec![ItemTag::Pickaxe]),
+                    tree_aquire_item(vec![ItemTag::Stone]),
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo)),
-                        BehaviorNode::Task(Arc::new(TaskMineBlock { progress: 0. })),
+                        BehaviorNode::Task(Arc::new(TaskBuildBlock {
+                            progress: 0.,
+                            block: Block::STONE,
+                        })),
                     ]),
                 ])),
                 Box::new(BehaviorNode::Task(Arc::new(TaskUnassignJob))),
@@ -56,17 +58,17 @@ impl ScorerBuilder for ScorerMine {
     }
 }
 
-pub fn score_mine(
+pub fn score_build(
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
-    q_jobs: Query<(Entity, &Job, &JobLocation), (With<JobMine>, With<IsJobAccessible>)>,
+    q_jobs: Query<(Entity, &Job, &JobLocation), (With<JobBuild>, With<IsJobAccessible>)>,
     q_items: Query<&Item>,
     q_free_items: Query<(&Item, &Transform), Without<InInventory>>,
     q_actors: Query<
         (&Inventory, &Transform, &NavigationFlags),
         (With<Actor>, Without<HasBehavior>),
     >,
-    mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerMine)>,
+    mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerBuild)>,
 ) {
     for (ActorRef(actor), mut score, mut scorer) in q_behaviors.iter_mut() {
         let Ok((inventory, transform, flags)) = q_actors.get(*actor) else {
@@ -124,9 +126,9 @@ pub fn score_mine(
 
         scorer.job = best;
 
-        let item_tags = &[ItemTag::Pickaxe];
+        let item_tags = &[ItemTag::Stone];
 
-        let has_pickaxe = inventory.items.iter().any(|e| {
+        let has_stone = inventory.items.iter().any(|e| {
             let Ok(item) = q_items.get(*e) else {
                 return false;
             };
@@ -134,8 +136,8 @@ pub fn score_mine(
             test_item_tags(&item.tags, item_tags)
         });
 
-        // if we have a pickaxe, score is higher
-        if has_pickaxe {
+        // if we have stone, score is higher
+        if has_stone {
             *score = Score(0.6);
             continue;
         }

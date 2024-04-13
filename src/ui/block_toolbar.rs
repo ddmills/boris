@@ -1,6 +1,6 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
-use crate::{debug::debug_settings::DebugSettings, Block};
+use crate::Block;
 
 use super::Tool;
 
@@ -83,6 +83,34 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
             .with_children(|parent| {
                 parent.spawn(TextBundle::from_section(
                     "mine",
+                    TextStyle {
+                        font_size: 18.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ));
+            });
+
+        parent
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(48.0),
+                        height: Val::Px(48.0),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                    background_color: BTN_NONE.into(),
+                    ..default()
+                },
+                BtnTool {
+                    tool: Tool::BuildStone,
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "build",
                     TextStyle {
                         font_size: 18.0,
                         color: Color::rgb(0.9, 0.9, 0.9),

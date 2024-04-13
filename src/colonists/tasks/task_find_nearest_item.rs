@@ -105,6 +105,7 @@ fn find_nearest(
             .items
             .iter()
             .filter(|i| {
+                println!("testing item {}", i.index());
                 let Ok((_, item)) = q_items.get(**i) else {
                     return false;
                 };
@@ -113,6 +114,7 @@ fn find_nearest(
                     return false;
                 }
 
+                println!("testing flags {}", i.index());
                 test_item_tags(&item.tags, &tags)
             })
             .cloned()

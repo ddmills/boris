@@ -1,7 +1,6 @@
 use bevy::ecs::{
     component::Component,
     entity::Entity,
-    query::{With, Without},
     system::{Commands, Query},
 };
 use task_derive::TaskBuilder;

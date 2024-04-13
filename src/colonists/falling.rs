@@ -10,7 +10,7 @@ use bevy::{
 
 use crate::{colonists::BlockMove, Terrain};
 
-use super::{get_block_flags, partition, InPartition, NavigationFlags, NavigationGraph};
+use super::{InPartition, NavigationFlags, NavigationGraph};
 
 #[derive(Component)]
 pub struct Faller;

@@ -1,13 +1,4 @@
-use bevy::{
-    ecs::{
-        component::Component,
-        entity::Entity,
-        system::{Commands, Query, Res},
-    },
-    math::vec3,
-    time::Time,
-    transform::components::Transform,
-};
+use bevy::ecs::component::Component;
 use itertools::Itertools;
 use ordered_float::*;
 
@@ -151,13 +142,8 @@ pub fn get_granular_path(
                     let [chunk_idx, block_idx] =
                         terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
 
-                    let Some(partition_id) = terrain.get_partition_id(chunk_idx, block_idx) else {
-                        return None;
-                    };
-
-                    let Some(partition) = graph.get_partition(partition_id) else {
-                        return None;
-                    };
+                    let partition_id = terrain.get_partition_id(chunk_idx, block_idx)?;
+                    let partition = graph.get_partition(partition_id)?;
 
                     if partition.flags & request.flags != NavigationFlags::NONE {
                         Some(*p)
@@ -259,9 +245,7 @@ pub fn get_partition_path(
             (g, terrain.get_partition_id(g_chunk_idx, g_block_idx))
         })
         .filter_map(|(g, p_id)| {
-            let Some(id) = p_id else {
-                return None;
-            };
+            let id = p_id?;
             Some((g, *id))
         })
         .collect();
@@ -270,16 +254,13 @@ pub fn get_partition_path(
     goal_partition_ids.sort();
     goal_partition_ids.dedup();
 
-    let Some(starting_partition_id) = terrain.get_partition_id(start_chunk_idx, start_block_idx)
-    else {
-        return None;
-    };
+    let starting_partition_id = terrain.get_partition_id(start_chunk_idx, start_block_idx)?;
 
     if goals.is_empty() {
         return None;
     }
 
-    if goal_partition_ids.contains(&starting_partition_id) {
+    if goal_partition_ids.contains(starting_partition_id) {
         return Some(PartitionPath {
             path: vec![*starting_partition_id],
             goals: request.goals.clone(),
@@ -297,7 +278,7 @@ pub fn get_partition_path(
                     .neighbor_ids
                     .iter()
                     .filter(|n| {
-                        let Some(n_p) = graph.get_partition(*n) else {
+                        let Some(n_p) = graph.get_partition(n) else {
                             return false;
                         };
                         n_p.flags & request.flags != NavigationFlags::NONE

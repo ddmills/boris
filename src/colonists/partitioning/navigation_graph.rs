@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::{common::flood_fill, Terrain};
 
-use super::{partition, region, NavigationFlags, NavigationGroup, Partition, Region};
+use super::{NavigationFlags, NavigationGroup, Partition, Region};
 
 #[derive(Resource)]
 pub struct NavigationGraph {

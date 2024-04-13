@@ -2,12 +2,13 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    behavior_pick_system, behavior_system, block_move_system, fatigue_system,
-    fix_colonist_positions, mine_job_checker, on_spawn_colonist, partition, partition_debug,
-    score_mine, score_wander, task_assign_job, task_check_has_item, task_debug, task_find_bed,
-    task_find_nearest_item, task_get_job_location, task_idle, task_mine_block, task_move_to,
-    task_pick_random_spot, task_pick_up_item, task_sleep, task_unassign_job, update_item_partition,
-    MovedEvent, NavigationGraph, PartitionDebug, PartitionEvent, ScorerPlugin, SpawnColonistEvent,
+    behavior_pick_system, behavior_system, block_move_system, destroy_items, fatigue_system,
+    fix_colonist_positions, job_accessibility, on_spawn_colonist, partition, partition_debug,
+    score_build, score_mine, score_wander, task_assign_job, task_build_block, task_check_has_item,
+    task_debug, task_find_bed, task_find_nearest_item, task_get_job_location, task_idle,
+    task_mine_block, task_move_to, task_pick_random_spot, task_pick_up_item, task_sleep,
+    task_unassign_job, update_item_partition, DestroyItemEvent, MovedEvent, NavigationGraph,
+    PartitionDebug, PartitionEvent, ScorerPlugin, SpawnColonistEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -46,6 +47,7 @@ fn main() {
         })
         .add_event::<SpawnColonistEvent>()
         .add_event::<SpawnPickaxeEvent>()
+        .add_event::<DestroyItemEvent>()
         .add_event::<SpawnStoneEvent>()
         .add_event::<MovedEvent>()
         .add_event::<TerrainSliceChanged>()
@@ -95,14 +97,15 @@ fn main() {
         .add_systems(Update, partition_debug)
         .add_systems(Update, update_item_partition)
         .add_systems(Update, fix_colonist_positions)
-        .add_systems(Update, mine_job_checker)
+        .add_systems(Update, job_accessibility)
         .add_systems(Update, fatigue_system)
+        .add_systems(Update, destroy_items)
         .add_systems(Update, block_move_system)
         .add_systems(PreUpdate, behavior_system)
         .add_systems(Update, behavior_pick_system)
         .add_systems(
             Update,
-            (score_wander, score_mine).before(behavior_pick_system),
+            (score_wander, score_mine, score_build).before(behavior_pick_system),
         )
         .add_systems(Update, task_assign_job)
         .add_systems(Update, task_find_bed)
@@ -112,6 +115,7 @@ fn main() {
         .add_systems(Update, task_move_to)
         .add_systems(Update, task_get_job_location)
         .add_systems(Update, task_mine_block)
+        .add_systems(Update, task_build_block)
         .add_systems(Update, task_debug)
         .add_systems(Update, task_unassign_job)
         .add_systems(Update, task_check_has_item)

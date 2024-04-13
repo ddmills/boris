@@ -11,7 +11,8 @@ use bevy::{
 
 use crate::{
     colonists::{
-        Job, JobLocation, JobMine, JobType, NavigationGraph, PartitionDebug, SpawnColonistEvent,
+        Job, JobBuild, JobLocation, JobMine, JobType, NavigationGraph, PartitionDebug,
+        SpawnColonistEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -29,6 +30,7 @@ pub enum Tool {
     ClearBlocks,
     SpawnColonist,
     SpawnPickaxe,
+    BuildStone,
     BlockInfo,
     Mine,
 }
@@ -277,6 +279,25 @@ pub fn tool_system(
                 ev_spawn_pickaxe.send(SpawnPickaxeEvent {
                     pos: raycast.adj_pos,
                 });
+            }
+        }
+        Tool::BuildStone => {
+            if !raycast.is_adj_hit {
+                return;
+            }
+
+            if mouse_input.just_released(MouseButton::Left) {
+                println!("SPAWN BUILD JOB AT");
+                cmd.spawn((
+                    Job {
+                        job_type: JobType::BuildWall,
+                        assignee: None,
+                    },
+                    JobBuild,
+                    JobLocation {
+                        pos: raycast.adj_pos,
+                    },
+                ));
             }
         }
     }

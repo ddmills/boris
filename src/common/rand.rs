@@ -7,6 +7,7 @@ pub struct Rand {
     r: SmallRng,
 }
 
+#[allow(dead_code)]
 impl Rand {
     pub fn seed(seed: u64) -> Self {
         Self {

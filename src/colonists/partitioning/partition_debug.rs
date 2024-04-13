@@ -7,7 +7,7 @@ use bevy::{
 
 use crate::Terrain;
 
-use super::{partition, region, NavigationGraph, Partition};
+use super::{NavigationGraph, Partition};
 
 #[derive(Resource, Default)]
 pub struct PartitionDebug {

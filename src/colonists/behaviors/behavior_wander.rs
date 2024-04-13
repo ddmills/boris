@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use bevy::ecs::{
     component::Component,
+    query::With,
     system::{EntityCommands, Query},
 };
 
 use crate::colonists::{
-    Actor, ActorRef, Behavior, BehaviorNode, Score, ScorerBuilder, TaskIdle, TaskMoveTo,
-    TaskPickRandomSpot,
+    Behavior, BehaviorNode, Score, ScorerBuilder, TaskIdle, TaskMoveTo, TaskPickRandomSpot,
 };
 
 #[derive(Component, Clone)]
@@ -37,11 +37,8 @@ impl ScorerBuilder for ScorerWander {
     }
 }
 
-pub fn score_wander(
-    q_actors: Query<&Actor>,
-    mut q_behaviors: Query<(&ActorRef, &mut Score, &ScorerWander)>,
-) {
-    for (ActorRef(actor), mut score, wander) in q_behaviors.iter_mut() {
+pub fn score_wander(mut q_behaviors: Query<&mut Score, With<ScorerWander>>) {
+    for mut score in q_behaviors.iter_mut() {
         *score = Score(0.1);
     }
 }

@@ -66,6 +66,12 @@ pub enum BehaviorNode {
 pub enum BehaviorNodeState {
     Task(NodeState, Arc<dyn TaskBuilder>),
     Try(NodeState, Box<BehaviorNodeState>, Box<BehaviorNodeState>),
+    IfElse(
+        NodeState,
+        Box<BehaviorNodeState>,
+        Box<BehaviorNodeState>,
+        Box<BehaviorNodeState>,
+    ),
     Not(NodeState, Box<BehaviorNodeState>),
     Sequence(NodeState, Vec<BehaviorNodeState>, usize),
     Select(NodeState, Vec<BehaviorNodeState>, usize),
@@ -96,10 +102,12 @@ impl BehaviorNodeState {
                     .collect(),
                 0,
             ),
-            BehaviorNode::IfElse(condition, if_node, else_node) => Self::new(BehaviorNode::Try(
-                Box::new(BehaviorNode::Sequence(vec![*condition, *if_node])),
-                else_node,
-            )),
+            BehaviorNode::IfElse(condition, if_node, else_node) => BehaviorNodeState::IfElse(
+                NodeState::NotStarted,
+                Box::new(BehaviorNodeState::new(*condition)),
+                Box::new(BehaviorNodeState::new(*if_node)),
+                Box::new(BehaviorNodeState::new(*else_node)),
+            ),
             BehaviorNode::Select(seq) => BehaviorNodeState::Select(
                 NodeState::NotStarted,
                 seq.iter()
@@ -119,6 +127,12 @@ impl BehaviorNodeState {
                 *s = NodeState::NotStarted;
                 node.reset();
                 catch.reset();
+            }
+            BehaviorNodeState::IfElse(s, condition, if_node, else_node) => {
+                *s = NodeState::NotStarted;
+                condition.reset();
+                if_node.reset();
+                else_node.reset();
             }
             BehaviorNodeState::Not(s, node) => {
                 *s = NodeState::NotStarted;
@@ -144,6 +158,7 @@ impl BehaviorNodeState {
             BehaviorNodeState::Not(s, _) => s,
             BehaviorNodeState::Sequence(s, _, _) => s,
             BehaviorNodeState::Select(s, _, _) => s,
+            BehaviorNodeState::IfElse(s, _, _, _) => s,
         }
     }
 
@@ -176,37 +191,34 @@ impl BehaviorNodeState {
                     *s = NodeState::Success;
                     NodeState::Success
                 }
-                NodeState::Failed => {
-                    let b_result = catch.state();
-                    match b_result {
-                        NodeState::Success => {
-                            *s = NodeState::Success;
-                            NodeState::Success
-                        }
-                        NodeState::Failed => {
-                            *s = NodeState::Failed;
-                            NodeState::Failed
-                        }
-                        NodeState::Executing => {
+                NodeState::Failed => match catch.state() {
+                    NodeState::Success => {
+                        *s = NodeState::Success;
+                        NodeState::Success
+                    }
+                    NodeState::Failed => {
+                        *s = NodeState::Failed;
+                        NodeState::Failed
+                    }
+                    NodeState::Executing => {
+                        *s = NodeState::Executing;
+                        if NodeState::Executing != catch.run(cmd, task_state) {
+                            self.run(cmd, task_state)
+                        } else {
                             *s = NodeState::Executing;
-                            if NodeState::Executing != catch.run(cmd, task_state) {
-                                self.run(cmd, task_state)
-                            } else {
-                                *s = NodeState::Executing;
-                                NodeState::Executing
-                            }
-                        }
-                        NodeState::NotStarted => {
-                            *s = NodeState::Executing;
-                            if NodeState::Executing != catch.run(cmd, task_state) {
-                                self.run(cmd, task_state)
-                            } else {
-                                *s = NodeState::Executing;
-                                NodeState::Executing
-                            }
+                            NodeState::Executing
                         }
                     }
-                }
+                    NodeState::NotStarted => {
+                        *s = NodeState::Executing;
+                        if NodeState::Executing != catch.run(cmd, task_state) {
+                            self.run(cmd, task_state)
+                        } else {
+                            *s = NodeState::Executing;
+                            NodeState::Executing
+                        }
+                    }
+                },
                 NodeState::Executing => {
                     *s = NodeState::Executing;
                     if NodeState::Executing != node.run(cmd, task_state) {
@@ -226,6 +238,34 @@ impl BehaviorNodeState {
                     }
                 }
             },
+            BehaviorNodeState::IfElse(s, condition, if_node, else_node) => {
+                match condition.state().clone() {
+                    NodeState::Success => {
+                        *s = if_node.run(cmd, task_state);
+                        s.clone()
+                    }
+                    NodeState::Failed => {
+                        *s = else_node.run(cmd, task_state);
+                        s.clone()
+                    }
+                    NodeState::Executing => {
+                        if NodeState::Executing != condition.run(cmd, task_state) {
+                            self.run(cmd, task_state)
+                        } else {
+                            *s = NodeState::Executing;
+                            NodeState::Executing
+                        }
+                    }
+                    NodeState::NotStarted => {
+                        if NodeState::Executing != condition.run(cmd, task_state) {
+                            self.run(cmd, task_state)
+                        } else {
+                            *s = NodeState::Executing;
+                            NodeState::Executing
+                        }
+                    }
+                }
+            }
             BehaviorNodeState::Not(s, node) => match node.state().clone() {
                 NodeState::Success => {
                     *s = NodeState::Failed;

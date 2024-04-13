@@ -28,14 +28,14 @@ pub fn on_spawn_pickaxe(
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    let mesh: Handle<Mesh> = asset_server.load("meshes/sphere.obj");
-    let material = materials.add(StandardMaterial {
-        base_color: Color::CYAN,
-        unlit: true,
-        ..default()
-    });
-
     for ev in ev_spawn_pickaxe.read() {
+        let mesh: Handle<Mesh> = asset_server.load("meshes/sphere.obj");
+        let material = materials.add(StandardMaterial {
+            base_color: Color::CYAN,
+            unlit: true,
+            ..default()
+        });
+
         let entity = cmd
             .spawn((
                 MaterialMeshBundle {

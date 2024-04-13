@@ -60,9 +60,7 @@ pub fn task_move_to(
                 flags: NavigationFlags::TALL | NavigationFlags::LADDER,
             };
 
-            // generate path
             let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
-                println!("path could not be generated, cannot move to!");
                 *state = TaskState::Failed;
                 continue;
             };

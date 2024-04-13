@@ -1,7 +1,11 @@
-use bevy::ecs::{
-    component::Component,
-    entity::Entity,
-    system::{Commands, Query, Res},
+use bevy::{
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::{With, Without},
+        system::{Commands, Query, Res},
+    },
+    hierarchy::DespawnRecursiveExt,
 };
 
 use crate::Terrain;
@@ -33,6 +37,12 @@ pub struct JobLocation {
 pub struct IsJobAccessible;
 
 #[derive(Component)]
+pub struct IsJobCancelled;
+
+#[derive(Component)]
+pub struct IsJobCompleted;
+
+#[derive(Component)]
 pub struct JobAssignment {
     pub job: Entity,
 }
@@ -40,7 +50,7 @@ pub struct JobAssignment {
 pub fn job_accessibility(
     mut cmd: Commands,
     terrain: Res<Terrain>,
-    q_jobs: Query<(Entity, &Job, &JobLocation)>,
+    q_jobs: Query<(Entity, &Job, &JobLocation), (Without<IsJobCancelled>, Without<IsJobCompleted>)>,
 ) {
     for (entity, job, job_location) in q_jobs.iter() {
         if job.assignee.is_some() {
@@ -53,11 +63,50 @@ pub fn job_accessibility(
             .iter()
             .any(|g| terrain.get_partition_id_u32(g[0], g[1], g[2]).is_some());
 
-        if is_accessible {
+        let is_filled = terrain
+            .get_block(
+                job_location.pos[0],
+                job_location.pos[1],
+                job_location.pos[2],
+            )
+            .is_filled();
+
+        let is_cancelled = match job.job_type {
+            JobType::Mine => {
+                if !is_filled {
+                    cmd.entity(entity).try_insert(IsJobCancelled);
+                    true
+                } else {
+                    false
+                }
+            }
+            JobType::BuildWall => {
+                if is_filled {
+                    cmd.entity(entity).try_insert(IsJobCancelled);
+                    true
+                } else {
+                    false
+                }
+            }
+        };
+
+        if !is_cancelled && is_accessible {
             cmd.entity(entity).insert(IsJobAccessible);
         } else {
             cmd.entity(entity).remove::<IsJobAccessible>();
         }
+    }
+}
+
+pub fn job_despawn_complete(mut cmd: Commands, q_jobs: Query<Entity, With<IsJobCompleted>>) {
+    for e in q_jobs.iter() {
+        cmd.entity(e).despawn_recursive();
+    }
+}
+
+pub fn job_despawn_cancelled(mut cmd: Commands, q_jobs: Query<Entity, With<IsJobCancelled>>) {
+    for e in q_jobs.iter() {
+        cmd.entity(e).despawn_recursive();
     }
 }
 

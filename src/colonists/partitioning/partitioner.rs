@@ -197,7 +197,6 @@ pub fn partition(
 
             let partition = graph.get_partition_mut(item_partition_id).unwrap();
 
-            println!("updated item to be in new partition!");
             partition.items.insert(item);
             ecmd.insert(InPartition {
                 partition_id: *item_partition_id,

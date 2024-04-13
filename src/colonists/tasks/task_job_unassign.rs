@@ -9,13 +9,13 @@ use task_derive::TaskBuilder;
 use crate::colonists::{Blackboard, Job, JobAssignment, TaskBuilder, TaskState};
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskUnassignJob;
+pub struct TaskJobUnassign;
 
-pub fn task_unassign_job(
+pub fn task_job_unassign(
     mut cmd: Commands,
     job_holders: Query<Entity>,
     mut q_jobs: Query<&mut Job>,
-    mut q_actors: Query<(&Blackboard, &mut TaskState), With<TaskUnassignJob>>,
+    mut q_actors: Query<(&Blackboard, &mut TaskState), With<TaskJobUnassign>>,
 ) {
     for (blackboard, mut state) in q_actors.iter_mut() {
         let Some(job_entity) = blackboard.job else {

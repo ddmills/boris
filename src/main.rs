@@ -3,12 +3,14 @@ use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
     behavior_pick_system, behavior_system, block_move_system, destroy_items, fatigue_system,
-    fix_colonist_positions, job_accessibility, on_spawn_colonist, partition, partition_debug,
+    fix_colonist_positions, job_accessibility, job_despawn_cancelled, job_despawn_complete,
+    on_spawn_colonist, on_spawn_job_build, on_spawn_job_mine, partition, partition_debug,
     score_build, score_mine, score_wander, task_assign_job, task_build_block, task_check_has_item,
     task_debug, task_find_bed, task_find_nearest_item, task_get_job_location, task_idle,
-    task_mine_block, task_move_to, task_pick_random_spot, task_pick_up_item, task_sleep,
-    task_unassign_job, update_item_partition, DestroyItemEvent, MovedEvent, NavigationGraph,
-    PartitionDebug, PartitionEvent, ScorerPlugin, SpawnColonistEvent,
+    task_is_target_empty, task_job_cancel, task_job_complete, task_job_unassign, task_mine_block,
+    task_move_to, task_pick_random_spot, task_pick_up_item, task_sleep, update_item_partition,
+    DestroyItemEvent, MovedEvent, NavigationGraph, PartitionDebug, PartitionEvent, ScorerPlugin,
+    SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -49,6 +51,8 @@ fn main() {
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<DestroyItemEvent>()
         .add_event::<SpawnStoneEvent>()
+        .add_event::<SpawnJobBuildEvent>()
+        .add_event::<SpawnJobMineEvent>()
         .add_event::<MovedEvent>()
         .add_event::<TerrainSliceChanged>()
         .add_event::<PartitionEvent>()
@@ -101,7 +105,11 @@ fn main() {
         .add_systems(Update, fatigue_system)
         .add_systems(Update, destroy_items)
         .add_systems(Update, block_move_system)
+        .add_systems(PreUpdate, job_despawn_complete)
+        .add_systems(PreUpdate, job_despawn_cancelled)
         .add_systems(PreUpdate, behavior_system)
+        .add_systems(Update, on_spawn_job_build)
+        .add_systems(Update, on_spawn_job_mine)
         .add_systems(Update, behavior_pick_system)
         .add_systems(
             Update,
@@ -117,10 +125,13 @@ fn main() {
         .add_systems(Update, task_mine_block)
         .add_systems(Update, task_build_block)
         .add_systems(Update, task_debug)
-        .add_systems(Update, task_unassign_job)
+        .add_systems(Update, task_job_unassign)
+        .add_systems(Update, task_job_cancel)
+        .add_systems(Update, task_job_complete)
         .add_systems(Update, task_check_has_item)
         .add_systems(Update, task_find_nearest_item)
         .add_systems(Update, task_pick_up_item)
+        .add_systems(Update, task_is_target_empty)
         .run();
 }
 
@@ -132,7 +143,7 @@ fn setup(
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = asset_server.load("meshes/cube.obj");
+    let mesh = asset_server.load("meshes/cube_offcenter.obj");
     let material = materials.add(Color::RED);
 
     cmd.spawn((

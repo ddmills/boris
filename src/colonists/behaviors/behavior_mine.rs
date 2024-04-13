@@ -14,10 +14,10 @@ use bevy::{
 use crate::{
     colonists::{
         is_reachable, job_access_points, test_item_tags, tree_aquire_item, Actor, ActorRef,
-        Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible, Item,
-        ItemTag, Job, JobLocation, JobMine, NavigationFlags, NavigationGraph, PartitionPathRequest,
-        Score, ScorerBuilder, TaskAssignJob, TaskGetJobLocation, TaskMineBlock, TaskMoveTo,
-        TaskUnassignJob,
+        Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible,
+        IsJobCancelled, Item, ItemTag, Job, JobLocation, JobMine, NavigationFlags, NavigationGraph,
+        PartitionPathRequest, Score, ScorerBuilder, TaskAssignJob, TaskGetJobLocation,
+        TaskJobComplete, TaskJobUnassign, TaskMineBlock, TaskMoveTo,
     },
     common::Distance,
     Terrain,
@@ -48,9 +48,10 @@ impl ScorerBuilder for ScorerMine {
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo)),
                         BehaviorNode::Task(Arc::new(TaskMineBlock { progress: 0. })),
+                        BehaviorNode::Task(Arc::new(TaskJobComplete)),
                     ]),
                 ])),
-                Box::new(BehaviorNode::Task(Arc::new(TaskUnassignJob))),
+                Box::new(BehaviorNode::Task(Arc::new(TaskJobUnassign))),
             ),
         )
     }
@@ -59,7 +60,15 @@ impl ScorerBuilder for ScorerMine {
 pub fn score_mine(
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
-    q_jobs: Query<(Entity, &Job, &JobLocation), (With<JobMine>, With<IsJobAccessible>)>,
+    q_jobs: Query<
+        (Entity, &Job, &JobLocation),
+        (
+            With<JobMine>,
+            With<IsJobAccessible>,
+            Without<IsJobCancelled>,
+            Without<TaskJobComplete>,
+        ),
+    >,
     q_items: Query<&Item>,
     q_free_items: Query<(&Item, &Transform), Without<InInventory>>,
     q_actors: Query<

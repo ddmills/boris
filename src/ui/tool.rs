@@ -12,7 +12,7 @@ use bevy::{
 use crate::{
     colonists::{
         Job, JobBuild, JobLocation, JobMine, JobType, NavigationGraph, PartitionDebug,
-        SpawnColonistEvent,
+        SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -52,6 +52,8 @@ pub fn tool_system(
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
     mut ev_spawn_pickaxe: EventWriter<SpawnPickaxeEvent>,
+    mut ev_spawn_job_build: EventWriter<SpawnJobBuildEvent>,
+    mut ev_spawn_job_mine: EventWriter<SpawnJobMineEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
     mut debug_settings: ResMut<DebugSettings>,
 ) {
@@ -251,14 +253,7 @@ pub fn tool_system(
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
                             if terrain.get_block(x, y, z).is_filled() {
-                                cmd.spawn((
-                                    Job {
-                                        job_type: JobType::Mine,
-                                        assignee: None,
-                                    },
-                                    JobMine,
-                                    JobLocation { pos: [x, y, z] },
-                                ));
+                                ev_spawn_job_mine.send(SpawnJobMineEvent { pos: [x, y, z] });
                             }
                         }
                     }
@@ -287,17 +282,9 @@ pub fn tool_system(
             }
 
             if mouse_input.just_released(MouseButton::Left) {
-                println!("SPAWN BUILD JOB AT");
-                cmd.spawn((
-                    Job {
-                        job_type: JobType::BuildWall,
-                        assignee: None,
-                    },
-                    JobBuild,
-                    JobLocation {
-                        pos: raycast.adj_pos,
-                    },
-                ));
+                ev_spawn_job_build.send(SpawnJobBuildEvent {
+                    pos: raycast.adj_pos,
+                });
             }
         }
     }

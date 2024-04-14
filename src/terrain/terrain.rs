@@ -210,12 +210,6 @@ impl Terrain {
         }
     }
 
-    pub fn get_block_type(&self, x: u32, y: u32, z: u32) -> BlockType {
-        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
-
-        self.get_block_type_by_idx(chunk_idx, block_idx)
-    }
-
     pub fn get_block(&self, x: u32, y: u32, z: u32) -> Block {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
@@ -310,14 +304,6 @@ impl Terrain {
         0
     }
 
-    pub fn get_block_type_i32(&self, x: i32, y: i32, z: i32) -> BlockType {
-        if self.is_oob(x, y, z) {
-            return BlockType::OOB;
-        }
-
-        self.get_block_type(x as u32, y as u32, z as u32)
-    }
-
     pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
         if self.is_oob(x, y, z) {
             return Block {
@@ -346,7 +332,7 @@ impl Terrain {
     pub fn get_partition_id(&self, chunk_idx: u32, block_idx: u32) -> Option<u32> {
         let chunk = self.get_chunk(chunk_idx)?;
 
-        return chunk.get_partition_id(block_idx);
+        chunk.get_partition_id(block_idx)
     }
 
     pub fn get_partition_id_u32(&self, x: u32, y: u32, z: u32) -> Option<u32> {
@@ -461,7 +447,7 @@ impl Terrain {
             attempts += 1;
             if !(y >= slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {
                 let b = self.get_block(x as u32, y as u32, z as u32);
-                if b.block.is_rendered() {
+                if b.is_rendered() {
                     return RayResult {
                         is_hit: true,
                         block: b,

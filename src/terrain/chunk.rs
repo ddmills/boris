@@ -53,20 +53,6 @@ impl BlockBuffer {
         Block::OOB
     }
 
-    pub fn set_block(&mut self, block_idx: u32, block: Block) {
-        self.blocks[block_idx as usize] = block;
-        self.is_dirty = true;
-    }
-
-    pub fn get_block_type(&self, block_idx: u32) -> BlockType {
-        if let Some(block) = self.blocks.get(block_idx as usize) {
-            return block.block;
-        }
-
-        BlockType::OOB
-    }
-
-    #[allow(dead_code)]
     pub fn get_block_world_pos(&self, block_idx: u32) -> [u32; 3] {
         let local_pos = self.shape.delinearize(block_idx);
 

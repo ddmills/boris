@@ -12,7 +12,7 @@ use bevy::{
     },
 };
 
-use crate::{BlockFace, BlockType, ATTRIBUTE_BLOCK_LIGHT, ATTRIBUTE_BLOCK_PACKED};
+use crate::{Block, BlockFace, ATTRIBUTE_BLOCK_LIGHT, ATTRIBUTE_BLOCK_PACKED};
 
 #[derive(Resource)]
 pub struct ChunkMaterialRes {
@@ -61,7 +61,7 @@ impl Material for ChunkMaterial {
     }
 }
 
-pub fn pack_block(block: BlockType, dir: BlockFace, ao: VertexCornerCount) -> u32 {
+pub fn pack_block(block: Block, dir: BlockFace, ao: VertexCornerCount) -> u32 {
     let t_id = block.texture_idx(); // four bits, 0-15
     let f_id = dir.bit(); // three bits, 0-7
     let ao_id = ao.bit(); // two bits, 0-3

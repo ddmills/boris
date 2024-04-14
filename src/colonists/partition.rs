@@ -10,11 +10,11 @@ pub struct PartitionEvent {
 }
 
 pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationFlags {
-    let block = terrain.get_block_type_i32(x, y, z);
+    let block = terrain.get_block_i32(x, y, z);
 
     let mut flags = NavigationFlags::NONE;
 
-    if block == BlockType::LADDER {
+    if block.block == BlockType::LADDER {
         return NavigationFlags::LADDER;
     }
 
@@ -22,16 +22,16 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationF
         return NavigationFlags::NONE;
     }
 
-    let nblock_below = terrain.get_block_type_i32(x, y - 1, z);
+    let nblock_below = terrain.get_block_i32(x, y - 1, z);
 
-    if nblock_below == BlockType::LADDER {
+    if nblock_below.block == BlockType::LADDER {
         return NavigationFlags::LADDER;
     }
 
     if nblock_below.is_walkable() {
         flags |= NavigationFlags::SOLID_GROUND;
 
-        let nblock_above = terrain.get_block_type_i32(x, y + 1, z);
+        let nblock_above = terrain.get_block_i32(x, y + 1, z);
 
         if nblock_above.is_empty() {
             flags |= NavigationFlags::TALL;

@@ -250,7 +250,7 @@ pub fn tool_system(
                 for x in min_x..=max_x {
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
-                            if !terrain.get_block_type(x, y, z).is_empty() {
+                            if !terrain.get_block(x, y, z).is_empty() {
                                 ev_spawn_job_mine.send(SpawnJobMineEvent { pos: [x, y, z] });
                             }
                         }

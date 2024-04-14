@@ -34,7 +34,7 @@ pub fn task_mine_block(
             continue;
         };
 
-        if terrain.get_block_type(x, y, z).is_empty() {
+        if terrain.get_block(x, y, z).is_empty() {
             *state = TaskState::Success;
             continue;
         }

@@ -24,6 +24,81 @@ impl Block {
         sunlight: 0,
         partition_id: None,
     };
+
+    pub fn is_oob(&self) -> bool {
+        self.block == BlockType::OOB
+    }
+
+    pub fn is_rendered(&self) -> bool {
+        !matches!(self.block, BlockType::OOB | BlockType::EMPTY)
+    }
+
+    pub fn is_walkable(&self) -> bool {
+        !matches!(
+            self.block,
+            BlockType::OOB
+                | BlockType::EMPTY
+                | BlockType::LADDER
+                | BlockType::MAGMA
+                | BlockType::BLUEPRINT
+        )
+    }
+
+    pub fn is_empty(&self) -> bool {
+        matches!(self.block, BlockType::EMPTY | BlockType::BLUEPRINT)
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        match self.block {
+            BlockType::OOB => true,
+            BlockType::EMPTY => false,
+            _ => true,
+        }
+    }
+
+    pub fn get_light_level(&self) -> u8 {
+        match self.block {
+            BlockType::LAMP => 12,
+            BlockType::MAGMA => 6,
+            _ => 0,
+        }
+    }
+
+    pub fn is_light(&self) -> bool {
+        self.get_light_level() > 0
+    }
+
+    pub fn texture_idx(&self) -> u32 {
+        match self.block {
+            BlockType::DIRT => 1,
+            BlockType::GRASS => 2,
+            BlockType::STONE => 3,
+            BlockType::ASHLAR_LARGE => 4,
+            BlockType::ASHLAR => 5,
+            BlockType::MAGMA => 6,
+            BlockType::LADDER => 7,
+            BlockType::LAMP => 8,
+            BlockType::BLUEPRINT => 16,
+            _ => 0,
+        }
+    }
+
+    pub fn name(&self) -> String {
+        match self.block {
+            BlockType::OOB => String::from("out of bounds"),
+            BlockType::EMPTY => String::from("empty"),
+            BlockType::DIRT => String::from("dirt"),
+            BlockType::GRASS => String::from("grass"),
+            BlockType::STONE => String::from("stone"),
+            BlockType::LAMP => String::from("lamp"),
+            BlockType::MAGMA => String::from("magma"),
+            BlockType::ASHLAR_LARGE => String::from("ashlar (large)"),
+            BlockType::ASHLAR => String::from("ashlar"),
+            BlockType::LADDER => String::from("ladder"),
+            BlockType::BLUEPRINT => String::from("blueprint"),
+            _ => String::from("unknown"),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
@@ -44,33 +119,6 @@ impl BlockType {
 }
 
 impl BlockType {
-    pub fn is_oob(&self) -> bool {
-        *self == Self::OOB
-    }
-
-    pub fn is_rendered(&self) -> bool {
-        !matches!(*self, Self::OOB | Self::EMPTY)
-    }
-
-    pub fn is_walkable(&self) -> bool {
-        !matches!(
-            *self,
-            Self::OOB | Self::EMPTY | Self::LADDER | Self::MAGMA | Self::BLUEPRINT
-        )
-    }
-
-    pub fn is_empty(&self) -> bool {
-        matches!(*self, Self::EMPTY | Self::BLUEPRINT)
-    }
-
-    pub fn is_opaque(&self) -> bool {
-        match *self {
-            Self::OOB => true,
-            Self::EMPTY => false,
-            _ => true,
-        }
-    }
-
     pub fn get_light_level(&self) -> u8 {
         match *self {
             Self::LAMP => 12,
@@ -81,21 +129,6 @@ impl BlockType {
 
     pub fn is_light(&self) -> bool {
         self.get_light_level() > 0
-    }
-
-    pub fn texture_idx(&self) -> u32 {
-        match *self {
-            Self::DIRT => 1,
-            Self::GRASS => 2,
-            Self::STONE => 3,
-            Self::ASHLAR_LARGE => 4,
-            Self::ASHLAR => 5,
-            Self::MAGMA => 6,
-            Self::LADDER => 7,
-            Self::LAMP => 8,
-            Self::BLUEPRINT => 16,
-            _ => 0,
-        }
     }
 
     pub fn name(&self) -> String {

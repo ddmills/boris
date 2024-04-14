@@ -158,13 +158,13 @@ fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
 
     for x in 0..terrain.world_size_x() {
         for z in 0..terrain.world_size_z() {
-            let block = terrain.get_block_type(x, slice_y, z);
+            let block = terrain.get_block(x, slice_y, z);
 
             if !block.is_rendered() {
                 continue;
             }
 
-            let below = terrain.get_block_type(x, slice_y - 1, z);
+            let below = terrain.get_block(x, slice_y - 1, z);
 
             if !below.is_rendered() {
                 continue;

@@ -41,7 +41,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
                 let n_y_u32 = n_y as u32;
                 let n_z_u32 = n_z as u32;
 
-                if n_block.block.is_light() {
+                if n_block.is_light() {
                     terrain.add_light(n_x_u32, n_y_u32, n_z_u32, n_block.get_light_level());
                 } else {
                     terrain.set_torchlight(n_x_u32, n_y_u32, n_z_u32, 0);

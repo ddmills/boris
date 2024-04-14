@@ -229,14 +229,6 @@ impl Terrain {
         }
     }
 
-    pub fn get_block_type_by_idx(&self, chunk_idx: u32, block_idx: u32) -> BlockType {
-        if let Some(chunk) = self.get_chunk(chunk_idx) {
-            return chunk.get_block_type(block_idx);
-        }
-
-        BlockType::OOB
-    }
-
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.set_torchlight(x, y, z, value);
         self.lights_queue_add.push(LightNode { x, y, z, value });

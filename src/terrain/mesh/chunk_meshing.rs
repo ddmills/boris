@@ -12,7 +12,7 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::PartitionEvent, pack_block, Block, BlockFace, BlockType, Chunk, ChunkMaterial,
+    colonists::PartitionEvent, pack_block, Block, BlockFace, Chunk, ChunkMaterial,
     ChunkMaterialRes, Neighbor, Terrain, TerrainSlice, TerrainSliceChanged, VertexCornerCount,
 };
 

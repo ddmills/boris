@@ -53,16 +53,6 @@ impl BlockBuffer {
         Block::OOB
     }
 
-    pub fn get_block_world_pos(&self, block_idx: u32) -> [u32; 3] {
-        let local_pos = self.shape.delinearize(block_idx);
-
-        [
-            self.world_x + local_pos[0],
-            self.world_y + local_pos[1],
-            self.world_z + local_pos[2],
-        ]
-    }
-
     pub fn set_partition_id(&mut self, block_idx: u32, value: u32) {
         self.blocks[block_idx as usize].partition_id = Some(value);
     }

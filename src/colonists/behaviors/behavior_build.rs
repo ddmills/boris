@@ -20,7 +20,7 @@ use crate::{
         TaskMoveTo,
     },
     common::Distance,
-    Block, Terrain,
+    BlockType, Terrain,
 };
 
 #[derive(Component, Clone, Default)]
@@ -52,7 +52,7 @@ impl ScorerBuilder for ScorerBuild {
                                 BehaviorNode::Task(Arc::new(TaskMoveTo)),
                                 BehaviorNode::Task(Arc::new(TaskBuildBlock {
                                     progress: 0.,
-                                    block: Block::STONE,
+                                    block: BlockType::STONE,
                                 })),
                                 BehaviorNode::Task(Arc::new(TaskJobComplete)),
                             ]),

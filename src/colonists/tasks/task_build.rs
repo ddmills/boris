@@ -10,13 +10,13 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{Blackboard, DestroyItemEvent, TaskBuilder, TaskState},
-    Block, Terrain,
+    BlockType, Terrain,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskBuildBlock {
     pub progress: f32,
-    pub block: Block,
+    pub block: BlockType,
 }
 
 pub fn task_build_block(
@@ -32,7 +32,7 @@ pub fn task_build_block(
             continue;
         };
 
-        if !terrain.get_block(x, y, z).is_empty() {
+        if !terrain.get_block_type(x, y, z).is_empty() {
             *state = TaskState::Failed;
             continue;
         }
@@ -44,7 +44,7 @@ pub fn task_build_block(
         }
 
         if task.progress >= 1. {
-            terrain.set_block(x, y, z, task.block);
+            terrain.set_block_type(x, y, z, task.block);
 
             let item = blackboard.item.unwrap();
             ev_destroy_item.send(DestroyItemEvent { entity: item });

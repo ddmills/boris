@@ -17,14 +17,14 @@ use crate::{
     controls::Raycast,
     debug::debug_settings::DebugSettings,
     items::SpawnPickaxeEvent,
-    Block, Cursor, Terrain,
+    BlockType, Cursor, Terrain,
 };
 
 use super::Toolbar;
 
 #[derive(PartialEq, Clone)]
 pub enum Tool {
-    PlaceBlocks(Block),
+    PlaceBlocks(BlockType),
     TogglePathDebug,
     ClearBlocks,
     SpawnColonist,
@@ -88,7 +88,7 @@ pub fn tool_system(
                 for x in min_x..=max_x {
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
-                            terrain.set_block(x, y, z, block);
+                            terrain.set_block_type(x, y, z, block);
                         }
                     }
                 }
@@ -154,7 +154,7 @@ pub fn tool_system(
                 for x in min_x..=max_x {
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
-                            terrain.set_block(x, y, z, Block::EMPTY);
+                            terrain.set_block_type(x, y, z, BlockType::EMPTY);
                         }
                     }
                 }
@@ -188,8 +188,8 @@ pub fn tool_system(
                     return;
                 };
 
-                let partition = graph.get_partition(partition_id).unwrap();
-                partition_debug.partition_id = Some(*partition_id);
+                let partition = graph.get_partition(&partition_id).unwrap();
+                partition_debug.partition_id = Some(partition_id);
 
                 println!(
                     "partition_id={}, region_id={}, flags={}",
@@ -250,7 +250,7 @@ pub fn tool_system(
                 for x in min_x..=max_x {
                     for y in min_y..=max_y {
                         for z in min_z..=max_z {
-                            if terrain.get_block(x, y, z).is_filled() {
+                            if !terrain.get_block_type(x, y, z).is_empty() {
                                 ev_spawn_job_mine.send(SpawnJobMineEvent { pos: [x, y, z] });
                             }
                         }

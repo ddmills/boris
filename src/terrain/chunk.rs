@@ -1,7 +1,7 @@
 use bevy::{asset::Handle, ecs::component::Component, render::mesh::Mesh};
 use ndshape::{AbstractShape, RuntimeShape};
 
-use crate::Block;
+use crate::{Block, BlockType};
 
 #[derive(Component)]
 pub struct Chunk {
@@ -16,8 +16,6 @@ pub struct Chunk {
 pub struct BlockBuffer {
     pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
-    pub light: Box<[u8]>,
-    pub partitions: Box<[u32]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -30,9 +28,7 @@ pub struct BlockBuffer {
 impl BlockBuffer {
     pub fn new(shape: RuntimeShape<u32, 3>) -> Self {
         Self {
-            blocks: vec![Block::EMPTY; shape.size() as usize].into_boxed_slice(),
-            light: vec![0; shape.size() as usize].into_boxed_slice(),
-            partitions: vec![0; shape.size() as usize].into_boxed_slice(),
+            blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -44,8 +40,8 @@ impl BlockBuffer {
         }
     }
 
-    pub fn set_block(&mut self, block_idx: u32, value: Block) {
-        self.blocks[block_idx as usize] = value;
+    pub fn set_block_type(&mut self, block_idx: u32, value: BlockType) {
+        self.blocks[block_idx as usize].block = value;
         self.is_dirty = true;
     }
 
@@ -55,6 +51,19 @@ impl BlockBuffer {
         }
 
         Block::OOB
+    }
+
+    pub fn set_block(&mut self, block_idx: u32, block: Block) {
+        self.blocks[block_idx as usize] = block;
+        self.is_dirty = true;
+    }
+
+    pub fn get_block_type(&self, block_idx: u32) -> BlockType {
+        if let Some(block) = self.blocks.get(block_idx as usize) {
+            return block.block;
+        }
+
+        BlockType::OOB
     }
 
     #[allow(dead_code)]
@@ -69,45 +78,36 @@ impl BlockBuffer {
     }
 
     pub fn set_partition_id(&mut self, block_idx: u32, value: u32) {
-        self.partitions[block_idx as usize] = value;
+        self.blocks[block_idx as usize].partition_id = Some(value);
     }
 
     pub fn unset_partition_id(&mut self, block_idx: u32) {
-        self.partitions[block_idx as usize] = 0;
+        self.blocks[block_idx as usize].partition_id = None;
     }
 
-    pub fn get_partition_id(&self, block_idx: u32) -> Option<&u32> {
-        self.partitions
+    pub fn get_partition_id(&self, block_idx: u32) -> Option<u32> {
+        self.blocks
             .get(block_idx as usize)
-            .and_then(|id| if *id == 0 { None } else { Some(id) })
+            .and_then(|block| block.partition_id)
     }
 
     pub fn get_sunlight(&self, block_idx: u32) -> u8 {
-        if let Some(light) = self.light.get(block_idx as usize) {
-            return light >> 4 & 0xf;
-        }
-
-        0
+        self.get_block(block_idx).sunlight
     }
 
     pub fn get_torchlight(&self, block_idx: u32) -> u8 {
-        if let Some(light) = self.light.get(block_idx as usize) {
-            return light & 0xf;
-        }
-
-        0
+        self.get_block(block_idx).light
     }
 
     #[inline]
     pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
-        self.light[block_idx as usize] =
-            self.light[block_idx as usize] & 0xf | ((value << 4) & 0xf0);
+        self.blocks[block_idx as usize].sunlight = value;
         self.is_dirty = true;
     }
 
     #[inline]
     pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
-        self.light[block_idx as usize] = (self.light[block_idx as usize] & 0xf0) | (value & 0xf);
+        self.blocks[block_idx as usize].light = value;
         self.is_dirty = true;
     }
 }

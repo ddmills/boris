@@ -10,6 +10,8 @@ use bevy::{
     utils::default,
 };
 
+use crate::{BlockType, Terrain};
+
 use super::{Job, JobBuild, JobLocation, JobType};
 
 #[derive(Event)]
@@ -19,6 +21,7 @@ pub struct SpawnJobBuildEvent {
 
 pub fn on_spawn_job_build(
     mut cmd: Commands,
+    mut terrain: ResMut<Terrain>,
     mut ev_spawn_job_mine: EventReader<SpawnJobBuildEvent>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
@@ -31,17 +34,19 @@ pub fn on_spawn_job_build(
             ..default()
         });
 
+        terrain.set_block_type(ev.pos[0], ev.pos[1], ev.pos[2], BlockType::BLUEPRINT);
+
         cmd.spawn((
-            MaterialMeshBundle {
-                mesh: mesh.clone(),
-                material: material.clone(),
-                transform: Transform::from_xyz(
-                    ev.pos[0] as f32 + 0.5,
-                    ev.pos[1] as f32,
-                    ev.pos[2] as f32 + 0.5,
-                ),
-                ..default()
-            },
+            // MaterialMeshBundle {
+            //     mesh: mesh.clone(),
+            //     material: material.clone(),
+            //     transform: Transform::from_xyz(
+            //         ev.pos[0] as f32 + 0.5,
+            //         ev.pos[1] as f32,
+            //         ev.pos[2] as f32 + 0.5,
+            //     ),
+            //     ..default()
+            // },
             Job {
                 job_type: JobType::BuildWall,
                 assignee: None,

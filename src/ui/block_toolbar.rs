@@ -1,6 +1,6 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
-use crate::Block;
+use crate::BlockType;
 
 use super::Tool;
 
@@ -260,17 +260,17 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
             });
 
         vec![
-            Block::GRASS,
-            Block::DIRT,
-            Block::STONE,
-            Block::ASHLAR,
-            Block::ASHLAR_LARGE,
-            Block::LAMP,
-            Block::MAGMA,
-            Block::LADDER,
+            BlockType::GRASS,
+            BlockType::DIRT,
+            BlockType::STONE,
+            BlockType::ASHLAR,
+            BlockType::ASHLAR_LARGE,
+            BlockType::LAMP,
+            BlockType::MAGMA,
+            BlockType::LADDER,
         ]
         .into_iter()
-        .for_each(|block: Block| {
+        .for_each(|block: BlockType| {
             parent
                 .spawn((
                     ButtonBundle {

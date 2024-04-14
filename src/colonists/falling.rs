@@ -69,7 +69,7 @@ pub fn apply_falling(
                 let mut flag_ok = true;
 
                 if let Some(partition_id) = terrain.get_partition_id_u32(x, sub_y, z) {
-                    if let Some(partition) = graph.get_partition(partition_id) {
+                    if let Some(partition) = graph.get_partition(&partition_id) {
                         if let Some(flags) = opt_flags {
                             flag_ok = partition.flags.intersects(*flags);
                         }
@@ -91,7 +91,7 @@ pub fn apply_falling(
                 let mut flag_ok = true;
 
                 if let Some(partition_id) = terrain.get_partition_id_u32(x, add_y, z) {
-                    if let Some(partition) = graph.get_partition(partition_id) {
+                    if let Some(partition) = graph.get_partition(&partition_id) {
                         if let Some(flags) = opt_flags {
                             flag_ok = partition.flags.intersects(*flags);
                         }

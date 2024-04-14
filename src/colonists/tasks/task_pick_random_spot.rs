@@ -43,13 +43,13 @@ pub fn task_pick_random_spot(
             return;
         };
 
-        let Some(current_partition) = graph.get_partition(current_partition_id) else {
+        let Some(current_partition) = graph.get_partition(&current_partition_id) else {
             *state = TaskState::Failed;
             return;
         };
 
         let target_partition_id = if current_partition.neighbor_ids.is_empty() {
-            *current_partition_id
+            current_partition_id
         } else {
             let neighbor_ids: Vec<u32> = current_partition.neighbor_ids.iter().copied().collect();
             rand.pick(&neighbor_ids)

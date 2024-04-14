@@ -57,7 +57,6 @@ pub fn partition(
             // get the partition for this block. if it does not exist, create one
             let mut partition_id = terrain
                 .get_partition_id(chunk_idx, block_idx)
-                .copied()
                 .unwrap_or_else(|| {
                     let new_region_id = graph.create_region(block_flags);
                     let new_partition_id =
@@ -94,9 +93,7 @@ pub fn partition(
                     return true;
                 }
 
-                if let Some(npartition_id_ref) = terrain.get_partition_id(nchunk_idx, nblock_idx) {
-                    let npartition_id = *npartition_id_ref;
-
+                if let Some(npartition_id) = terrain.get_partition_id(nchunk_idx, nblock_idx) {
                     // already assigned to this partition
                     if npartition_id == partition_id {
                         return false;
@@ -196,11 +193,11 @@ pub fn partition(
                 continue;
             };
 
-            let partition = graph.get_partition_mut(item_partition_id).unwrap();
+            let partition = graph.get_partition_mut(&item_partition_id).unwrap();
 
             partition.items.insert(item);
             ecmd.insert(InPartition {
-                partition_id: *item_partition_id,
+                partition_id: item_partition_id,
             });
         }
     }

@@ -1,7 +1,7 @@
 use bevy::ecs::system::Resource;
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{common::sig_num, Block, BlockBuffer, BlockDetail, BlockFace, LightNode};
+use crate::{common::sig_num, Block, BlockBuffer, BlockFace, BlockType, LightNode};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -146,11 +146,11 @@ impl Terrain {
         [chunk_idx, block_idx]
     }
 
-    pub fn set_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
+    pub fn set_block_type(&mut self, x: u32, y: u32, z: u32, value: BlockType) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-            chunk.set_block(block_idx, value);
+            chunk.set_block_type(block_idx, value);
             self.remove_sunlight(x, y, z);
 
             if value.is_light() {
@@ -199,15 +199,21 @@ impl Terrain {
         }
     }
 
-    pub fn init_block(&mut self, x: u32, y: u32, z: u32, value: Block) {
+    pub fn init_block(&mut self, x: u32, y: u32, z: u32, value: BlockType) {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
         let chunk = self.get_chunk_mut(chunk_idx).unwrap();
-        chunk.set_block(block_idx, value);
+        chunk.set_block_type(block_idx, value);
 
         if value.is_light() {
             self.add_light(x, y, z, value.get_light_level());
         }
+    }
+
+    pub fn get_block_type(&self, x: u32, y: u32, z: u32) -> BlockType {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        self.get_block_type_by_idx(chunk_idx, block_idx)
     }
 
     pub fn get_block(&self, x: u32, y: u32, z: u32) -> Block {
@@ -216,37 +222,25 @@ impl Terrain {
         self.get_block_by_idx(chunk_idx, block_idx)
     }
 
-    pub fn get_block_detail(&self, x: u32, y: u32, z: u32) -> BlockDetail {
-        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
-
-        self.get_block_detail_by_idx(chunk_idx, block_idx)
-    }
-
-    pub fn get_block_detail_by_idx(&self, chunk_idx: u32, block_idx: u32) -> BlockDetail {
-        if let Some(chunk) = self.get_chunk(chunk_idx) {
-            let block = chunk.get_block(block_idx);
-            let light = chunk.get_torchlight(block_idx);
-            let sunlight = chunk.get_sunlight(block_idx);
-            return BlockDetail {
-                block,
-                light,
-                sunlight,
-            };
-        }
-
-        BlockDetail {
-            block: Block::OOB,
-            light: 0,
-            sunlight: 0,
-        }
-    }
-
     pub fn get_block_by_idx(&self, chunk_idx: u32, block_idx: u32) -> Block {
         if let Some(chunk) = self.get_chunk(chunk_idx) {
             return chunk.get_block(block_idx);
         }
 
-        Block::OOB
+        Block {
+            block: BlockType::OOB,
+            light: 0,
+            sunlight: 0,
+            partition_id: None,
+        }
+    }
+
+    pub fn get_block_type_by_idx(&self, chunk_idx: u32, block_idx: u32) -> BlockType {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_block_type(block_idx);
+        }
+
+        BlockType::OOB
     }
 
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
@@ -316,24 +310,25 @@ impl Terrain {
         0
     }
 
-    pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
+    pub fn get_block_type_i32(&self, x: i32, y: i32, z: i32) -> BlockType {
         if self.is_oob(x, y, z) {
-            return Block::OOB;
+            return BlockType::OOB;
         }
 
-        self.get_block(x as u32, y as u32, z as u32)
+        self.get_block_type(x as u32, y as u32, z as u32)
     }
 
-    pub fn get_block_detail_i32(&self, x: i32, y: i32, z: i32) -> BlockDetail {
+    pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
         if self.is_oob(x, y, z) {
-            return BlockDetail {
-                block: Block::OOB,
+            return Block {
+                block: BlockType::OOB,
                 light: 0,
                 sunlight: 0,
+                partition_id: None,
             };
         }
 
-        self.get_block_detail(x as u32, y as u32, z as u32)
+        self.get_block(x as u32, y as u32, z as u32)
     }
 
     pub fn unset_partition_id(&mut self, chunk_idx: u32, block_idx: u32) {
@@ -348,13 +343,13 @@ impl Terrain {
         }
     }
 
-    pub fn get_partition_id(&self, chunk_idx: u32, block_idx: u32) -> Option<&u32> {
+    pub fn get_partition_id(&self, chunk_idx: u32, block_idx: u32) -> Option<u32> {
         let chunk = self.get_chunk(chunk_idx)?;
 
         return chunk.get_partition_id(block_idx);
     }
 
-    pub fn get_partition_id_u32(&self, x: u32, y: u32, z: u32) -> Option<&u32> {
+    pub fn get_partition_id_u32(&self, x: u32, y: u32, z: u32) -> Option<u32> {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
         let chunk = self.get_chunk(chunk_idx)?;
@@ -362,19 +357,7 @@ impl Terrain {
         chunk.get_partition_id(block_idx)
     }
 
-    #[allow(dead_code)]
-    pub fn get_neighbors_immediate(&self, x: u32, y: u32, z: u32) -> [Block; 6] {
-        [
-            self.get_block(x + 1, y, z),
-            self.get_block(x - 1, y, z),
-            self.get_block(x, y + 1, z),
-            self.get_block(x, y - 1, z),
-            self.get_block(x, y, z + 1),
-            self.get_block(x, y, z - 1),
-        ]
-    }
-
-    pub fn get_neighbors_detail(&self, x: u32, y: u32, z: u32) -> [BlockDetail; 26] {
+    pub fn get_neighbors_detail(&self, x: u32, y: u32, z: u32) -> [Block; 26] {
         let x_i32 = x as i32;
         let y_i32 = y as i32;
         let z_i32 = z as i32;
@@ -388,34 +371,34 @@ impl Terrain {
 
         [
             // ABOVE
-            self.get_block_detail_i32(left, above, forward), // above, forward, left -- 0
-            self.get_block_detail_i32(x_i32, above, forward), // above, forward, middle -- 1
-            self.get_block_detail_i32(right, above, forward), // above, forward, right -- 2
-            self.get_block_detail_i32(left, above, z_i32),   // above, left -- 3
-            self.get_block_detail_i32(x_i32, above, z_i32),  // above -- 4
-            self.get_block_detail_i32(right, above, z_i32),  // above, right -- 5
-            self.get_block_detail_i32(left, above, behind),  // above, behind, left -- 6
-            self.get_block_detail_i32(x_i32, above, behind), // above, behind, middle -- 7
-            self.get_block_detail_i32(right, above, behind), // above, behind, right -- 8
+            self.get_block_i32(left, above, forward), // above, forward, left -- 0
+            self.get_block_i32(x_i32, above, forward), // above, forward, middle -- 1
+            self.get_block_i32(right, above, forward), // above, forward, right -- 2
+            self.get_block_i32(left, above, z_i32),   // above, left -- 3
+            self.get_block_i32(x_i32, above, z_i32),  // above -- 4
+            self.get_block_i32(right, above, z_i32),  // above, right -- 5
+            self.get_block_i32(left, above, behind),  // above, behind, left -- 6
+            self.get_block_i32(x_i32, above, behind), // above, behind, middle -- 7
+            self.get_block_i32(right, above, behind), // above, behind, right -- 8
             // MIDDLE
-            self.get_block_detail_i32(left, y_i32, forward), // middle, forward, left -- 9
-            self.get_block_detail_i32(x_i32, y_i32, forward), // middle, forward, middle -- 10
-            self.get_block_detail_i32(right, y_i32, forward), // middle, forward, right -- 11
-            self.get_block_detail_i32(left, y_i32, z_i32),   // middle, left -- 12
-            self.get_block_detail_i32(right, y_i32, z_i32),  // middle, right -- 13
-            self.get_block_detail_i32(left, y_i32, behind),  // middle, behind, left -- 14
-            self.get_block_detail_i32(x_i32, y_i32, behind), // middle, behind, middle -- 15
-            self.get_block_detail_i32(right, y_i32, behind), // middle, behind, right -- 16
+            self.get_block_i32(left, y_i32, forward), // middle, forward, left -- 9
+            self.get_block_i32(x_i32, y_i32, forward), // middle, forward, middle -- 10
+            self.get_block_i32(right, y_i32, forward), // middle, forward, right -- 11
+            self.get_block_i32(left, y_i32, z_i32),   // middle, left -- 12
+            self.get_block_i32(right, y_i32, z_i32),  // middle, right -- 13
+            self.get_block_i32(left, y_i32, behind),  // middle, behind, left -- 14
+            self.get_block_i32(x_i32, y_i32, behind), // middle, behind, middle -- 15
+            self.get_block_i32(right, y_i32, behind), // middle, behind, right -- 16
             // BELOW
-            self.get_block_detail_i32(left, below, forward), // below, forward, left -- 17
-            self.get_block_detail_i32(x_i32, below, forward), // below, forward, middle -- 18
-            self.get_block_detail_i32(right, below, forward), // below, forward, right -- 19
-            self.get_block_detail_i32(left, below, z_i32),   // below, left -- 20
-            self.get_block_detail_i32(x_i32, below, z_i32),  // below -- 21
-            self.get_block_detail_i32(right, below, z_i32),  // below, right -- 22
-            self.get_block_detail_i32(left, below, behind),  // below, behind, left -- 23
-            self.get_block_detail_i32(x_i32, below, behind), // below, behind, middle -- 24
-            self.get_block_detail_i32(right, below, behind), // below, behind, right -- 25
+            self.get_block_i32(left, below, forward), // below, forward, left -- 17
+            self.get_block_i32(x_i32, below, forward), // below, forward, middle -- 18
+            self.get_block_i32(right, below, forward), // below, forward, right -- 19
+            self.get_block_i32(left, below, z_i32),   // below, left -- 20
+            self.get_block_i32(x_i32, below, z_i32),  // below -- 21
+            self.get_block_i32(right, below, z_i32),  // below, right -- 22
+            self.get_block_i32(left, below, behind),  // below, behind, left -- 23
+            self.get_block_i32(x_i32, below, behind), // below, behind, middle -- 24
+            self.get_block_i32(right, below, behind), // below, behind, right -- 25
         ]
     }
 
@@ -478,7 +461,7 @@ impl Terrain {
             attempts += 1;
             if !(y >= slice_y as i32 || x < 0 || y < 0 || z < 0 || x > wx || y > wy || z > wz) {
                 let b = self.get_block(x as u32, y as u32, z as u32);
-                if b.is_filled() {
+                if b.block.is_rendered() {
                     return RayResult {
                         is_hit: true,
                         block: b,

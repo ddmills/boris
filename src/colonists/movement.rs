@@ -51,13 +51,13 @@ pub fn update_item_partition(
                 println!("doh! item not in a partition? {}", ev.entity.index());
                 continue;
             };
-            let Some(new_partition) = graph.get_partition_mut(new_partition_id) else {
+            let Some(new_partition) = graph.get_partition_mut(&new_partition_id) else {
                 continue;
             };
 
             new_partition.items.insert(ev.entity);
             ecmd.insert(InPartition {
-                partition_id: *new_partition_id,
+                partition_id: new_partition_id,
             });
         }
     }

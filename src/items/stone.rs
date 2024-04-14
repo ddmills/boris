@@ -63,14 +63,12 @@ pub fn on_spawn_stone(
             continue;
         };
 
-        let Some(partition) = graph.get_partition_mut(partition_id) else {
+        let Some(partition) = graph.get_partition_mut(&partition_id) else {
             println!("Missing partition trying to insert item! {}", partition_id);
             continue;
         };
 
         partition.items.insert(entity);
-        cmd.entity(entity).insert(InPartition {
-            partition_id: *partition_id,
-        });
+        cmd.entity(entity).insert(InPartition { partition_id });
     }
 }

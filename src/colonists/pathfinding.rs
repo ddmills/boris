@@ -47,7 +47,7 @@ pub fn get_granular_path(
 ) -> Option<GranularPath> {
     let current_partition_id =
         terrain.get_partition_id_u32(request.start[0], request.start[1], request.start[2])?;
-    let is_last_partition = request.goal_partition_id == *current_partition_id;
+    let is_last_partition = request.goal_partition_id == current_partition_id;
     let goal_partition = graph.get_partition(&request.goal_partition_id)?;
 
     let goal_positions = if is_last_partition {
@@ -81,7 +81,7 @@ pub fn get_granular_path(
                     return false;
                 };
 
-                *partition_id == request.goal_partition_id
+                partition_id == request.goal_partition_id
             }
         },
         cost: |a, b| Distance::diagonal([a[0], a[1], a[2]], [b[0], b[1], b[2]]),
@@ -143,7 +143,7 @@ pub fn get_granular_path(
                         terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
 
                     let partition_id = terrain.get_partition_id(chunk_idx, block_idx)?;
-                    let partition = graph.get_partition(partition_id)?;
+                    let partition = graph.get_partition(&partition_id)?;
 
                     if partition.flags & request.flags != NavigationFlags::NONE {
                         Some(*p)
@@ -204,7 +204,7 @@ pub fn is_reachable(
     };
 
     let start_group_ids = graph
-        .get_groups_for_partition(partition_id)
+        .get_groups_for_partition(&partition_id)
         .iter()
         .filter_map(|group| {
             if group.flags.intersects(request.flags) {
@@ -222,7 +222,7 @@ pub fn is_reachable(
         .unique()
         .any(|goal_partition_id| {
             graph
-                .get_group_ids_for_partition(goal_partition_id)
+                .get_group_ids_for_partition(&goal_partition_id)
                 .iter()
                 .any(|goal_group_ids| start_group_ids.contains(goal_group_ids))
         })
@@ -245,7 +245,7 @@ pub fn get_partition_path(
         })
         .filter_map(|(g, p_id)| {
             let id = p_id?;
-            Some((g, *id))
+            Some((g, id))
         })
         .collect();
 
@@ -259,16 +259,16 @@ pub fn get_partition_path(
         return None;
     }
 
-    if goal_partition_ids.contains(starting_partition_id) {
+    if goal_partition_ids.contains(&starting_partition_id) {
         return Some(PartitionPath {
-            path: vec![*starting_partition_id],
+            path: vec![starting_partition_id],
             goals: request.goals.clone(),
             flags: request.flags,
         });
     }
 
     let partition_path = astar(AStarSettings {
-        start: *starting_partition_id,
+        start: starting_partition_id,
         is_goal: |p| goal_partition_ids.contains(&p),
         max_depth: 2000,
         neighbors: |v| {

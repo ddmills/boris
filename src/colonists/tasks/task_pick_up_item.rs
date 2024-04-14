@@ -55,7 +55,7 @@ pub fn task_pick_up_item(
             panic!("Missing partition_id?");
         };
 
-        let Some(partition) = graph.get_partition_mut(partition_id) else {
+        let Some(partition) = graph.get_partition_mut(&partition_id) else {
             panic!("Missing partition!? {}", partition_id);
         };
 

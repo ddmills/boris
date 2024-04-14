@@ -12,7 +12,7 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::PartitionEvent, pack_block, Block, BlockFace, Chunk, ChunkMaterial,
+    colonists::PartitionEvent, pack_block, BlockFace, BlockType, Chunk, ChunkMaterial,
     ChunkMaterialRes, Neighbor, Terrain, TerrainSlice, TerrainSliceChanged, VertexCornerCount,
 };
 
@@ -171,9 +171,9 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                 let wx = chunk_offset[0] + x;
                 let wy = chunk_offset[1] + y;
                 let wz = chunk_offset[2] + z;
-                let block = terrain.get_block(wx, wy, wz);
+                let block = terrain.get_block_type(wx, wy, wz);
 
-                if !block.is_filled() {
+                if !block.is_rendered() {
                     continue;
                 }
 
@@ -183,7 +183,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
 
                 let neighbors = terrain.get_neighbors_detail(wx, wy, wz);
 
-                if !neighbors[Neighbor::ABOVE.idx()].block.is_filled() {
+                if !neighbors[Neighbor::ABOVE.idx()].block.is_rendered() {
                     // add face above
                     data.positions.push([fx, fy + 1., fz + 1.]); // behind left
                     let f1_ao = vert_ao(
@@ -250,7 +250,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx += 4;
                 }
 
-                if !neighbors[Neighbor::FORWARD.idx()].block.is_filled() {
+                if !neighbors[Neighbor::FORWARD.idx()].block.is_rendered() {
                     // add face in front
                     data.positions.push([fx + 1., fy, fz]); // bottom right
                     let f1_ao = vert_ao(
@@ -317,7 +317,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx += 4;
                 }
 
-                if !neighbors[Neighbor::RIGHT.idx()].block.is_filled() {
+                if !neighbors[Neighbor::RIGHT.idx()].block.is_rendered() {
                     // add face right
                     data.positions.push([fx + 1., fy, fz + 1.]); // bottom back
                     let f1_ao = vert_ao(
@@ -384,7 +384,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx += 4;
                 }
 
-                if !neighbors[Neighbor::BEHIND.idx()].block.is_filled() {
+                if !neighbors[Neighbor::BEHIND.idx()].block.is_rendered() {
                     // add face behind
                     data.positions.push([fx, fy, fz + 1.]); // bottom left
                     let f1_ao = vert_ao(
@@ -451,7 +451,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx += 4;
                 }
 
-                if !neighbors[Neighbor::LEFT.idx()].block.is_filled() {
+                if !neighbors[Neighbor::LEFT.idx()].block.is_rendered() {
                     // add face left
                     data.positions.push([fx, fy, fz]); // below forward
                     let f1_ao = vert_ao(
@@ -518,7 +518,7 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
                     idx += 4;
                 }
 
-                if !neighbors[Neighbor::BELOW.idx()].block.is_filled() {
+                if !neighbors[Neighbor::BELOW.idx()].block.is_rendered() {
                     // add face below
                     data.positions.push([fx + 1., fy, fz + 1.]); // behind right
                     let f1_ao = vert_ao(
@@ -591,10 +591,10 @@ fn build_chunk_mesh(terrain: &Terrain, chunk_idx: u32) -> ChunkMeshData {
     data
 }
 
-fn vert_ao(side1: Block, side2: Block, corner: Block) -> VertexCornerCount {
-    let s1f = side1.is_filled();
-    let s2f = side2.is_filled();
-    let cf = corner.is_filled();
+fn vert_ao(side1: BlockType, side2: BlockType, corner: BlockType) -> VertexCornerCount {
+    let s1f = side1.is_rendered();
+    let s2f = side2.is_rendered();
+    let cf = corner.is_rendered();
 
     if s1f && s2f {
         return VertexCornerCount::Three;

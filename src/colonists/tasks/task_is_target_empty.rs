@@ -24,7 +24,7 @@ pub fn task_is_target_empty(
             continue;
         };
 
-        if terrain.get_block(x, y, z).is_empty() {
+        if terrain.get_block_type(x, y, z).is_empty() {
             *state = TaskState::Success;
             continue;
         }

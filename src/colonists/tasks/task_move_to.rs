@@ -98,7 +98,7 @@ pub fn task_move_to(
             continue;
         };
 
-        let partition_path_idx = path.partition_path.iter().position(|p| p == partition_id);
+        let partition_path_idx = path.partition_path.iter().position(|p| *p == partition_id);
 
         if let Some(idx) = partition_path_idx {
             path.current_partition_idx = idx;

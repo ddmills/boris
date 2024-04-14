@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::{common::FractalNoise, Block, Terrain};
+use crate::{common::FractalNoise, BlockType, Terrain};
 use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
@@ -33,7 +33,7 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
 
                 // above ground
                 if y > surface {
-                    terrain.init_block(x, y, z, Block::EMPTY);
+                    terrain.init_block(x, y, z, BlockType::EMPTY);
                     if y == surface + 1 {
                         terrain.add_sunlight(x, y, z, 15);
                     } else {
@@ -43,7 +43,7 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
                 }
 
                 if y <= magma_level {
-                    terrain.init_block(x, y, z, Block::MAGMA);
+                    terrain.init_block(x, y, z, BlockType::MAGMA);
                     continue;
                 }
 
@@ -56,17 +56,17 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
                 if c > depth {
                     let cave = caves.get_3d(x_f32, y_f32, z_f32);
                     if cave < 0.5 {
-                        terrain.init_block(x, y, z, Block::EMPTY);
+                        terrain.init_block(x, y, z, BlockType::EMPTY);
                         continue;
                     }
                 }
 
                 if y == surface {
-                    terrain.init_block(x, y, z, Block::GRASS);
+                    terrain.init_block(x, y, z, BlockType::GRASS);
                 } else if y > surface - dirt_depth {
-                    terrain.init_block(x, y, z, Block::DIRT);
+                    terrain.init_block(x, y, z, BlockType::DIRT);
                 } else {
-                    terrain.init_block(x, y, z, Block::STONE);
+                    terrain.init_block(x, y, z, BlockType::STONE);
                 }
             }
         }

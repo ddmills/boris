@@ -12,7 +12,7 @@ use crate::{
     colonists::{Blackboard, TaskBuilder, TaskState},
     common::Rand,
     items::SpawnStoneEvent,
-    Block, Terrain,
+    BlockType, Terrain,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
@@ -34,13 +34,13 @@ pub fn task_mine_block(
             continue;
         };
 
-        if terrain.get_block(x, y, z).is_empty() {
+        if terrain.get_block_type(x, y, z).is_empty() {
             *state = TaskState::Success;
             continue;
         }
 
         if task.progress >= 1. {
-            terrain.set_block(x, y, z, Block::EMPTY);
+            terrain.set_block_type(x, y, z, BlockType::EMPTY);
 
             if rand.bool(0.35) {
                 ev_spawn_stone.send(SpawnStoneEvent { pos: [x, y, z] });

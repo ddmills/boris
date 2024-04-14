@@ -35,7 +35,7 @@ fn main() {
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
-            tool: Tool::PlaceBlocks(Block::STONE),
+            tool: Tool::PlaceBlocks(BlockType::STONE),
         })
         .insert_resource(Ui {
             pointer_captured: false,
@@ -45,7 +45,7 @@ fn main() {
             hit_pos: [0, 0, 0],
             is_adj_hit: false,
             adj_pos: [0, 0, 0],
-            hit_block: Block::EMPTY,
+            hit_block: Block::OOB,
         })
         .add_event::<SpawnColonistEvent>()
         .add_event::<SpawnPickaxeEvent>()

@@ -63,13 +63,13 @@ pub fn job_accessibility(
             .iter()
             .any(|g| terrain.get_partition_id_u32(g[0], g[1], g[2]).is_some());
 
-        let is_filled = terrain
-            .get_block(
+        let is_filled = !terrain
+            .get_block_type(
                 job_location.pos[0],
                 job_location.pos[1],
                 job_location.pos[2],
             )
-            .is_filled();
+            .is_empty();
 
         let is_cancelled = match job.job_type {
             JobType::Mine => {

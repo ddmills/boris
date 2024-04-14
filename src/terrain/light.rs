@@ -30,7 +30,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
         ];
 
         for [n_x, n_y, n_z] in neighbors {
-            let n_detail = terrain.get_block_detail_i32(n_x, n_y, n_z);
+            let n_detail = terrain.get_block_i32(n_x, n_y, n_z);
 
             if n_detail.block.is_oob() {
                 continue;
@@ -87,7 +87,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
         let current_light = terrain.get_torchlight_xyz(node.x, node.y, node.z);
 
         for [n_x, n_y, n_z] in neighbors {
-            let n_detail = terrain.get_block_detail_i32(n_x, n_y, n_z);
+            let n_detail = terrain.get_block_i32(n_x, n_y, n_z);
 
             if n_detail.block.is_opaque() {
                 continue;
@@ -120,7 +120,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
         ];
 
         for [n_x, n_y, n_z] in neighbors {
-            let n_detail = terrain.get_block_detail_i32(n_x, n_y, n_z);
+            let n_detail = terrain.get_block_i32(n_x, n_y, n_z);
 
             if (n_detail.sunlight == 15 && n_y == world_y - 1)
                 || (n_detail.sunlight != 0 && n_detail.sunlight < node.value)
@@ -159,7 +159,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
 
         let node = terrain.sunlight_queue_add.remove(0);
 
-        let block_detail = terrain.get_block_detail(node.x, node.y, node.z);
+        let block_detail = terrain.get_block(node.x, node.y, node.z);
 
         if block_detail.block.is_opaque() {
             continue;
@@ -179,7 +179,7 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
         ];
 
         for [n_x, n_y, n_z] in neighbors {
-            let n_detail = terrain.get_block_detail_i32(n_x, n_y, n_z);
+            let n_detail = terrain.get_block_i32(n_x, n_y, n_z);
 
             if n_detail.block.is_opaque() {
                 continue;

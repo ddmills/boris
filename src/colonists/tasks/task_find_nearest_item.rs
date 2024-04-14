@@ -55,11 +55,12 @@ pub fn task_find_nearest_item(
 
         let Some(items) = find_nearest(*start_id, task.0.clone(), &graph, &q_items) else {
             println!("No nearby item with matching tags");
+            for tag in task.0.clone() {
+                println!("- tag {}", tag);
+            }
             *state = TaskState::Failed;
             continue;
         };
-
-        println!("found {} matching items!", items.len());
 
         let item_entity = items.first().unwrap();
 

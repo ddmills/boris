@@ -122,7 +122,6 @@ pub fn task_move_to(
                     flags: path.flags,
                 },
             ) else {
-                println!("Could not get granular path, retrying!");
                 cmd.entity(*actor).remove::<Path>();
                 continue;
             };

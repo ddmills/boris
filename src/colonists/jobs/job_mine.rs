@@ -10,7 +10,7 @@ use bevy::{
     utils::default,
 };
 
-use super::{Job, JobBuild, JobLocation, JobMine, JobType};
+use super::{Job, JobLocation, JobMine, JobType};
 
 #[derive(Event)]
 pub struct SpawnJobMineEvent {

@@ -33,6 +33,7 @@ pub fn partition(
 ) {
     for ev in partition_ev.read() {
         let chunk_idx = ev.chunk_idx;
+
         let mut items: HashSet<Entity> = HashSet::new();
 
         let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
@@ -178,7 +179,7 @@ pub fn partition(
 
         for item in items {
             let Ok(transform) = q_items.get(item) else {
-                println!("Item does not exist anymore.");
+                println!("Item does not exist anymore. {}", item.index());
                 continue;
             };
 

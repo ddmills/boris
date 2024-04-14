@@ -12,7 +12,7 @@ use bevy::{
 
 use crate::Terrain;
 
-use super::{InInventory, InPartition, NavigationGraph};
+use super::{InInventory, InPartition, Item, NavigationGraph};
 
 #[derive(Event)]
 pub struct MovedEvent {
@@ -27,6 +27,7 @@ pub fn update_item_partition(
     mut ev_moved: EventReader<MovedEvent>,
     q_in_inventory: Query<&InInventory>,
     q_in_partition: Query<&InPartition>,
+    q_items: Query<&Item>,
 ) {
     for ev in ev_moved.read() {
         let mut ecmd = cmd.entity(ev.entity);
@@ -44,19 +45,21 @@ pub fn update_item_partition(
             continue;
         }
 
-        let [x, y, z] = ev.position;
-        let Some(new_partition_id) = terrain.get_partition_id_u32(x, y, z) else {
-            // not in a partition
-            continue;
-        };
-        let Some(new_partition) = graph.get_partition_mut(new_partition_id) else {
-            continue;
-        };
+        if q_items.contains(ev.entity) {
+            let [x, y, z] = ev.position;
+            let Some(new_partition_id) = terrain.get_partition_id_u32(x, y, z) else {
+                println!("doh! item not in a partition? {}", ev.entity.index());
+                continue;
+            };
+            let Some(new_partition) = graph.get_partition_mut(new_partition_id) else {
+                continue;
+            };
 
-        new_partition.items.insert(ev.entity);
-        ecmd.insert(InPartition {
-            partition_id: *new_partition_id,
-        });
+            new_partition.items.insert(ev.entity);
+            ecmd.insert(InPartition {
+                partition_id: *new_partition_id,
+            });
+        }
     }
 }
 

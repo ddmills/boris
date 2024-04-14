@@ -1,11 +1,8 @@
-use bevy::{
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::With,
-        system::{Commands, Query},
-    },
-    hierarchy::DespawnRecursiveExt,
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    query::With,
+    system::{Commands, Query},
 };
 use task_derive::TaskBuilder;
 

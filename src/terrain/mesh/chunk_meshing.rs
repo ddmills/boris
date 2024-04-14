@@ -85,7 +85,6 @@ pub fn setup_chunk_meshes(
                 center: Vec3A::new(size, size, size),
                 half_extents: Vec3A::new(size, size, size),
             },
-            // Wireframe,
         ));
     }
 }
@@ -127,7 +126,6 @@ pub fn process_dirty_chunks(
         update_slice = true;
         ev_partition.send(PartitionEvent {
             chunk_idx: chunk.chunk_idx,
-            refresh: true,
         });
     });
 

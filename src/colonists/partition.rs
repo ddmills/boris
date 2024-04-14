@@ -7,7 +7,6 @@ use super::NavigationFlags;
 #[derive(Event)]
 pub struct PartitionEvent {
     pub chunk_idx: u32,
-    pub refresh: bool,
 }
 
 pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationFlags {

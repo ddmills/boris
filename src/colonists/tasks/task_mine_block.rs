@@ -42,7 +42,7 @@ pub fn task_mine_block(
         if task.progress >= 1. {
             terrain.set_block(x, y, z, Block::EMPTY);
 
-            if rand.bool(0.25) {
+            if rand.bool(0.35) {
                 ev_spawn_stone.send(SpawnStoneEvent { pos: [x, y, z] });
             }
 

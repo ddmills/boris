@@ -19,14 +19,13 @@ pub fn task_job_complete(
 ) {
     for (blackboard, mut state) in q_actors.iter_mut() {
         let Some(job_entity) = blackboard.job else {
-            println!("no job on blackboard, cannot complete!");
+            println!("ERR: cannot complete job: no job on blackboard!");
             *state = TaskState::Failed;
             continue;
         };
 
-        println!("Completing job");
         let Ok(mut job) = q_jobs.get_mut(job_entity) else {
-            println!("ERR: job does not exist!?");
+            println!("ERR: cannot complete job: job does not exist!?");
             *state = TaskState::Failed;
             continue;
         };
@@ -35,7 +34,7 @@ pub fn task_job_complete(
             if let Ok(holder) = job_holders.get(job_assignee) {
                 cmd.entity(holder).remove::<JobAssignment>();
             } else {
-                println!("ERR: no holder for job!?");
+                println!("ERR: cannot complete job: no holder for job!?");
             };
         }
 

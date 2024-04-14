@@ -2,8 +2,8 @@ use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    behavior_pick_system, behavior_system, block_move_system, destroy_items, fatigue_system,
-    fix_colonist_positions, job_accessibility, job_despawn_cancelled, job_despawn_complete,
+    apply_falling, behavior_pick_system, behavior_system, block_move_system, destroy_items,
+    fatigue_system, job_accessibility, job_despawn_cancelled, job_despawn_complete,
     on_spawn_colonist, on_spawn_job_build, on_spawn_job_mine, partition, partition_debug,
     score_build, score_mine, score_wander, task_assign_job, task_build_block, task_check_has_item,
     task_debug, task_find_bed, task_find_nearest_item, task_get_job_location, task_idle,
@@ -86,7 +86,7 @@ fn main() {
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
         .add_systems(Update, scroll_events)
-        .add_systems(Update, process_dirty_chunks)
+        // .add_systems(Update, process_dirty_chunks)
         .add_systems(Update, on_slice_changed)
         .add_systems(Update, update_slice_mesh)
         .add_systems(Update, light_system)
@@ -97,10 +97,13 @@ fn main() {
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, on_spawn_stone)
-        .add_systems(Update, partition)
+        .add_systems(
+            Update,
+            (process_dirty_chunks, partition, update_item_partition).chain(),
+        )
+        // .add_systems(Update, update_item_partition)
+        .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
-        .add_systems(Update, update_item_partition)
-        .add_systems(Update, fix_colonist_positions)
         .add_systems(Update, job_accessibility)
         .add_systems(Update, fatigue_system)
         .add_systems(Update, destroy_items)

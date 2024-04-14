@@ -157,7 +157,6 @@ pub fn get_granular_path(
     });
 
     if !result.is_success {
-        println!("no granular path found!");
         return None;
     }
 

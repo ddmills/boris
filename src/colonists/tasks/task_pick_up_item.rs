@@ -69,7 +69,7 @@ pub fn task_pick_up_item(
         let mut ecmd = cmd.entity(item);
         ecmd.remove::<InPartition>();
 
-        println!("Item is now in inventory");
+        println!("Item is now in inventory {}", item.index());
         inventory.items.push(item);
         ecmd.insert(Visibility::Hidden);
         ecmd.insert(InInventory { holder: *actor });

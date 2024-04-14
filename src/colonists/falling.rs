@@ -15,7 +15,7 @@ use super::{InPartition, NavigationFlags, NavigationGraph};
 #[derive(Component)]
 pub struct Faller;
 
-pub fn fix_colonist_positions(
+pub fn apply_falling(
     mut cmd: Commands,
     terrain: Res<Terrain>,
     mut graph: ResMut<NavigationGraph>,
@@ -34,7 +34,13 @@ pub fn fix_colonist_positions(
         let y = transform.translation.y as u32;
         let z = transform.translation.z as u32;
 
-        if terrain.get_partition_id_u32(x, y, z).is_some() {
+        let [chunk_idx, block_idx] = terrain.get_block_indexes(x, y, z);
+
+        if terrain.get_partition_id(chunk_idx, block_idx).is_some() {
+            continue;
+        }
+
+        if terrain.get_chunk_dirty(chunk_idx) {
             continue;
         }
 
@@ -53,6 +59,8 @@ pub fn fix_colonist_positions(
 
         let mut delta_y = 0;
 
+        println!("applying falling to {}", entity.index());
+
         loop {
             delta_y += 1;
 
@@ -63,9 +71,7 @@ pub fn fix_colonist_positions(
                 if let Some(partition_id) = terrain.get_partition_id_u32(x, sub_y, z) {
                     if let Some(partition) = graph.get_partition(partition_id) {
                         if let Some(flags) = opt_flags {
-                            if !partition.flags.intersects(*flags) {
-                                flag_ok = false;
-                            }
+                            flag_ok = partition.flags.intersects(*flags);
                         }
 
                         if flag_ok {
@@ -87,9 +93,7 @@ pub fn fix_colonist_positions(
                 if let Some(partition_id) = terrain.get_partition_id_u32(x, add_y, z) {
                     if let Some(partition) = graph.get_partition(partition_id) {
                         if let Some(flags) = opt_flags {
-                            if !partition.flags.intersects(*flags) {
-                                flag_ok = false;
-                            }
+                            flag_ok = partition.flags.intersects(*flags);
                         }
 
                         if flag_ok {

@@ -2,7 +2,7 @@ use bevy::{
     ecs::{
         event::EventWriter,
         query::With,
-        system::{Commands, Local, Query, Res, ResMut},
+        system::{Local, Query, Res, ResMut},
     },
     input::{mouse::MouseButton, ButtonInput},
     math::Vec3,
@@ -11,8 +11,7 @@ use bevy::{
 
 use crate::{
     colonists::{
-        Job, JobBuild, JobLocation, JobMine, JobType, NavigationGraph, PartitionDebug,
-        SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
+        NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -42,7 +41,6 @@ pub struct ToolState {
 }
 
 pub fn tool_system(
-    mut cmd: Commands,
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
     graph: Res<NavigationGraph>,

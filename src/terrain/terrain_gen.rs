@@ -4,8 +4,8 @@ use crate::{common::FractalNoise, Block, Terrain};
 use bevy::ecs::system::ResMut;
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
-    let seed = 1;
-    let mut height = FractalNoise::new(seed, 0.006, 8);
+    let seed = 3;
+    let mut height = FractalNoise::new(seed, 0.01, 8);
     let mut caverns = FractalNoise::new(seed + 1, 0.01, 4);
     let mut caves = FractalNoise::new(seed + 1, 0.02, 3);
 

@@ -75,6 +75,26 @@ impl BlockBuffer {
         self.get_block(block_idx).light
     }
 
+    pub fn set_flag_blueprint(&mut self, block_idx: u32, value: bool) -> bool {
+        let block = self.blocks[block_idx as usize];
+        let is_changed = block.flag_blueprint != value;
+        self.blocks[block_idx as usize].flag_blueprint = value;
+        if is_changed {
+            self.is_dirty = true;
+        }
+        is_changed
+    }
+
+    pub fn set_flag_mine(&mut self, block_idx: u32, value: bool) -> bool {
+        let block = self.blocks[block_idx as usize];
+        let is_changed = block.flag_mine != value;
+        self.blocks[block_idx as usize].flag_mine = value;
+        if is_changed {
+            self.is_dirty = true;
+        }
+        is_changed
+    }
+
     #[inline]
     pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
         self.blocks[block_idx as usize].sunlight = value;

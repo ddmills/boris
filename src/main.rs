@@ -147,7 +147,12 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let mesh = asset_server.load("meshes/cube_offcenter.obj");
-    let material = materials.add(Color::RED);
+    let material = materials.add(StandardMaterial {
+        base_color: Color::YELLOW,
+        unlit: true,
+        depth_bias: 10.,
+        ..default()
+    });
 
     cmd.spawn((
         MaterialMeshBundle {

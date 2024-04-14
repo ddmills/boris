@@ -73,6 +73,8 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let block_type = mesh.packed_block & 15u;
     let block_face = mesh.packed_block >> 4u & 7u;
     let vertex_ao = mesh.packed_block >> 7u & 3u;
+    let vertex_mine = (mesh.packed_block >> 9u & 1u) == 1u;
+    let vertex_blue = (mesh.packed_block >> 10u & 1u) == 1u;
     let vert = mesh.vertex_index % 4;
 
     var uv: vec2<f32>;
@@ -128,6 +130,14 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     var outc = light * tex * mesh.ao * (mesh.light * vec4(1.0, 0.91, 0.56, 1.0));
 
     outc[3] = 1.0;
+    
+    if (vertex_blue) {
+        outc[2] = 0.25;
+    }
+
+    if (vertex_mine) {
+        outc[0] = 0.05;
+    }
 
     return outc;
 }

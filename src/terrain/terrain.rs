@@ -221,12 +221,7 @@ impl Terrain {
             return chunk.get_block(block_idx);
         }
 
-        Block {
-            block: BlockType::OOB,
-            light: 0,
-            sunlight: 0,
-            partition_id: None,
-        }
+        Block::OOB
     }
 
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
@@ -250,6 +245,26 @@ impl Terrain {
         self.set_sunlight(x, y, z, 0);
         self.sunlight_queue_remove
             .push(LightNode { x, y, z, value });
+    }
+
+    pub fn set_flag_blueprint(&mut self, x: u32, y: u32, z: u32, value: bool) -> bool {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.set_flag_blueprint(block_idx, value);
+        }
+
+        false
+    }
+
+    pub fn set_flag_mine(&mut self, x: u32, y: u32, z: u32, value: bool) -> bool {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.set_flag_mine(block_idx, value);
+        }
+
+        false
     }
 
     pub fn set_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
@@ -298,12 +313,7 @@ impl Terrain {
 
     pub fn get_block_i32(&self, x: i32, y: i32, z: i32) -> Block {
         if self.is_oob(x, y, z) {
-            return Block {
-                block: BlockType::OOB,
-                light: 0,
-                sunlight: 0,
-                partition_id: None,
-            };
+            return Block::OOB;
         }
 
         self.get_block(x as u32, y as u32, z as u32)

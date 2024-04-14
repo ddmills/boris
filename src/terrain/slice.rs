@@ -20,7 +20,7 @@ use bevy::{
     },
 };
 
-use crate::Terrain;
+use crate::{pack_block, Terrain, ATTRIBUTE_BLOCK_PACKED};
 
 #[derive(Resource)]
 pub struct TerrainSlice {
@@ -72,6 +72,7 @@ pub fn setup_terrain_slice(
     )
     .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, mesh_data.positions)
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_data.normals)
+    .with_inserted_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_data.packed)
     .with_inserted_indices(Indices::U32(mesh_data.indicies));
 
     let mesh_handle = meshes.add(mesh);
@@ -111,6 +112,7 @@ pub fn update_slice_mesh(
 
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh_buffer.positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_buffer.normals);
+        mesh.insert_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_buffer.packed);
         mesh.insert_indices(Indices::U32(mesh_buffer.indicies));
     }
 }
@@ -144,6 +146,7 @@ pub fn scroll_events(
 struct SliceMeshData {
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
+    pub packed: Vec<u32>,
     pub indicies: Vec<u32>,
 }
 
@@ -170,6 +173,12 @@ fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
                 continue;
             }
 
+            let packed = pack_block(
+                below,
+                crate::BlockFace::PosY,
+                crate::VertexCornerCount::None,
+            );
+
             let fx = x as f32;
             let fy = slice_y as f32;
             let fz = z as f32;
@@ -183,6 +192,11 @@ fn build_slice_mesh(terrain: &Terrain, slice_y: u32) -> SliceMeshData {
             data.normals.push([0., 1., 0.]);
             data.normals.push([0., 1., 0.]);
             data.normals.push([0., 1., 0.]);
+
+            data.packed.push(packed);
+            data.packed.push(packed);
+            data.packed.push(packed);
+            data.packed.push(packed);
 
             data.indicies.push(idx + 2);
             data.indicies.push(idx + 1);
@@ -222,7 +236,10 @@ impl Material for SliceMaterial {
         layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        let vertex_layout = layout.get_layout(&[Mesh::ATTRIBUTE_POSITION.at_shader_location(0)])?;
+        let vertex_layout = layout.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            ATTRIBUTE_BLOCK_PACKED.at_shader_location(1),
+        ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }

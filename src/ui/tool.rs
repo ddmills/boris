@@ -177,6 +177,9 @@ pub fn tool_system(
                     return;
                 }
 
+                let hit = raycast.hit_block;
+                println!("block {}. blueprint={}", hit.name(), hit.flag_blueprint);
+
                 let [chunk_idx, block_idx] = terrain.get_block_indexes(
                     raycast.adj_pos[0],
                     raycast.adj_pos[1],

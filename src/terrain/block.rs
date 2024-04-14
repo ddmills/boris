@@ -4,6 +4,8 @@ pub struct Block {
     pub light: u8,
     pub sunlight: u8,
     pub partition_id: Option<u32>,
+    pub flag_mine: bool,
+    pub flag_blueprint: bool,
 }
 
 impl Default for Block {
@@ -13,6 +15,8 @@ impl Default for Block {
             light: 0,
             sunlight: 0,
             partition_id: None,
+            flag_mine: false,
+            flag_blueprint: false,
         }
     }
 }
@@ -23,6 +27,8 @@ impl Block {
         light: 0,
         sunlight: 0,
         partition_id: None,
+        flag_mine: false,
+        flag_blueprint: false,
     };
 
     pub fn is_oob(&self) -> bool {
@@ -30,22 +36,26 @@ impl Block {
     }
 
     pub fn is_rendered(&self) -> bool {
+        if self.flag_blueprint {
+            return true;
+        }
+
         !matches!(self.block, BlockType::OOB | BlockType::EMPTY)
     }
 
     pub fn is_walkable(&self) -> bool {
+        if self.flag_blueprint {
+            return false;
+        }
+
         !matches!(
             self.block,
-            BlockType::OOB
-                | BlockType::EMPTY
-                | BlockType::LADDER
-                | BlockType::MAGMA
-                | BlockType::BLUEPRINT
+            BlockType::OOB | BlockType::EMPTY | BlockType::LADDER | BlockType::MAGMA
         )
     }
 
     pub fn is_empty(&self) -> bool {
-        matches!(self.block, BlockType::EMPTY | BlockType::BLUEPRINT)
+        self.flag_blueprint || matches!(self.block, BlockType::EMPTY)
     }
 
     pub fn is_opaque(&self) -> bool {
@@ -78,7 +88,6 @@ impl Block {
             BlockType::MAGMA => 6,
             BlockType::LADDER => 7,
             BlockType::LAMP => 8,
-            BlockType::BLUEPRINT => 16,
             _ => 0,
         }
     }
@@ -95,7 +104,6 @@ impl Block {
             BlockType::ASHLAR_LARGE => String::from("ashlar (large)"),
             BlockType::ASHLAR => String::from("ashlar"),
             BlockType::LADDER => String::from("ladder"),
-            BlockType::BLUEPRINT => String::from("blueprint"),
             _ => String::from("unknown"),
         }
     }

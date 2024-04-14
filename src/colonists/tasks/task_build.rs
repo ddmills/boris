@@ -32,7 +32,15 @@ pub fn task_build_block(
             continue;
         };
 
-        if !terrain.get_block(x, y, z).is_empty() {
+        let current_block = terrain.get_block(x, y, z);
+
+        if !current_block.is_empty() {
+            *state = TaskState::Failed;
+            continue;
+        }
+
+        if !current_block.flag_blueprint {
+            println!("Block is not a blueprint and cannot be built!");
             *state = TaskState::Failed;
             continue;
         }
@@ -44,6 +52,7 @@ pub fn task_build_block(
         }
 
         if task.progress >= 1. {
+            terrain.set_flag_blueprint(x, y, z, false);
             terrain.set_block_type(x, y, z, task.block);
 
             let item = blackboard.item.unwrap();

@@ -3,7 +3,7 @@ use bevy::ecs::{
     system::{Commands, ResMut},
 };
 
-use crate::{BlockType, Terrain};
+use crate::{Block, BlockType, Terrain};
 
 use super::{Job, JobBuild, JobLocation, JobType};
 
@@ -18,7 +18,14 @@ pub fn on_spawn_job_build(
     mut ev_spawn_job_mine: EventReader<SpawnJobBuildEvent>,
 ) {
     for ev in ev_spawn_job_mine.read() {
-        terrain.set_block_type(ev.pos[0], ev.pos[1], ev.pos[2], BlockType::BLUEPRINT);
+        let flagged = terrain.set_flag_blueprint(ev.pos[0], ev.pos[1], ev.pos[2], true);
+
+        if !flagged {
+            println!("already building?");
+            continue;
+        }
+
+        terrain.set_block_type(ev.pos[0], ev.pos[1], ev.pos[2], BlockType::STONE);
 
         cmd.spawn((
             Job {

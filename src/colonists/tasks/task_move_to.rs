@@ -107,7 +107,6 @@ pub fn task_move_to(
         // if current block index is zero, it means we've finished the granular path
         if path.current_block_idx == 0 {
             let Some(next_partition_id) = path.next_partition_id() else {
-                println!("Path has changed? Retrying pathfinding.");
                 cmd.entity(*actor).remove::<Path>();
                 continue;
             };
@@ -133,7 +132,6 @@ pub fn task_move_to(
         path.current_block_idx -= 1;
 
         let Some(next_block) = path.next_block() else {
-            println!("Path has changed? Retrying pathfinding.");
             cmd.entity(*actor).remove::<Path>();
             continue;
         };
@@ -141,7 +139,6 @@ pub fn task_move_to(
         let block_flags = get_block_flags(&terrain, next_block[0], next_block[1], next_block[2]);
 
         if block_flags & path.flags == NavigationFlags::NONE {
-            println!("Path block flags have changed? Retrying pathfinding.");
             cmd.entity(*actor).remove::<Path>();
             continue;
         }

@@ -59,8 +59,6 @@ pub fn apply_falling(
 
         let mut delta_y = 0;
 
-        println!("applying falling to {}", entity.index());
-
         loop {
             delta_y += 1;
 

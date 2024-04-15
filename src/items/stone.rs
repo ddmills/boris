@@ -56,8 +56,6 @@ pub fn on_spawn_stone(
             ))
             .id();
 
-        println!("spawning stone {}", entity.index());
-
         let Some(partition_id) = terrain.get_partition_id_u32(ev.pos[0], ev.pos[1], ev.pos[2])
         else {
             continue;

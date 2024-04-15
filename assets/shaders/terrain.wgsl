@@ -78,6 +78,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let vert = mesh.vertex_index % 4;
 
     var uv: vec2<f32>;
+    var uv_px_offset: vec2<f32>;
 
     let ox = f32(block_type % texture_count);
     let oy = f32(block_type / texture_count);
@@ -96,30 +97,37 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     switch block_face {
         case 0u: { // PosX
+            uv_px_offset = vec2(position_local.z, position_local.y);
             uv = vec2(ox + position_local.z, oy + position_local.y);
             light = 0.5;
         }
         case 1u: { // NegX
+            uv_px_offset = vec2(position_local.z, position_local.y);
             uv = vec2(ox + position_local.z, oy + position_local.y);
             light = 0.5;
         }
         case 2u: { // PosY
+            uv_px_offset = vec2(position_local.x, position_local.z);
             uv = vec2(ox + position_local.x, oy + position_local.z);
             light = 1.0;
         }
         case 3u: { // NegY
+            uv_px_offset = vec2(position_local.x, position_local.z);
             uv = vec2(ox + position_local.x, oy + position_local.z);
             light = 1.0;
         }
         case 4u: { // PosZ
+            uv_px_offset = vec2(position_local.x, position_local.y);
             uv = vec2(ox + position_local.x, oy + position_local.y);
             light = 0.2;
         }
         case 5u: { // NegZ
+            uv_px_offset = vec2(position_local.x, position_local.y);
             uv = vec2(ox + position_local.x, oy + position_local.y);
             light = 0.2;
         }
         default: { // ?
+            uv_px_offset = vec2(position_local.x, position_local.z);
             uv = vec2(position_local.x, position_local.z);
             light = 1.0;
         }
@@ -136,7 +144,17 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     if (vertex_mine) {
-        outc[0] = 0.05;
+        outc[0] = 0.15;
+        let axe_texture_idx = 60u;
+        let axe_ox = f32(axe_texture_idx % texture_count);
+        let axe_oy = f32(axe_texture_idx / texture_count);
+        var uv2 = (vec2(axe_ox, axe_oy) + uv_px_offset)/ f32(texture_count);
+        var axe_c = textureSample(texture, texture_sampler, uv2);
+
+        if (axe_c[3] != 0) {
+            // outc = axe_c;
+            outc = vec4(1., 1., 1., 1.);
+        }
     }
 
     return outc;

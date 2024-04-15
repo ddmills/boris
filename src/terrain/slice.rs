@@ -55,10 +55,12 @@ pub fn setup_terrain_slice(
 ) {
     let settings = |s: &mut ImageLoaderSettings| s.sampler = ImageSampler::nearest();
     let slice_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/slice.png", settings);
+        asset_server.load_with_settings("textures/comfy.png", settings);
 
     let slice_material = materials.add(SliceMaterial {
         texture: slice_texture,
+        texture_count: 8,
+        texture_idx: 62,
         color: Color::WHITE,
     });
 
@@ -219,6 +221,10 @@ pub struct SliceMaterial {
     pub texture: Handle<Image>,
     #[uniform[2]]
     pub color: Color,
+    #[uniform[3]]
+    pub texture_count: u32,
+    #[uniform[4]]
+    pub texture_idx: u32,
 }
 
 impl Material for SliceMaterial {

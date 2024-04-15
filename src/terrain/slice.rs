@@ -236,6 +236,10 @@ impl Material for SliceMaterial {
         "shaders/slice.wgsl".into()
     }
 
+    fn depth_bias(&self) -> f32 {
+        10.
+    }
+
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,

@@ -3,7 +3,7 @@ use bevy::ecs::{
     system::{Commands, ResMut},
 };
 
-use crate::{Block, BlockType, Terrain};
+use crate::{BlockType, Terrain};
 
 use super::{Job, JobBuild, JobLocation, JobType};
 

@@ -9,7 +9,9 @@ use bevy::{
 use task_derive::TaskBuilder;
 
 use crate::{
-    colonists::{Actor, ActorRef, Blackboard, NavigationGraph, TaskBuilder, TaskState},
+    colonists::{
+        Actor, ActorRef, Blackboard, NavigationFlags, NavigationGraph, TaskBuilder, TaskState,
+    },
     common::Rand,
     Terrain,
 };
@@ -51,16 +53,42 @@ pub fn task_pick_random_spot(
         let target_partition_id = if current_partition.neighbor_ids.is_empty() {
             current_partition_id
         } else {
-            let neighbor_ids: Vec<u32> = current_partition.neighbor_ids.iter().copied().collect();
-            rand.pick(&neighbor_ids)
+            let neighbor_ids: Vec<u32> = current_partition
+                .neighbor_ids
+                .iter()
+                .filter_map(|n| {
+                    let p = graph.get_partition(n)?;
+
+                    if !p
+                        .flags
+                        .intersects(NavigationFlags::SOLID_GROUND | NavigationFlags::TALL)
+                    {
+                        return None;
+                    }
+
+                    Some(*n)
+                })
+                .collect();
+
+            if neighbor_ids.is_empty() {
+                current_partition_id
+            } else {
+                rand.pick(&neighbor_ids)
+            }
         };
 
         let target_partition = graph.get_partition(&target_partition_id).unwrap();
-        let blocks = &target_partition.blocks.iter().copied().collect::<Vec<_>>();
+        let blocks = &target_partition.blocks.iter().collect::<Vec<_>>();
+
+        if blocks.is_empty() {
+            *state = TaskState::Failed;
+            return;
+        }
+
         let target_block_idx = rand.pick(blocks);
         let target_chunk_idx = target_partition.chunk_idx;
 
-        let target_pos = terrain.get_block_world_pos(target_chunk_idx, target_block_idx);
+        let target_pos = terrain.get_block_world_pos(target_chunk_idx, *target_block_idx);
 
         blackboard.move_goals = vec![target_pos];
 

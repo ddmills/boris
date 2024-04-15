@@ -57,7 +57,7 @@ pub fn task_move_to(
             let request = PartitionPathRequest {
                 start: pos,
                 goals: blackboard.move_goals.clone(),
-                flags: NavigationFlags::TALL | NavigationFlags::LADDER,
+                flags: NavigationFlags::COLONIST,
             };
 
             let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {

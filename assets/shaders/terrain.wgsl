@@ -144,7 +144,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     if (vertex_mine) {
-        outc[0] = 0.15;
+        outc[0] = 0.1;
         let axe_texture_idx = 60u;
         let axe_ox = f32(axe_texture_idx % texture_count);
         let axe_oy = f32(axe_texture_idx / texture_count);

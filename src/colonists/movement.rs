@@ -101,7 +101,10 @@ pub fn block_move_system(
         } else {
             transform.translation += direction * move_dist;
             if block_move.look_at {
-                let target_rot = transform.looking_at(pos, Vec3::Y).rotation;
+                let target_rot = transform
+                    .looking_at(Vec3::new(pos.x, transform.translation.y, pos.z), Vec3::Y)
+                    .rotation;
+
                 transform.rotation = transform
                     .rotation
                     .slerp(target_rot, time.delta_seconds() * 20.);

@@ -4,7 +4,7 @@ use ndshape::{AbstractShape, RuntimeShape};
 use crate::{Block, BlockType};
 
 #[derive(Component)]
-pub struct Chunk {
+pub struct ChunkMesh {
     pub chunk_idx: u32,
     pub world_x: u32,
     pub world_y: u32,
@@ -22,7 +22,8 @@ pub struct BlockBuffer {
     pub world_x: u32,
     pub world_y: u32,
     pub world_z: u32,
-    pub is_dirty: bool,
+    pub is_mesh_dirty: bool,
+    pub is_nav_dirty: bool,
 }
 
 impl BlockBuffer {
@@ -36,13 +37,15 @@ impl BlockBuffer {
             world_x: 0,
             world_y: 0,
             world_z: 0,
-            is_dirty: true,
+            is_mesh_dirty: true,
+            is_nav_dirty: true,
         }
     }
 
     pub fn set_block_type(&mut self, block_idx: u32, value: BlockType) {
         self.blocks[block_idx as usize].block = value;
-        self.is_dirty = true;
+        self.is_mesh_dirty = true;
+        self.is_nav_dirty = true;
     }
 
     pub fn get_block(&self, block_idx: u32) -> Block {
@@ -80,7 +83,7 @@ impl BlockBuffer {
         let is_changed = block.flag_blueprint != value;
         self.blocks[block_idx as usize].flag_blueprint = value;
         if is_changed {
-            self.is_dirty = true;
+            self.is_mesh_dirty = true;
         }
         is_changed
     }
@@ -90,7 +93,7 @@ impl BlockBuffer {
         let is_changed = block.flag_mine != value;
         self.blocks[block_idx as usize].flag_mine = value;
         if is_changed {
-            self.is_dirty = true;
+            self.is_mesh_dirty = true;
         }
         is_changed
     }
@@ -98,13 +101,13 @@ impl BlockBuffer {
     #[inline]
     pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
         self.blocks[block_idx as usize].sunlight = value;
-        self.is_dirty = true;
+        self.is_mesh_dirty = true;
     }
 
     #[inline]
     pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
         self.blocks[block_idx as usize].light = value;
-        self.is_dirty = true;
+        self.is_mesh_dirty = true;
     }
 }
 

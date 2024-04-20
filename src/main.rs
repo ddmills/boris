@@ -1,6 +1,5 @@
+use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
-use bevy::{gltf::Gltf, pbr::wireframe::WireframePlugin};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, destroy_items,
@@ -10,7 +9,7 @@ use colonists::{
     task_debug, task_find_bed, task_find_nearest_item, task_get_job_location, task_idle,
     task_is_target_empty, task_job_cancel, task_job_complete, task_job_unassign, task_mine_block,
     task_move_to, task_pick_random_spot, task_pick_up_item, task_sleep, update_item_partition,
-    DestroyItemEvent, MovedEvent, NavigationGraph, PartitionDebug, PartitionEvent, ScorerPlugin,
+    DestroyItemEvent, MovedEvent, NavigationGraph, PartitionDebug, ScorerPlugin,
     SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
 };
 use common::Rand;
@@ -58,7 +57,6 @@ fn main() {
         .add_event::<SpawnJobMineEvent>()
         .add_event::<MovedEvent>()
         .add_event::<TerrainSliceChanged>()
-        .add_event::<PartitionEvent>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
@@ -90,7 +88,6 @@ fn main() {
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
         .add_systems(Update, scroll_events)
-        // .add_systems(Update, process_dirty_chunks)
         .add_systems(Update, on_slice_changed)
         .add_systems(Update, update_slice_mesh)
         .add_systems(Update, light_system)
@@ -103,9 +100,8 @@ fn main() {
         .add_systems(Update, on_spawn_stone)
         .add_systems(
             PostUpdate,
-            (process_dirty_chunks, partition, update_item_partition).chain(),
+            (chunk_meshing, partition, update_item_partition).chain(),
         )
-        // .add_systems(Update, update_item_partition)
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
         .add_systems(Update, job_accessibility)

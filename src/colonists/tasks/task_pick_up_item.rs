@@ -59,7 +59,6 @@ pub fn task_pick_up_item(
             panic!("Missing partition!? {}", partition_id);
         };
 
-        println!("Removing item from partition");
         if !partition.items.remove(&item) {
             println!("Item not here!");
             *state = TaskState::Failed;
@@ -69,7 +68,6 @@ pub fn task_pick_up_item(
         let mut ecmd = cmd.entity(item);
         ecmd.remove::<InPartition>();
 
-        println!("Item is now in inventory {}", item.index());
         inventory.items.push(item);
         ecmd.insert(Visibility::Hidden);
         ecmd.insert(InInventory { holder: *actor });

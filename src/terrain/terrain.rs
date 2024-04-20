@@ -91,16 +91,36 @@ impl Terrain {
         return self.chunks.get(chunk_idx as usize);
     }
 
-    pub fn get_chunk_dirty(&self, chunk_idx: u32) -> bool {
+    pub fn get_is_chunk_mesh_dirty(&self, chunk_idx: u32) -> bool {
         if let Some(chunk) = self.chunks.get(chunk_idx as usize) {
-            return chunk.is_dirty;
+            return chunk.is_mesh_dirty;
         }
         false
     }
 
     pub fn set_chunk_dirty(&mut self, chunk_idx: u32, value: bool) {
         if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
-            chunk.is_dirty = value;
+            chunk.is_mesh_dirty = value;
+            chunk.is_nav_dirty = value;
+        }
+    }
+
+    pub fn set_chunk_mesh_dirty(&mut self, chunk_idx: u32, value: bool) {
+        if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
+            chunk.is_mesh_dirty = value;
+        }
+    }
+
+    pub fn get_is_chunk_nav_dirty(&self, chunk_idx: u32) -> bool {
+        if let Some(chunk) = self.chunks.get(chunk_idx as usize) {
+            return chunk.is_nav_dirty;
+        }
+        false
+    }
+
+    pub fn set_chunk_nav_dirty(&mut self, chunk_idx: u32, value: bool) {
+        if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
+            chunk.is_nav_dirty = value;
         }
     }
 

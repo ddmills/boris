@@ -10,9 +10,9 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        get_block_flags, get_granular_path, get_partition_path, Actor, ActorRef, Blackboard,
-        BlockMove, GranularPathRequest, NavigationFlags, NavigationGraph, PartitionPathRequest,
-        Path, TaskBuilder, TaskState,
+        get_block_flags, get_granular_path, get_partition_path, is_reachable, Actor, ActorRef,
+        Blackboard, BlockMove, GranularPathRequest, NavigationFlags, NavigationGraph,
+        PartitionPathRequest, Path, TaskBuilder, TaskState,
     },
     Terrain,
 };
@@ -74,14 +74,21 @@ pub fn task_move_to(
 
             move_to.attempts += 1;
             let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
+                if !is_reachable(&request, &terrain, &graph) {
+                    *state = TaskState::Failed;
+                    continue;
+                }
+
                 println!(
-                    "no partition path! entity={} attempts={}",
+                    "No partition path! entity={} attempts={}",
                     actor.index(),
-                    move_to.attempts
+                    move_to.attempts,
                 );
+
                 if move_to.attempts >= move_to.max_retries {
                     *state = TaskState::Failed;
                 }
+
                 continue;
             };
 

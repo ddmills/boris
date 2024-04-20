@@ -1,13 +1,6 @@
-use bevy::ecs::event::Event;
-
 use crate::{BlockType, Terrain};
 
 use super::NavigationFlags;
-
-#[derive(Event)]
-pub struct PartitionEvent {
-    pub chunk_idx: u32,
-}
 
 pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationFlags {
     let block = terrain.get_block_i32(x, y, z);

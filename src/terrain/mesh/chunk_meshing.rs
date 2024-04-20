@@ -12,8 +12,8 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::PartitionEvent, pack_block, Block, BlockFace, Chunk, ChunkMaterial,
-    ChunkMaterialRes, Neighbor, Terrain, TerrainSlice, TerrainSliceChanged, VertexCornerCount,
+    pack_block, Block, BlockFace, ChunkMaterial, ChunkMaterialRes, ChunkMesh, Neighbor, Terrain,
+    TerrainSlice, TerrainSliceChanged, VertexCornerCount,
 };
 
 pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
@@ -68,7 +68,7 @@ pub fn setup_chunk_meshes(
         let size = terrain.chunk_size as f32 / 2.;
 
         cmd.spawn((
-            Chunk {
+            ChunkMesh {
                 chunk_idx,
                 mesh_handle: mesh_handle.clone(),
                 world_x: x,
@@ -89,21 +89,20 @@ pub fn setup_chunk_meshes(
     }
 }
 
-pub fn process_dirty_chunks(
+pub fn chunk_meshing(
     mut terrain: ResMut<Terrain>,
     mut meshes: ResMut<Assets<Mesh>>,
-    chunks: Query<&Chunk>,
+    chunks: Query<&ChunkMesh>,
     mut ev_terrain_slice: EventWriter<TerrainSliceChanged>,
-    mut ev_partition: EventWriter<PartitionEvent>,
 ) {
     let maximum = 1;
     let mut cur = 0;
     let mut update_slice = false;
 
     chunks.iter().for_each(|chunk| {
-        let is_dirty = terrain.get_chunk_dirty(chunk.chunk_idx);
+        let is_mesh_dirty = terrain.get_is_chunk_mesh_dirty(chunk.chunk_idx);
 
-        if !is_dirty {
+        if !is_mesh_dirty {
             return;
         }
 
@@ -121,12 +120,9 @@ pub fn process_dirty_chunks(
             mesh.insert_indices(Indices::U32(mesh_data.indicies));
         }
 
-        terrain.set_chunk_dirty(chunk.chunk_idx, false);
+        terrain.set_chunk_mesh_dirty(chunk.chunk_idx, false);
 
         update_slice = true;
-        ev_partition.send(PartitionEvent {
-            chunk_idx: chunk.chunk_idx,
-        });
     });
 
     if update_slice {

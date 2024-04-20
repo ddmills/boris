@@ -40,7 +40,7 @@ pub fn apply_falling(
             continue;
         }
 
-        if terrain.get_chunk_dirty(chunk_idx) {
+        if terrain.get_is_chunk_nav_dirty(chunk_idx) {
             continue;
         }
 

@@ -2,7 +2,6 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::EventReader,
         query::With,
         system::{Commands, Query, ResMut},
     },
@@ -12,7 +11,7 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::{get_block_flags, Item, PartitionEvent},
+    colonists::{get_block_flags, Item},
     common::flood_fill_i32,
     Terrain,
 };
@@ -26,15 +25,16 @@ pub struct InPartition {
 
 pub fn partition(
     mut cmd: Commands,
-    mut partition_ev: EventReader<PartitionEvent>,
     mut graph: ResMut<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
     q_items: Query<&Transform, With<Item>>,
 ) {
-    for ev in partition_ev.read() {
-        let chunk_idx = ev.chunk_idx;
+    for chunk_idx in 0..terrain.chunk_count {
+        let is_nav_dirty = terrain.get_is_chunk_nav_dirty(chunk_idx);
 
-        println!("partition {}", chunk_idx);
+        if !is_nav_dirty {
+            continue;
+        }
 
         let mut items: HashSet<Entity> = HashSet::new();
 
@@ -202,5 +202,7 @@ pub fn partition(
                 partition_id: item_partition_id,
             });
         }
+
+        terrain.set_chunk_nav_dirty(chunk_idx, false);
     }
 }

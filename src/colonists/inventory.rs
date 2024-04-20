@@ -56,7 +56,6 @@ pub fn destroy_items(
     mut ev_destroy_item: EventReader<DestroyItemEvent>,
 ) {
     for ev in ev_destroy_item.read() {
-        println!("destroying item {}", ev.entity.index());
         cmd.entity(ev.entity).despawn_recursive();
 
         let Ok(in_partition) = q_items.get(ev.entity) else {
@@ -67,7 +66,6 @@ pub fn destroy_items(
             panic!("Missing partition!? {}", in_partition.partition_id);
         };
 
-        println!("Removing item from partition");
         if !partition.items.remove(&ev.entity) {
             println!("Item not here!");
         }

@@ -71,12 +71,9 @@ pub fn tree_aquire_item(tags: Vec<ItemTag>) -> BehaviorNode {
         Box::new(BehaviorNode::Task(Arc::new(TaskCheckHasItem(tags.clone())))),
         Box::new(BehaviorNode::Sequence(vec![
             BehaviorNode::Task(Arc::new(TaskFindNearestItem(tags))),
-            BehaviorNode::Task(Arc::new(TaskMoveTo)),
+            BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
             BehaviorNode::Task(Arc::new(TaskPickUpItem)),
-            BehaviorNode::Task(Arc::new(TaskIdle {
-                duration_s: 0.5,
-                progress: 0.,
-            })),
+            BehaviorNode::Task(Arc::new(TaskIdle::default())),
         ])),
     )
 }

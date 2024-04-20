@@ -34,6 +34,8 @@ pub fn partition(
     for ev in partition_ev.read() {
         let chunk_idx = ev.chunk_idx;
 
+        println!("partition {}", chunk_idx);
+
         let mut items: HashSet<Entity> = HashSet::new();
 
         let cleanups = graph.delete_partitions_for_chunk(chunk_idx);

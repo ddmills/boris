@@ -18,7 +18,19 @@ use crate::{
 };
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskMoveTo;
+pub struct TaskMoveTo {
+    attempts: u8,
+    max_retries: u8,
+}
+
+impl Default for TaskMoveTo {
+    fn default() -> Self {
+        Self {
+            attempts: 0,
+            max_retries: 4,
+        }
+    }
+}
 
 pub fn task_move_to(
     mut cmd: Commands,
@@ -27,9 +39,9 @@ pub fn task_move_to(
     mut q_paths: Query<&mut Path, With<Actor>>,
     q_movers: Query<&BlockMove, With<Actor>>,
     q_transforms: Query<&Transform, With<Actor>>,
-    mut q_behavior: Query<(&ActorRef, &Blackboard, &mut TaskState), With<TaskMoveTo>>,
+    mut q_behavior: Query<(&ActorRef, &Blackboard, &mut TaskState, &mut TaskMoveTo)>,
 ) {
-    for (ActorRef(actor), blackboard, mut state) in q_behavior.iter_mut() {
+    for (ActorRef(actor), blackboard, mut state, mut move_to) in q_behavior.iter_mut() {
         let Ok(transform) = q_transforms.get(*actor) else {
             println!("no transform on actor, cannot move to!");
             cmd.entity(*actor).remove::<Path>();
@@ -60,8 +72,16 @@ pub fn task_move_to(
                 flags: NavigationFlags::COLONIST,
             };
 
+            move_to.attempts += 1;
             let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
-                *state = TaskState::Failed;
+                println!(
+                    "no partition path! entity={} attempts={}",
+                    actor.index(),
+                    move_to.attempts
+                );
+                if move_to.attempts >= move_to.max_retries {
+                    *state = TaskState::Failed;
+                }
                 continue;
             };
 

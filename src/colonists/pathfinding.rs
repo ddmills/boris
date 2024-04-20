@@ -207,7 +207,7 @@ pub fn is_reachable(
         .get_groups_for_partition(&partition_id)
         .iter()
         .filter_map(|group| {
-            if group.flags.intersects(request.flags) {
+            if group.flags.contains(request.flags) {
                 Some(group.id)
             } else {
                 None
@@ -224,7 +224,7 @@ pub fn is_reachable(
             graph
                 .get_group_ids_for_partition(&goal_partition_id)
                 .iter()
-                .any(|goal_group_ids| start_group_ids.contains(goal_group_ids))
+                .any(|goal_group_id| start_group_ids.contains(goal_group_id))
         })
 }
 
@@ -267,25 +267,25 @@ pub fn get_partition_path(
         });
     }
 
-    let partition_path = astar(AStarSettings {
+    let partition_path: crate::common::AStarResult<u32> = astar(AStarSettings {
         start: starting_partition_id,
         is_goal: |p| goal_partition_ids.contains(&p),
         max_depth: 2000,
         neighbors: |v| {
-            if let Some(p) = graph.get_partition(&v) {
-                return p
-                    .neighbor_ids
-                    .iter()
-                    .filter(|n| {
-                        let Some(n_p) = graph.get_partition(n) else {
-                            return false;
-                        };
-                        n_p.flags & request.flags != NavigationFlags::NONE
-                    })
-                    .copied()
-                    .collect();
-            }
-            vec![]
+            let Some(p) = graph.get_partition(&v) else {
+                return vec![];
+            };
+
+            p.neighbor_ids
+                .iter()
+                .filter(|n| {
+                    let Some(n_p) = graph.get_partition(n) else {
+                        return false;
+                    };
+                    n_p.flags & request.flags != NavigationFlags::NONE
+                })
+                .copied()
+                .collect()
         },
         heuristic: |a| {
             let [ax, ay, az] = graph.get_partition(&a).unwrap().extents.center();

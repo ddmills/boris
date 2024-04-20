@@ -27,7 +27,7 @@ impl ScorerBuilder for ScorerWander {
             "Wander",
             BehaviorNode::Sequence(vec![
                 BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
-                BehaviorNode::Task(Arc::new(TaskMoveTo)),
+                BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
                 BehaviorNode::Task(Arc::new(TaskIdle {
                     duration_s: 1.,
                     progress: 0.,

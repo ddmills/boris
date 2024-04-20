@@ -46,7 +46,7 @@ impl ScorerBuilder for ScorerMine {
                     tree_aquire_item(vec![ItemTag::Pickaxe]),
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
-                        BehaviorNode::Task(Arc::new(TaskMoveTo)),
+                        BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
                         BehaviorNode::Task(Arc::new(TaskMineBlock { progress: 0. })),
                         BehaviorNode::Task(Arc::new(TaskJobComplete)),
                     ]),

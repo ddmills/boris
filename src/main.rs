@@ -102,7 +102,7 @@ fn main() {
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, on_spawn_stone)
         .add_systems(
-            Update,
+            PostUpdate,
             (process_dirty_chunks, partition, update_item_partition).chain(),
         )
         // .add_systems(Update, update_item_partition)

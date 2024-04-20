@@ -12,7 +12,7 @@ bitflags! {
         const TALL = 4;
         const CLIMB = 8;
         const COLONIST = Self::TALL.bits() | Self::LADDER.bits() | Self::CLIMB.bits();
-        const CAT = Self::SOLID_GROUND.bits() | Self::CLIMB.bits();
+        const CAT = Self::SOLID_GROUND.bits();
     }
 }
 

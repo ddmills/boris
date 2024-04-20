@@ -49,7 +49,7 @@ impl ScorerBuilder for ScorerBuild {
                             tree_aquire_item(vec![ItemTag::Stone]),
                             BehaviorNode::Sequence(vec![
                                 BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
-                                BehaviorNode::Task(Arc::new(TaskMoveTo)),
+                                BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
                                 BehaviorNode::Task(Arc::new(TaskBuildBlock {
                                     progress: 0.,
                                     block: BlockType::STONE,

@@ -23,6 +23,7 @@ pub fn task_assign_job(
         // check if job is already assigned
 
         let Ok((mut job, job_location)) = q_jobs.get_mut(task.0) else {
+            println!("no job location!");
             *state = TaskState::Failed;
             continue;
         };

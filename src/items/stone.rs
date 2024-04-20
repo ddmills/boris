@@ -1,8 +1,9 @@
 use bevy::{
+    animation::AnimationClip,
     asset::{AssetServer, Assets, Handle},
     ecs::{
         event::{Event, EventReader},
-        system::{Commands, Res, ResMut},
+        system::{Commands, Res, ResMut, Resource},
     },
     pbr::{MaterialMeshBundle, StandardMaterial},
     prelude::default,
@@ -14,6 +15,9 @@ use crate::{
     colonists::{Faller, InPartition, Item, ItemTag, NavigationGraph},
     Terrain,
 };
+
+#[derive(Resource)]
+pub struct ColonistAnimations(pub Vec<Handle<AnimationClip>>);
 
 #[derive(Event)]
 pub struct SpawnStoneEvent {

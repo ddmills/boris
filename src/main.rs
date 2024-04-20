@@ -1,5 +1,6 @@
-use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
+use bevy::{gltf::Gltf, pbr::wireframe::WireframePlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, destroy_items,
@@ -15,7 +16,9 @@ use colonists::{
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
-use items::{on_spawn_pickaxe, on_spawn_stone, SpawnPickaxeEvent, SpawnStoneEvent};
+use items::{
+    on_spawn_pickaxe, on_spawn_stone, ColonistAnimations, SpawnPickaxeEvent, SpawnStoneEvent,
+};
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -59,6 +62,7 @@ fn main() {
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
+        // .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -135,17 +139,39 @@ fn main() {
         .add_systems(Update, task_find_nearest_item)
         .add_systems(Update, task_pick_up_item)
         .add_systems(Update, task_is_target_empty)
+        .add_systems(Update, run_animations)
         .run();
 }
 
 #[derive(Component, Default)]
 struct Cursor {}
 
+#[derive(Resource)]
+struct HumanGltf(Handle<Scene>);
+
+fn run_animations(
+    animations: Res<ColonistAnimations>,
+    mut colonists: Query<&mut AnimationPlayer, Added<AnimationPlayer>>,
+) {
+    for mut colonist in colonists.iter_mut() {
+        colonist.play(animations.0[2].clone_weak()).repeat();
+    }
+}
+
 fn setup(
     mut cmd: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    let gltf = asset_server.load("human.gltf#Scene0");
+    cmd.insert_resource(HumanGltf(gltf));
+
+    cmd.insert_resource(ColonistAnimations(vec![
+        asset_server.load("human.gltf#Animation0"),
+        asset_server.load("human.gltf#Animation1"),
+        asset_server.load("human.gltf#Animation2"),
+    ]));
+
     let mesh = asset_server.load("meshes/cube_offcenter.obj");
     let material = materials.add(StandardMaterial {
         base_color: Color::YELLOW,

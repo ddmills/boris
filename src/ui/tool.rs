@@ -11,7 +11,8 @@ use bevy::{
 
 use crate::{
     colonists::{
-        NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
+        Job, NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobBuildEvent,
+        SpawnJobMineEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -54,6 +55,7 @@ pub fn tool_system(
     mut ev_spawn_job_mine: EventWriter<SpawnJobMineEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
     mut debug_settings: ResMut<DebugSettings>,
+    q_jobs: Query<&Job>,
 ) {
     match toolbar.tool {
         Tool::PlaceBlocks(block) => {
@@ -176,6 +178,9 @@ pub fn tool_system(
                 if !raycast.is_adj_hit {
                     return;
                 }
+
+                let count = q_jobs.iter().len();
+                println!("JOB COUNT {}", count);
 
                 let hit = raycast.hit_block;
                 println!("block {}. blueprint={}", hit.name(), hit.flag_blueprint);

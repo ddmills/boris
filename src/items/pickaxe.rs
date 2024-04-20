@@ -29,7 +29,7 @@ pub fn on_spawn_pickaxe(
     asset_server: Res<AssetServer>,
 ) {
     for ev in ev_spawn_pickaxe.read() {
-        let mesh: Handle<Mesh> = asset_server.load("meshes/sphere.obj");
+        let mesh: Handle<Mesh> = asset_server.load("meshes/pickaxe.obj");
         let material = materials.add(StandardMaterial {
             base_color: Color::CYAN,
             unlit: true,

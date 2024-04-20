@@ -18,15 +18,15 @@ use crate::{
 };
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskPickUpItem;
+pub struct TaskItemPickUp;
 
-pub fn task_pick_up_item(
+pub fn task_item_pick_up(
     mut cmd: Commands,
     terrain: Res<Terrain>,
     mut graph: ResMut<NavigationGraph>,
     q_items: Query<&Transform, With<Item>>,
     mut q_actors: Query<&mut Inventory, With<Actor>>,
-    mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut Blackboard), With<TaskPickUpItem>>,
+    mut q_behavior: Query<(&ActorRef, &mut TaskState, &Blackboard), With<TaskItemPickUp>>,
 ) {
     for (ActorRef(actor), mut state, blackboard) in q_behavior.iter_mut() {
         let Some(item) = blackboard.item else {

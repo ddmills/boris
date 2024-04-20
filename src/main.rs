@@ -1,16 +1,17 @@
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, destroy_items,
     fatigue_system, job_accessibility, job_despawn_cancelled, job_despawn_complete,
     on_spawn_colonist, on_spawn_job_build, on_spawn_job_mine, partition, partition_debug,
-    score_build, score_mine, score_wander, task_assign_job, task_build_block, task_check_has_item,
-    task_debug, task_find_bed, task_find_nearest_item, task_get_job_location, task_idle,
-    task_is_target_empty, task_job_cancel, task_job_complete, task_job_unassign, task_mine_block,
-    task_move_to, task_pick_random_spot, task_pick_up_item, task_sleep, update_item_partition,
-    DestroyItemEvent, MovedEvent, NavigationGraph, PartitionDebug, ScorerPlugin,
-    SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
+    score_build, score_mine, score_wander, task_build_block, task_check_has_item, task_debug,
+    task_find_bed, task_find_nearest_item, task_get_job_location, task_idle, task_is_target_empty,
+    task_item_equip, task_item_pick_up, task_job_assign, task_job_cancel, task_job_complete,
+    task_job_unassign, task_mine_block, task_move_to, task_pick_random_spot, task_sleep,
+    update_item_partition, DestroyItemEvent, MovedEvent, NavigationGraph, PartitionDebug,
+    ScorerPlugin, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -60,7 +61,7 @@ fn main() {
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
-        // .add_plugins(WorldInspectorPlugin::default())
+        .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -118,7 +119,7 @@ fn main() {
             Update,
             (score_wander, score_mine, score_build).before(behavior_pick_system),
         )
-        .add_systems(Update, task_assign_job)
+        .add_systems(Update, task_job_assign)
         .add_systems(Update, task_find_bed)
         .add_systems(Update, task_sleep)
         .add_systems(Update, task_idle)
@@ -133,7 +134,8 @@ fn main() {
         .add_systems(Update, task_job_complete)
         .add_systems(Update, task_check_has_item)
         .add_systems(Update, task_find_nearest_item)
-        .add_systems(Update, task_pick_up_item)
+        .add_systems(Update, task_item_pick_up)
+        .add_systems(Update, task_item_equip)
         .add_systems(Update, task_is_target_empty)
         .add_systems(Update, run_animations)
         .run();

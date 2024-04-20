@@ -44,6 +44,10 @@ pub fn setup_chunk_meshes(
         handle: chunk_material.clone(),
     });
 
+    let chunk_container_entity = cmd
+        .spawn((Name::new("Chunks"), SpatialBundle::default()))
+        .id();
+
     for chunk_idx in 0..terrain.chunk_count {
         let chunk_pos = terrain.shape.delinearize(chunk_idx);
         let x = chunk_pos[0] * terrain.chunk_size;
@@ -67,7 +71,8 @@ pub fn setup_chunk_meshes(
         let z_f32 = z as f32;
         let size = terrain.chunk_size as f32 / 2.;
 
-        cmd.spawn((
+        let mut chunk_cmds = cmd.spawn((
+            Name::new("Chunk"),
             ChunkMesh {
                 chunk_idx,
                 mesh_handle: mesh_handle.clone(),
@@ -86,6 +91,8 @@ pub fn setup_chunk_meshes(
                 half_extents: Vec3A::new(size, size, size),
             },
         ));
+
+        chunk_cmds.set_parent(chunk_container_entity);
     }
 }
 

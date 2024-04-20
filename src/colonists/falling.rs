@@ -10,7 +10,7 @@ use bevy::{
 
 use crate::{colonists::BlockMove, Terrain};
 
-use super::{InPartition, NavigationFlags, NavigationGraph};
+use super::{InInventory, InPartition, NavigationFlags, NavigationGraph};
 
 #[derive(Component)]
 pub struct Faller;
@@ -26,7 +26,7 @@ pub fn apply_falling(
             Option<&InPartition>,
             Option<&NavigationFlags>,
         ),
-        (With<Faller>, Without<BlockMove>),
+        (With<Faller>, Without<BlockMove>, Without<InInventory>),
     >,
 ) {
     for (entity, transform, opt_in_partition, opt_flags) in q_fallers.iter() {

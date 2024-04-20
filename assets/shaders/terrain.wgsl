@@ -153,7 +153,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
         if (axe_c[3] != 0) {
             // outc = axe_c;
-            outc = vec4(1., 1., 1., 1.);
+            outc = vec4(.7, .7, .7, 1.);
         }
     }
 

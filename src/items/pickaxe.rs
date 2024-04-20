@@ -1,5 +1,6 @@
 use bevy::{
     asset::{AssetServer, Assets, Handle},
+    core::Name,
     ecs::{
         event::{Event, EventReader},
         system::{Commands, Res, ResMut},
@@ -38,6 +39,7 @@ pub fn on_spawn_pickaxe(
 
         let entity = cmd
             .spawn((
+                Name::new("Pickaxe"),
                 MaterialMeshBundle {
                     mesh: mesh.clone(),
                     material: material.clone(),

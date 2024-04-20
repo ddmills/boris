@@ -10,12 +10,12 @@ use crate::colonists::{
 };
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskAssignJob(pub Entity);
+pub struct TaskJobAssign(pub Entity);
 
-pub fn task_assign_job(
+pub fn task_job_assign(
     mut cmd: Commands,
     mut q_jobs: Query<(&mut Job, Option<&JobLocation>)>,
-    mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut Blackboard, &TaskAssignJob)>,
+    mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut Blackboard, &TaskJobAssign)>,
 ) {
     for (ActorRef(actor), mut state, mut blackboard, task) in q_behavior.iter_mut() {
         // todo: Make this safe and possibly check for actor and job to exist first!

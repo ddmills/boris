@@ -1,6 +1,7 @@
 use bevy::{
     animation::AnimationClip,
     asset::{AssetServer, Assets, Handle},
+    core::Name,
     ecs::{
         event::{Event, EventReader},
         system::{Commands, Res, ResMut, Resource},
@@ -42,6 +43,7 @@ pub fn on_spawn_stone(
     for ev in ev_spawn_stone.read() {
         let entity = cmd
             .spawn((
+                Name::new("Stone"),
                 MaterialMeshBundle {
                     mesh: mesh.clone(),
                     material: material.clone(),

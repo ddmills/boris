@@ -15,9 +15,9 @@ use crate::{
         is_reachable, job_access_points, test_item_tags, tree_aquire_item, Actor, ActorRef,
         Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible,
         IsJobCancelled, IsJobCompleted, Item, ItemTag, Job, JobBuild, JobLocation, NavigationFlags,
-        NavigationGraph, PartitionPathRequest, Score, ScorerBuilder, TaskAssignJob, TaskBuildBlock,
-        TaskGetJobLocation, TaskIsTargetEmpty, TaskJobCancel, TaskJobComplete, TaskJobUnassign,
-        TaskMoveTo,
+        NavigationGraph, PartitionPathRequest, Score, ScorerBuilder, TaskBuildBlock,
+        TaskGetJobLocation, TaskIsTargetEmpty, TaskJobAssign, TaskJobCancel, TaskJobComplete,
+        TaskJobUnassign, TaskMoveTo,
     },
     common::Distance,
     BlockType, Terrain,
@@ -42,7 +42,7 @@ impl ScorerBuilder for ScorerBuild {
             "Build",
             BehaviorNode::Try(
                 Box::new(BehaviorNode::Sequence(vec![
-                    BehaviorNode::Task(Arc::new(TaskAssignJob(self.job.unwrap()))),
+                    BehaviorNode::Task(Arc::new(TaskJobAssign(self.job.unwrap()))),
                     BehaviorNode::IfElse(
                         Box::new(BehaviorNode::Task(Arc::new(TaskIsTargetEmpty))),
                         Box::new(BehaviorNode::Sequence(vec![

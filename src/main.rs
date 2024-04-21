@@ -18,6 +18,7 @@ use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use items::{on_spawn_pickaxe, on_spawn_stone, SpawnPickaxeEvent, SpawnStoneEvent};
+use rendering::BasicMaterial;
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -28,6 +29,7 @@ mod common;
 mod controls;
 mod debug;
 mod items;
+mod rendering;
 mod terrain;
 mod ui;
 
@@ -67,6 +69,10 @@ fn main() {
             ..default()
         })
         .add_plugins(MaterialPlugin::<SliceMaterial> {
+            prepass_enabled: false,
+            ..default()
+        })
+        .add_plugins(MaterialPlugin::<BasicMaterial> {
             prepass_enabled: false,
             ..default()
         })

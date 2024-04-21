@@ -5,14 +5,22 @@ use bevy::{
         event::{Event, EventReader},
         system::{Commands, Res, ResMut},
     },
-    pbr::{MaterialMeshBundle, StandardMaterial},
+    pbr::MaterialMeshBundle,
     prelude::default,
-    render::{color::Color, mesh::Mesh},
+    render::{
+        color::Color,
+        render_resource::AddressMode,
+        texture::{
+            Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
+            ImageSamplerDescriptor,
+        },
+    },
     transform::components::Transform,
 };
 
 use crate::{
     colonists::{Faller, InPartition, Item, ItemTag, NavigationGraph},
+    rendering::BasicMaterial,
     Terrain,
 };
 
@@ -26,17 +34,31 @@ pub fn on_spawn_stone(
     terrain: Res<Terrain>,
     mut graph: ResMut<NavigationGraph>,
     mut ev_spawn_stone: EventReader<SpawnStoneEvent>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<BasicMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    let mesh: Handle<Mesh> = asset_server.load("meshes/sphere.obj");
-    let material = materials.add(StandardMaterial {
-        base_color: Color::GRAY,
-        unlit: true,
-        ..default()
-    });
-
     for ev in ev_spawn_stone.read() {
+        let settings = |s: &mut ImageLoaderSettings| {
+            s.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+                address_mode_u: ImageAddressMode::Repeat,
+                address_mode_v: ImageAddressMode::Repeat,
+                address_mode_w: ImageAddressMode::Repeat,
+                mag_filter: ImageFilterMode::Nearest,
+                min_filter: ImageFilterMode::Nearest,
+                mipmap_filter: ImageFilterMode::Nearest,
+                ..default()
+            });
+        };
+
+        let stone_texture: Handle<Image> =
+            asset_server.load_with_settings("textures/stone.png", settings);
+        let mesh = asset_server.load("sphere.gltf#Mesh0/Primitive0");
+        let material = materials.add(BasicMaterial {
+            texture: Some(stone_texture.clone()),
+            light: 8,
+            color: Color::WHITE,
+        });
+
         let entity = cmd
             .spawn((
                 Name::new("Stone"),

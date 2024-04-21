@@ -13,7 +13,7 @@ pub struct ChunkMesh {
 }
 
 #[derive(Clone)]
-pub struct BlockBuffer {
+pub struct Chunk {
     pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
     pub block_count: u32,
@@ -26,7 +26,7 @@ pub struct BlockBuffer {
     pub is_nav_dirty: bool,
 }
 
-impl BlockBuffer {
+impl Chunk {
     pub fn new(shape: RuntimeShape<u32, 3>) -> Self {
         Self {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),

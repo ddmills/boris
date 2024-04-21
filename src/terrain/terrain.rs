@@ -1,7 +1,7 @@
 use bevy::ecs::system::Resource;
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{common::sig_num, Block, BlockBuffer, BlockFace, BlockType, LightNode};
+use crate::{common::sig_num, Block, BlockFace, BlockType, Chunk, LightNode};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -12,7 +12,7 @@ pub struct Terrain {
     pub chunk_count: u32,
     pub shape: RuntimeShape<u32, 3>,
     pub chunk_shape: RuntimeShape<u32, 3>,
-    pub chunks: Vec<BlockBuffer>,
+    pub chunks: Vec<Chunk>,
     pub lights_queue_add: Vec<LightNode>,
     pub lights_queue_remove: Vec<LightNode>,
     pub sunlight_queue_add: Vec<LightNode>,
@@ -46,7 +46,7 @@ impl Terrain {
             chunk_size,
             chunk_count: shape.size(),
             chunk_shape: chunk_shape.clone(),
-            chunks: vec![BlockBuffer::new(chunk_shape); shape.size() as usize],
+            chunks: vec![Chunk::new(chunk_shape); shape.size() as usize],
             shape,
             lights_queue_add: vec![],
             lights_queue_remove: vec![],
@@ -87,7 +87,7 @@ impl Terrain {
             || z >= self.world_size_z() as i32
     }
 
-    pub fn get_chunk(&self, chunk_idx: u32) -> Option<&BlockBuffer> {
+    pub fn get_chunk(&self, chunk_idx: u32) -> Option<&Chunk> {
         return self.chunks.get(chunk_idx as usize);
     }
 
@@ -124,7 +124,7 @@ impl Terrain {
         }
     }
 
-    pub fn get_chunk_mut(&mut self, chunk_idx: u32) -> Option<&mut BlockBuffer> {
+    pub fn get_chunk_mut(&mut self, chunk_idx: u32) -> Option<&mut Chunk> {
         return self.chunks.get_mut(chunk_idx as usize);
     }
 

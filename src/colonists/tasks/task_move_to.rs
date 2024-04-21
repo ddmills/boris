@@ -73,13 +73,13 @@ pub fn task_move_to(
                 flags: NavigationFlags::COLONIST,
             };
 
-            move_to.attempts += 1;
             let Some(partition_path) = get_partition_path(&request, &terrain, &graph) else {
                 if !is_reachable(&request, &terrain, &graph) {
                     *state = TaskState::Failed;
                     continue;
                 }
 
+                move_to.attempts += 1;
                 println!(
                     "No partition path! entity={} attempts={}",
                     actor.index(),

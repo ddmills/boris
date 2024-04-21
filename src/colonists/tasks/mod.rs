@@ -1,3 +1,4 @@
+mod task_animate;
 mod task_build;
 mod task_check_has_item;
 mod task_debug;
@@ -17,6 +18,7 @@ mod task_move_to;
 mod task_pick_random_spot;
 mod task_sleep;
 
+pub use task_animate::*;
 pub use task_build::*;
 pub use task_check_has_item::*;
 pub use task_debug::*;

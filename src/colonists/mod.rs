@@ -1,3 +1,4 @@
+mod animations;
 mod behavior;
 mod behavior_pick;
 mod behaviors;
@@ -13,6 +14,7 @@ mod pathfinding;
 mod scorer;
 mod tasks;
 
+pub use animations::*;
 pub use behavior::*;
 pub use behavior_pick::*;
 pub use behaviors::*;

@@ -56,7 +56,7 @@ pub fn task_item_equip(
     }
 }
 
-fn get_child_by_name_recursive(
+pub fn get_child_by_name_recursive(
     entity: &Entity,
     name: &str,
     q_names: &Query<&Name>,

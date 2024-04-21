@@ -3,22 +3,21 @@ use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_obj::ObjPlugin;
 use colonists::{
-    apply_falling, behavior_pick_system, behavior_system, block_move_system, destroy_items,
-    fatigue_system, job_accessibility, job_despawn_cancelled, job_despawn_complete,
+    apply_falling, behavior_pick_system, behavior_system, block_move_system, colonist_animations,
+    destroy_items, fatigue_system, job_accessibility, job_despawn_cancelled, job_despawn_complete,
     on_spawn_colonist, on_spawn_job_build, on_spawn_job_mine, partition, partition_debug,
-    score_build, score_mine, score_wander, task_build_block, task_check_has_item, task_debug,
-    task_find_bed, task_find_nearest_item, task_get_job_location, task_idle, task_is_target_empty,
-    task_item_equip, task_item_pick_up, task_job_assign, task_job_cancel, task_job_complete,
-    task_job_unassign, task_mine_block, task_move_to, task_pick_random_spot, task_sleep,
-    update_item_partition, DestroyItemEvent, MovedEvent, NavigationGraph, PartitionDebug,
-    ScorerPlugin, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
+    score_build, score_mine, score_wander, setup_colonists, task_animate, task_build_block,
+    task_check_has_item, task_debug, task_find_bed, task_find_nearest_item, task_get_job_location,
+    task_idle, task_is_target_empty, task_item_equip, task_item_pick_up, task_job_assign,
+    task_job_cancel, task_job_complete, task_job_unassign, task_mine_block, task_move_to,
+    task_pick_random_spot, task_sleep, update_item_partition, ColonistAnimations, DestroyItemEvent,
+    MovedEvent, NavigationGraph, PartitionDebug, ScorerPlugin, SpawnColonistEvent,
+    SpawnJobBuildEvent, SpawnJobMineEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
-use items::{
-    on_spawn_pickaxe, on_spawn_stone, ColonistAnimations, SpawnPickaxeEvent, SpawnStoneEvent,
-};
+use items::{on_spawn_pickaxe, on_spawn_stone, SpawnPickaxeEvent, SpawnStoneEvent};
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -137,7 +136,9 @@ fn main() {
         .add_systems(Update, task_item_pick_up)
         .add_systems(Update, task_item_equip)
         .add_systems(Update, task_is_target_empty)
-        .add_systems(Update, run_animations)
+        .add_systems(Update, task_animate)
+        .add_systems(Update, colonist_animations)
+        .add_systems(Update, setup_colonists)
         .run();
 }
 
@@ -147,15 +148,6 @@ struct Cursor {}
 #[derive(Resource)]
 struct HumanGltf(Handle<Scene>);
 
-fn run_animations(
-    animations: Res<ColonistAnimations>,
-    mut colonists: Query<&mut AnimationPlayer, Added<AnimationPlayer>>,
-) {
-    for mut colonist in colonists.iter_mut() {
-        colonist.play(animations.0[2].clone_weak()).repeat();
-    }
-}
-
 fn setup(
     mut cmd: Commands,
     asset_server: Res<AssetServer>,
@@ -164,11 +156,13 @@ fn setup(
     let gltf = asset_server.load("human.gltf#Scene0");
     cmd.insert_resource(HumanGltf(gltf));
 
-    cmd.insert_resource(ColonistAnimations(vec![
-        asset_server.load("human.gltf#Animation0"),
-        asset_server.load("human.gltf#Animation1"),
-        asset_server.load("human.gltf#Animation2"),
-    ]));
+    cmd.insert_resource(ColonistAnimations {
+        base: asset_server.load("human.gltf#Animation0"),
+        idle: asset_server.load("human.gltf#Animation1"),
+        swing_pick: asset_server.load("human.gltf#Animation2"),
+        pick_up: asset_server.load("human.gltf#Animation3"),
+        run: asset_server.load("human.gltf#Animation4"),
+    });
 
     let mesh = asset_server.load("meshes/cube_offcenter.obj");
     let material = materials.add(StandardMaterial {

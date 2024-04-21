@@ -5,9 +5,12 @@ use bevy::{
     core::Name,
     ecs::{
         component::Component,
+        entity::Entity,
         event::{Event, EventReader},
-        system::{Commands, Res, ResMut},
+        query::{With, Without},
+        system::{Commands, Query, Res, ResMut},
     },
+    hierarchy::Children,
     pbr::StandardMaterial,
     prelude::default,
     render::{color::Color, texture::Image},
@@ -15,11 +18,11 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::HumanGltf;
+use crate::{colonists::AnimState, HumanGltf};
 
 use super::{
-    Actor, Faller, Fatigue, Inventory, NavigationFlags, ScorerBuild, ScorerMine, ScorerWander,
-    Thinker,
+    get_child_by_name_recursive, Actor, AnimClip, Animator, Faller, Fatigue, Inventory,
+    NavigationFlags, ScorerBuild, ScorerMine, ScorerWander, Thinker,
 };
 
 #[derive(Component, Default)]
@@ -86,5 +89,29 @@ pub fn on_spawn_colonist(
             Faller,
             NavigationFlags::COLONIST,
         ));
+    }
+}
+
+pub fn setup_colonists(
+    mut cmd: Commands,
+    q_children: Query<&Children>,
+    q_names: Query<&Name>,
+    q_colonists: Query<Entity, (With<Colonist>, Without<Animator>)>,
+) {
+    for colonist in q_colonists.iter() {
+        let Some(armature) =
+            get_child_by_name_recursive(&colonist, "Armature", &q_names, &q_children)
+        else {
+            continue;
+        };
+
+        let mut e_cmd = cmd.entity(colonist);
+
+        e_cmd.insert(Animator {
+            clip: AnimClip::Idle,
+            armature,
+            prev_clip: AnimClip::None,
+            state: AnimState::Completed,
+        });
     }
 }

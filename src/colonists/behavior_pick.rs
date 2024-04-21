@@ -9,8 +9,9 @@ use bevy::ecs::{
 use bevy_trait_query::One;
 
 use super::{
-    Actor, ActorRef, BehaviorNode, HasBehavior, ItemTag, Path, Score, ScorerBuilder, Scorers,
-    TaskCheckHasItem, TaskFindNearestItem, TaskIdle, TaskItemPickUp, TaskMoveTo, TaskState,
+    Actor, ActorRef, AnimClip, BehaviorNode, HasBehavior, ItemTag, Path, Score, ScorerBuilder,
+    Scorers, TaskAnimate, TaskCheckHasItem, TaskFindNearestItem, TaskItemPickUp, TaskMoveTo,
+    TaskState,
 };
 
 #[derive(Component, Default)]
@@ -72,8 +73,8 @@ pub fn tree_aquire_item(tags: Vec<ItemTag>) -> BehaviorNode {
         Box::new(BehaviorNode::Sequence(vec![
             BehaviorNode::Task(Arc::new(TaskFindNearestItem(tags))),
             BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
-            BehaviorNode::Task(Arc::new(TaskIdle::default())),
             BehaviorNode::Task(Arc::new(TaskItemPickUp)),
+            BehaviorNode::Task(Arc::new(TaskAnimate(AnimClip::PickUp))),
         ])),
     )
 }

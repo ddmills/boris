@@ -11,8 +11,8 @@ use task_derive::TaskBuilder;
 use crate::{
     colonists::{
         get_block_flags, get_granular_path, get_partition_path, is_reachable, Actor, ActorRef,
-        Blackboard, BlockMove, GranularPathRequest, NavigationFlags, NavigationGraph,
-        PartitionPathRequest, Path, TaskBuilder, TaskState,
+        AnimClip, Animator, Blackboard, BlockMove, GranularPathRequest, NavigationFlags,
+        NavigationGraph, PartitionPathRequest, Path, TaskBuilder, TaskState,
     },
     Terrain,
 };
@@ -38,6 +38,7 @@ pub fn task_move_to(
     graph: Res<NavigationGraph>,
     mut q_paths: Query<&mut Path, With<Actor>>,
     q_movers: Query<&BlockMove, With<Actor>>,
+    mut q_animators: Query<&mut Animator, With<Actor>>,
     q_transforms: Query<&Transform, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &Blackboard, &mut TaskState, &mut TaskMoveTo)>,
 ) {
@@ -169,6 +170,10 @@ pub fn task_move_to(
             cmd.entity(*actor).remove::<Path>();
             continue;
         }
+
+        if let Ok(mut animator) = q_animators.get_mut(*actor) {
+            animator.clip = AnimClip::Run;
+        };
 
         cmd.entity(*actor).insert(BlockMove {
             speed: 4.,

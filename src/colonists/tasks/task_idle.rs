@@ -1,13 +1,14 @@
 use bevy::{
     ecs::{
         component::Component,
+        query::With,
         system::{Query, Res},
     },
     time::Time,
 };
 use task_derive::TaskBuilder;
 
-use crate::colonists::{TaskBuilder, TaskState};
+use crate::colonists::{Actor, ActorRef, AnimClip, Animator, TaskBuilder, TaskState};
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskIdle {
@@ -24,12 +25,20 @@ impl Default for TaskIdle {
     }
 }
 
-pub fn task_idle(time: Res<Time>, mut q_behavior: Query<(&mut TaskState, &mut TaskIdle)>) {
-    for (mut state, mut task) in q_behavior.iter_mut() {
+pub fn task_idle(
+    time: Res<Time>,
+    mut q_animators: Query<&mut Animator, With<Actor>>,
+    mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut TaskIdle)>,
+) {
+    for (ActorRef(actor), mut state, mut task) in q_behavior.iter_mut() {
         if task.progress >= task.duration_s {
             *state = TaskState::Success;
             continue;
         }
+
+        if let Ok(mut animator) = q_animators.get_mut(*actor) {
+            animator.clip = AnimClip::Idle;
+        };
 
         task.progress += time.delta_seconds();
     }

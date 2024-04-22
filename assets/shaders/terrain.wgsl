@@ -63,7 +63,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let torch = vertex.light & 0xf;
     let sun = (vertex.light >> 4) & 0xf;
-    out.light = f32(max(sun, torch)) / 15.0 + 0.1055;
+    out.light = f32(max(sun, torch)) / 15.0 + 0.05;
 
     return out;
 }
@@ -135,7 +135,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     uv = uv / f32(texture_count);
     let tex = textureSample(texture, texture_sampler, uv);
-    var outc = light * tex * mesh.ao * (mesh.light * vec4(1.0, 0.91, 0.56, 1.0));
+    var outc = light * tex * mesh.ao * mesh.light;
 
     outc[3] = 1.0;
     

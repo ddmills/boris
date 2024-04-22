@@ -52,7 +52,8 @@ pub fn on_spawn_stone(
         let mesh = asset_server.load("sphere.gltf#Mesh0/Primitive0");
         let material = materials.add(BasicMaterial {
             texture: Some(stone_texture.clone()),
-            light: 8,
+            sunlight: 8,
+            torchlight: 8,
             color: Color::WHITE,
         });
 

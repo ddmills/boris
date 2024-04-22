@@ -8,10 +8,7 @@ use bevy::{
     transform::components::GlobalTransform,
 };
 
-use crate::{
-    colonists::{InInventory, NavigationGraph},
-    Terrain,
-};
+use crate::{colonists::NavigationGraph, Terrain};
 
 #[derive(Component, Default)]
 pub struct Position {
@@ -62,8 +59,6 @@ pub fn update_positions(
 
                 position.partition_id = partition_id;
             }
-
-            println!("position changed. {}, {}, {}", x, y, z);
         }
     }
 }

@@ -17,7 +17,9 @@ use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use items::{on_spawn_pickaxe, on_spawn_stone, SpawnPickaxeEvent, SpawnStoneEvent};
-use rendering::BasicMaterial;
+use rendering::{
+    update_basic_material_children_lighting, update_basic_material_lighting, BasicMaterial,
+};
 use terrain::*;
 use ui::{
     setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
@@ -60,7 +62,7 @@ fn main() {
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .add_plugins((DefaultPlugins, ObjPlugin))
-        .add_plugins(WorldInspectorPlugin::default())
+        // .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -139,6 +141,8 @@ fn main() {
         .add_systems(Update, task_animate)
         .add_systems(Update, colonist_animations)
         .add_systems(Update, setup_colonists)
+        .add_systems(Update, update_basic_material_lighting)
+        .add_systems(Update, update_basic_material_children_lighting)
         .add_systems(
             PostUpdate,
             (chunk_meshing, partition, update_positions).chain(),
@@ -155,7 +159,7 @@ struct HumanGltf(Handle<Scene>);
 fn setup(
     mut cmd: Commands,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut materials: ResMut<Assets<BasicMaterial>>,
 ) {
     let gltf = asset_server.load("human.gltf#Scene0");
     cmd.insert_resource(HumanGltf(gltf));
@@ -168,12 +172,12 @@ fn setup(
         run: asset_server.load("human.gltf#Animation4"),
     });
 
-    let mesh = asset_server.load("meshes/cube_offcenter.obj");
-    let material = materials.add(StandardMaterial {
-        base_color: Color::YELLOW,
-        unlit: true,
-        depth_bias: 10.,
-        ..default()
+    let mesh = asset_server.load("cube_offset.gltf#Mesh0/Primitive0");
+    let material = materials.add(BasicMaterial {
+        color: Color::YELLOW,
+        texture: None,
+        sunlight: 15,
+        torchlight: 15,
     });
 
     cmd.spawn((

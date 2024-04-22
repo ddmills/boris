@@ -13,12 +13,12 @@ use bevy::{
     hierarchy::Children,
     pbr::StandardMaterial,
     prelude::default,
-    render::{color::Color, texture::Image},
+    render::{color::Color, texture::Image, view::Visibility},
     scene::{Scene, SceneBundle},
     transform::components::Transform,
 };
 
-use crate::{colonists::AnimState, HumanGltf};
+use crate::{colonists::AnimState, rendering::BasicMaterial, HumanGltf, Position};
 
 use super::{
     get_child_by_name_recursive, Actor, AnimClip, Animator, Faller, Fatigue, Inventory,
@@ -28,6 +28,9 @@ use super::{
 #[derive(Component, Default)]
 pub struct Colonist {}
 
+#[derive(Component)]
+pub struct ChildMaterials(pub Handle<BasicMaterial>);
+
 #[derive(Event)]
 pub struct SpawnColonistEvent {
     pub pos: [u32; 3],
@@ -36,31 +39,9 @@ pub struct SpawnColonistEvent {
 pub fn on_spawn_colonist(
     mut cmd: Commands,
     mut ev_spawn_colonist: EventReader<SpawnColonistEvent>,
-    asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     human_gltf: Res<HumanGltf>,
-    mut scenes: ResMut<Assets<Scene>>,
 ) {
-    let Some(scene) = scenes.get_mut(human_gltf.0.clone()) else {
-        println!("gltf not loaded yet?");
-        return;
-    };
     for ev in ev_spawn_colonist.read() {
-        let texture: Handle<Image> = asset_server.load("textures/colonist.png");
-
-        for material_handle in scene
-            .world
-            .query::<&Handle<StandardMaterial>>()
-            .iter(&scene.world)
-        {
-            let Some(material) = materials.get_mut(material_handle) else {
-                continue;
-            };
-            material.unlit = true;
-            material.base_color = Color::WHITE;
-            material.base_color_texture = Some(texture.clone());
-        }
-
         cmd.spawn((
             Name::new("Colonist"),
             SceneBundle {
@@ -70,6 +51,7 @@ pub fn on_spawn_colonist(
                     ev.pos[1] as f32,
                     ev.pos[2] as f32 + 0.5,
                 ),
+                visibility: Visibility::Hidden,
                 ..default()
             },
             Fatigue {
@@ -87,6 +69,7 @@ pub fn on_spawn_colonist(
                 ],
             },
             Faller,
+            Position::default(),
             NavigationFlags::COLONIST,
         ));
     }
@@ -97,21 +80,44 @@ pub fn setup_colonists(
     q_children: Query<&Children>,
     q_names: Query<&Name>,
     q_colonists: Query<Entity, (With<Colonist>, Without<Animator>)>,
+    asset_server: Res<AssetServer>,
+    mut basic_materials: ResMut<Assets<BasicMaterial>>,
 ) {
     for colonist in q_colonists.iter() {
-        let Some(armature) =
+        if let Some(armature) =
             get_child_by_name_recursive(&colonist, "Armature", &q_names, &q_children)
-        else {
-            continue;
-        };
+        {
+            let mut e_cmd = cmd.entity(colonist);
+            e_cmd.insert(Animator {
+                clip: AnimClip::Idle,
+                armature,
+                prev_clip: AnimClip::None,
+                state: AnimState::Completed,
+            });
+        }
+
+        if let Some(mesh) =
+            get_child_by_name_recursive(&colonist, "HumanMesh", &q_names, &q_children)
+        {
+            let mut mesh_cmd = cmd.entity(mesh);
+
+            let texture: Handle<Image> = asset_server.load("textures/colonist.png");
+
+            let basic_material = basic_materials.add(BasicMaterial {
+                color: Color::WHITE,
+                texture: Some(texture.clone()),
+                sunlight: 15,
+                torchlight: 15,
+            });
+
+            mesh_cmd.insert(basic_material.clone());
+            mesh_cmd.remove::<Handle<StandardMaterial>>();
+
+            let mut e_cmd = cmd.entity(colonist);
+            e_cmd.insert(ChildMaterials(basic_material.clone()));
+        }
 
         let mut e_cmd = cmd.entity(colonist);
-
-        e_cmd.insert(Animator {
-            clip: AnimClip::Idle,
-            armature,
-            prev_clip: AnimClip::None,
-            state: AnimState::Completed,
-        });
+        e_cmd.insert(Visibility::Visible);
     }
 }

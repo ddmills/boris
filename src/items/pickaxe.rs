@@ -5,11 +5,10 @@ use bevy::{
         event::{Event, EventReader},
         system::{Commands, Res, ResMut},
     },
-    pbr::{MaterialMeshBundle, StandardMaterial},
+    pbr::MaterialMeshBundle,
     prelude::default,
     render::{
         color::Color,
-        mesh::Mesh,
         texture::{
             Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
             ImageSamplerDescriptor,
@@ -19,9 +18,9 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{Faller, InPartition, Item, ItemTag, NavigationGraph},
+    colonists::{Faller, Item, ItemTag},
     rendering::BasicMaterial,
-    Terrain,
+    Position,
 };
 
 #[derive(Event)]
@@ -31,8 +30,6 @@ pub struct SpawnPickaxeEvent {
 
 pub fn on_spawn_pickaxe(
     mut cmd: Commands,
-    terrain: Res<Terrain>,
-    mut graph: ResMut<NavigationGraph>,
     mut ev_spawn_pickaxe: EventReader<SpawnPickaxeEvent>,
     mut materials: ResMut<Assets<BasicMaterial>>,
     asset_server: Res<AssetServer>,
@@ -59,39 +56,24 @@ pub fn on_spawn_pickaxe(
             color: Color::WHITE,
         });
 
-        let entity = cmd
-            .spawn((
-                Name::new("Pickaxe"),
-                MaterialMeshBundle {
-                    mesh: mesh.clone(),
-                    material: material.clone(),
-                    transform: Transform::from_xyz(
-                        ev.pos[0] as f32 + 0.5,
-                        ev.pos[1] as f32,
-                        ev.pos[2] as f32 + 0.5,
-                    ),
-                    ..default()
-                },
-                Item {
-                    tags: vec![ItemTag::Pickaxe],
-                    reserved: None,
-                },
-                Faller,
-            ))
-            .id();
-
-        let Some(partition_id) = terrain.get_partition_id_u32(ev.pos[0], ev.pos[1], ev.pos[2])
-        else {
-            println!("Missing partition_id trying to insert item!");
-            continue;
-        };
-
-        let Some(partition) = graph.get_partition_mut(&partition_id) else {
-            println!("Missing partition trying to insert item! {}", partition_id);
-            continue;
-        };
-
-        partition.items.insert(entity);
-        cmd.entity(entity).insert(InPartition { partition_id });
+        cmd.spawn((
+            Name::new("Pickaxe"),
+            MaterialMeshBundle {
+                mesh: mesh.clone(),
+                material: material.clone(),
+                transform: Transform::from_xyz(
+                    ev.pos[0] as f32 + 0.5,
+                    ev.pos[1] as f32,
+                    ev.pos[2] as f32 + 0.5,
+                ),
+                ..default()
+            },
+            Item {
+                tags: vec![ItemTag::Pickaxe],
+                reserved: None,
+            },
+            Faller,
+            Position::default(),
+        ));
     }
 }

@@ -10,9 +10,8 @@ use colonists::{
     task_check_has_item, task_debug, task_find_bed, task_find_nearest_item, task_get_job_location,
     task_idle, task_is_target_empty, task_item_equip, task_item_pick_up, task_job_assign,
     task_job_cancel, task_job_complete, task_job_unassign, task_mine_block, task_move_to,
-    task_pick_random_spot, task_sleep, update_item_partition, ColonistAnimations, DestroyItemEvent,
-    MovedEvent, NavigationGraph, PartitionDebug, ScorerPlugin, SpawnColonistEvent,
-    SpawnJobBuildEvent, SpawnJobMineEvent,
+    task_pick_random_spot, task_sleep, ColonistAnimations, DestroyItemEvent, NavigationGraph,
+    PartitionDebug, ScorerPlugin, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -35,7 +34,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Terrain::new(6, 2, 6, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
@@ -57,7 +56,6 @@ fn main() {
         .add_event::<SpawnStoneEvent>()
         .add_event::<SpawnJobBuildEvent>()
         .add_event::<SpawnJobMineEvent>()
-        .add_event::<MovedEvent>()
         .add_event::<TerrainSliceChanged>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
@@ -104,10 +102,6 @@ fn main() {
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, on_spawn_stone)
-        .add_systems(
-            PostUpdate,
-            (chunk_meshing, partition, update_item_partition).chain(),
-        )
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
         .add_systems(Update, job_accessibility)
@@ -145,6 +139,10 @@ fn main() {
         .add_systems(Update, task_animate)
         .add_systems(Update, colonist_animations)
         .add_systems(Update, setup_colonists)
+        .add_systems(
+            PostUpdate,
+            (chunk_meshing, partition, update_positions).chain(),
+        )
         .run();
 }
 

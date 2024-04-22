@@ -1,4 +1,7 @@
-use bevy::ecs::system::Resource;
+use bevy::{
+    ecs::{entity::Entity, system::Resource},
+    utils::hashbrown::HashSet,
+};
 use ndshape::{RuntimeShape, Shape};
 
 use crate::{common::sig_num, Block, BlockFace, BlockType, Chunk, LightNode};
@@ -242,6 +245,28 @@ impl Terrain {
         }
 
         Block::OOB
+    }
+
+    pub fn get_items(&self, chunk_idx: u32, block_idx: u32) -> HashSet<Entity> {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_items(block_idx);
+        }
+
+        HashSet::new()
+    }
+
+    pub fn add_item(&mut self, chunk_idx: u32, block_idx: u32, item: Entity) {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.add_item(block_idx, item);
+        }
+    }
+
+    pub fn remove_item(&mut self, chunk_idx: u32, block_idx: u32, item: &Entity) -> bool {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.remove_item(block_idx, item);
+        }
+
+        false
     }
 
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {

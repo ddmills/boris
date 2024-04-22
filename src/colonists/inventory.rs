@@ -10,7 +10,9 @@ use bevy::{
     hierarchy::DespawnRecursiveExt,
 };
 
-use super::{InPartition, NavigationGraph};
+use crate::{Position, Terrain};
+
+use super::NavigationGraph;
 
 #[derive(Component, Default)]
 pub struct Inventory {
@@ -50,24 +52,31 @@ pub struct DestroyItemEvent {
 }
 
 pub fn destroy_items(
+    mut terrain: ResMut<Terrain>,
     mut graph: ResMut<NavigationGraph>,
     mut cmd: Commands,
-    q_items: Query<&InPartition>,
+    q_items: Query<&Position>,
     mut ev_destroy_item: EventReader<DestroyItemEvent>,
 ) {
     for ev in ev_destroy_item.read() {
         cmd.entity(ev.entity).despawn_recursive();
 
-        let Ok(in_partition) = q_items.get(ev.entity) else {
+        let Ok(position) = q_items.get(ev.entity) else {
             continue;
         };
 
-        let Some(partition) = graph.get_partition_mut(&in_partition.partition_id) else {
-            panic!("Missing partition!? {}", in_partition.partition_id);
+        terrain.remove_item(position.chunk_idx, position.block_idx, &ev.entity);
+
+        let Some(partition_id) = position.partition_id else {
+            continue;
         };
 
-        if !partition.items.remove(&ev.entity) {
-            println!("Item not here!");
+        if !graph.remove_item_from_partition(&partition_id, &ev.entity) {
+            println!(
+                "Item not in expected partition! item={} partition_id={}",
+                ev.entity.index(),
+                partition_id
+            );
         }
     }
 }

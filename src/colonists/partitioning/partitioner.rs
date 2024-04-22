@@ -1,33 +1,20 @@
 use bevy::{
     ecs::{
-        component::Component,
         entity::Entity,
-        query::With,
-        system::{Commands, Query, ResMut},
+        system::{Query, ResMut},
     },
-    transform::components::Transform,
     utils::hashbrown::HashSet,
 };
 use ndshape::AbstractShape;
 
-use crate::{
-    colonists::{get_block_flags, Item},
-    common::flood_fill_i32,
-    Terrain,
-};
+use crate::{colonists::get_block_flags, common::flood_fill_i32, Position, Terrain};
 
 use super::NavigationGraph;
 
-#[derive(Component)]
-pub struct InPartition {
-    pub partition_id: u32,
-}
-
 pub fn partition(
-    mut cmd: Commands,
     mut graph: ResMut<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
-    q_items: Query<&Transform, With<Item>>,
+    mut q_items: Query<&mut Position>,
 ) {
     for chunk_idx in 0..terrain.chunk_count {
         let is_nav_dirty = terrain.get_is_chunk_nav_dirty(chunk_idx);
@@ -177,30 +164,18 @@ pub fn partition(
         }
 
         for item in items {
-            let Ok(transform) = q_items.get(item) else {
+            let Ok(mut position) = q_items.get_mut(item) else {
                 println!("Item does not exist anymore. {}", item.index());
                 continue;
             };
 
-            let x = transform.translation.x as u32;
-            let y = transform.translation.y as u32;
-            let z = transform.translation.z as u32;
+            position.partition_id =
+                terrain.get_partition_id(position.chunk_idx, position.block_idx);
 
-            let mut ecmd = cmd.entity(item);
-
-            ecmd.remove::<InPartition>();
-
-            let Some(item_partition_id) = terrain.get_partition_id_u32(x, y, z) else {
-                println!("Item is not in a valid partition! Teleport it?");
-                continue;
-            };
-
-            let partition = graph.get_partition_mut(&item_partition_id).unwrap();
-
-            partition.items.insert(item);
-            ecmd.insert(InPartition {
-                partition_id: item_partition_id,
-            });
+            if let Some(partition_id) = position.partition_id {
+                let partition = graph.get_partition_mut(&partition_id).unwrap();
+                partition.items.insert(item);
+            }
         }
 
         terrain.set_chunk_nav_dirty(chunk_idx, false);

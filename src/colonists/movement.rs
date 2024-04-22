@@ -2,66 +2,12 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::{Event, EventReader, EventWriter},
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, Res},
     },
     math::{vec3, Vec3},
     time::Time,
     transform::components::Transform,
 };
-
-use crate::Terrain;
-
-use super::{InInventory, InPartition, Item, NavigationGraph};
-
-#[derive(Event)]
-pub struct MovedEvent {
-    pub entity: Entity,
-    pub position: [u32; 3],
-}
-
-pub fn update_item_partition(
-    mut graph: ResMut<NavigationGraph>,
-    terrain: Res<Terrain>,
-    mut cmd: Commands,
-    mut ev_moved: EventReader<MovedEvent>,
-    q_in_inventory: Query<&InInventory>,
-    q_in_partition: Query<&InPartition>,
-    q_items: Query<&Item>,
-) {
-    for ev in ev_moved.read() {
-        let mut ecmd = cmd.entity(ev.entity);
-
-        // remove the item from whatever partition it is in
-        if let Ok(in_partition) = q_in_partition.get(ev.entity) {
-            let partition_id = in_partition.partition_id;
-            if let Some(partition) = graph.get_partition_mut(&partition_id) {
-                partition.items.remove(&ev.entity);
-            }
-            ecmd.remove::<InPartition>();
-        };
-
-        if q_in_inventory.contains(ev.entity) {
-            continue;
-        }
-
-        if q_items.contains(ev.entity) {
-            let [x, y, z] = ev.position;
-            let Some(new_partition_id) = terrain.get_partition_id_u32(x, y, z) else {
-                println!("doh! item not in a partition? {}", ev.entity.index());
-                continue;
-            };
-            let Some(new_partition) = graph.get_partition_mut(&new_partition_id) else {
-                continue;
-            };
-
-            new_partition.items.insert(ev.entity);
-            ecmd.insert(InPartition {
-                partition_id: new_partition_id,
-            });
-        }
-    }
-}
 
 #[derive(Component)]
 pub struct BlockMove {
@@ -74,7 +20,6 @@ pub fn block_move_system(
     mut cmd: Commands,
     time: Res<Time>,
     mut query: Query<(Entity, &BlockMove, &mut Transform)>,
-    mut ev_moved: EventWriter<MovedEvent>,
 ) {
     for (entity, block_move, mut transform) in query.iter_mut() {
         let pos = vec3(
@@ -90,14 +35,6 @@ pub fn block_move_system(
         if distance < move_dist {
             transform.translation = pos;
             cmd.entity(entity).remove::<BlockMove>();
-            ev_moved.send(MovedEvent {
-                entity,
-                position: [
-                    block_move.target[0] as u32,
-                    block_move.target[1] as u32,
-                    block_move.target[2] as u32,
-                ],
-            });
         } else {
             transform.translation += direction * move_dist;
             if block_move.look_at {

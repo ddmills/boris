@@ -1,5 +1,5 @@
 use bevy::{
-    ecs::system::Resource,
+    ecs::{entity::Entity, system::Resource},
     utils::hashbrown::{HashMap, HashSet},
 };
 
@@ -128,6 +128,22 @@ impl NavigationGraph {
             .iter()
             .filter_map(|group_id| self.get_group(group_id))
             .collect::<HashSet<_>>()
+    }
+
+    pub fn add_item_to_partition(&mut self, partition_id: &u32, item: Entity) -> bool {
+        if let Some(partition) = self.get_partition_mut(partition_id) {
+            return partition.items.insert(item);
+        }
+
+        false
+    }
+
+    pub fn remove_item_from_partition(&mut self, partition_id: &u32, item: &Entity) -> bool {
+        if let Some(partition) = self.get_partition_mut(partition_id) {
+            return partition.items.remove(item);
+        }
+
+        false
     }
 
     /// Set partitions A and B as neighbors. It also makes the regions neighbors

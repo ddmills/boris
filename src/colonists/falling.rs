@@ -3,14 +3,14 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{With, Without},
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, Res},
     },
     transform::components::Transform,
 };
 
 use crate::{colonists::BlockMove, Terrain};
 
-use super::{InInventory, InPartition, NavigationFlags, NavigationGraph};
+use super::{InInventory, NavigationFlags, NavigationGraph};
 
 #[derive(Component)]
 pub struct Faller;
@@ -18,18 +18,13 @@ pub struct Faller;
 pub fn apply_falling(
     mut cmd: Commands,
     terrain: Res<Terrain>,
-    mut graph: ResMut<NavigationGraph>,
+    graph: Res<NavigationGraph>,
     q_fallers: Query<
-        (
-            Entity,
-            &Transform,
-            Option<&InPartition>,
-            Option<&NavigationFlags>,
-        ),
+        (Entity, &Transform, Option<&NavigationFlags>),
         (With<Faller>, Without<BlockMove>, Without<InInventory>),
     >,
 ) {
-    for (entity, transform, opt_in_partition, opt_flags) in q_fallers.iter() {
+    for (entity, transform, opt_flags) in q_fallers.iter() {
         let x = transform.translation.x as u32;
         let y = transform.translation.y as u32;
         let z = transform.translation.z as u32;
@@ -45,15 +40,6 @@ pub fn apply_falling(
         }
 
         let mut ecmd = cmd.entity(entity);
-
-        // remove the item from whatever partition it is in
-        if let Some(in_partition) = opt_in_partition {
-            let partition_id = in_partition.partition_id;
-            if let Some(partition) = graph.get_partition_mut(&partition_id) {
-                partition.items.remove(&entity);
-            }
-            ecmd.remove::<InPartition>();
-        }
 
         let world_y = terrain.world_size_y();
 

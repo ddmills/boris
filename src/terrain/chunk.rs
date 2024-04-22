@@ -1,4 +1,9 @@
-use bevy::{asset::Handle, ecs::component::Component, render::mesh::Mesh};
+use bevy::{
+    asset::Handle,
+    ecs::{component::Component, entity::Entity},
+    render::mesh::Mesh,
+    utils::hashbrown::HashSet,
+};
 use ndshape::{AbstractShape, RuntimeShape};
 
 use crate::{Block, BlockType};
@@ -16,6 +21,7 @@ pub struct ChunkMesh {
 pub struct Chunk {
     pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
+    pub items: Box<[HashSet<Entity>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -30,6 +36,7 @@ impl Chunk {
     pub fn new(shape: RuntimeShape<u32, 3>) -> Self {
         Self {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
+            items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -54,6 +61,28 @@ impl Chunk {
         }
 
         Block::OOB
+    }
+
+    pub fn get_items(&self, block_idx: u32) -> HashSet<Entity> {
+        if let Some(items) = self.items.get(block_idx as usize) {
+            return items.clone();
+        }
+
+        HashSet::new()
+    }
+
+    pub fn add_item(&mut self, block_idx: u32, item: Entity) {
+        if let Some(items) = self.items.get_mut(block_idx as usize) {
+            items.insert(item);
+        }
+    }
+
+    pub fn remove_item(&mut self, block_idx: u32, item: &Entity) -> bool {
+        if let Some(items) = self.items.get_mut(block_idx as usize) {
+            return items.remove(item);
+        }
+
+        false
     }
 
     pub fn set_partition_id(&mut self, block_idx: u32, value: u32) {

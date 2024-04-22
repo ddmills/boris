@@ -17,7 +17,7 @@ use crate::{
         test_item_tags, Actor, ActorRef, Blackboard, Item, ItemTag, NavigationGraph, TaskBuilder,
         TaskState,
     },
-    Terrain,
+    Position, Terrain,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
@@ -26,7 +26,7 @@ pub struct TaskFindNearestItem(pub Vec<ItemTag>);
 pub fn task_find_nearest_item(
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
-    mut q_items: Query<(&Transform, &mut Item)>,
+    mut q_items: Query<(&Position, &mut Item)>,
     q_actors: Query<&Transform, With<Actor>>,
     mut q_behavior: Query<(
         &ActorRef,
@@ -64,7 +64,7 @@ pub fn task_find_nearest_item(
 
         let item_entity = items.first().unwrap();
 
-        let Ok((item_tansform, mut item)) = q_items.get_mut(*item_entity) else {
+        let Ok((item_position, mut item)) = q_items.get_mut(*item_entity) else {
             println!("Item without transform? Or stale item data");
             *state = TaskState::Failed;
             continue;
@@ -72,14 +72,8 @@ pub fn task_find_nearest_item(
 
         item.reserved = Some(*actor);
 
-        let item_pos = [
-            item_tansform.translation.x as u32,
-            item_tansform.translation.y as u32,
-            item_tansform.translation.z as u32,
-        ];
-
         blackboard.item = Some(*item_entity);
-        blackboard.move_goals = vec![item_pos];
+        blackboard.move_goals = vec![[item_position.x, item_position.y, item_position.z]];
         *state = TaskState::Success;
     }
 }
@@ -88,7 +82,7 @@ fn find_nearest(
     start_id: u32,
     tags: Vec<ItemTag>,
     graph: &NavigationGraph,
-    q_items: &Query<(&Transform, &mut Item)>,
+    q_items: &Query<(&Position, &mut Item)>,
 ) -> Option<Vec<Entity>> {
     let mut visited = HashSet::new();
     let mut queue = VecDeque::new();

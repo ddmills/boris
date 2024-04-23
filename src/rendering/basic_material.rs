@@ -4,14 +4,11 @@ use bevy::{
         query::Changed,
         system::{Query, Res, ResMut},
     },
-    pbr::{Material, MaterialPipeline, MaterialPipelineKey},
+    pbr::Material,
     reflect::TypePath,
     render::{
         color::Color,
-        mesh::{Mesh, MeshVertexBufferLayout},
-        render_resource::{
-            AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
-        },
+        render_resource::{AsBindGroup, ShaderRef},
         texture::Image,
     },
 };

@@ -10,6 +10,7 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{Blackboard, DestroyItemEvent, TaskBuilder, TaskState},
+    ui::GameSpeed,
     BlockType, Terrain,
 };
 
@@ -21,6 +22,7 @@ pub struct TaskBuildBlock {
 
 pub fn task_build_block(
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
     mut terrain: ResMut<Terrain>,
     mut q_behavior: Query<(&mut TaskState, &Blackboard, &mut TaskBuildBlock)>,
     mut ev_destroy_item: EventWriter<DestroyItemEvent>,
@@ -62,6 +64,6 @@ pub fn task_build_block(
             continue;
         }
 
-        task.progress += time.delta_seconds();
+        task.progress += time.delta_seconds() * game_speed.speed();
     }
 }

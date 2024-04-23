@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use bevy::{
     app::{Plugin, PreUpdate},
+    core::Name,
     ecs::{
         component::Component,
         entity::Entity,
@@ -9,13 +10,16 @@ use bevy::{
         system::{Commands, EntityCommands, Query},
     },
     prelude::App,
+    reflect::Reflect,
 };
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 
 use crate::colonists::{ScorerBuild, ScorerMine, ScorerWander};
 
 use super::{ActorRef, Behavior};
 
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Score(pub f32);
 
 #[derive(Component, Clone)]
@@ -23,7 +27,8 @@ pub struct Thinker {
     pub score_builders: Vec<Arc<dyn ScorerBuilder>>,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Scorers {
     pub scorers: Vec<Entity>,
 }
@@ -62,14 +67,20 @@ pub fn spawn_scorers(
             .enumerate()
             .map(|(idx, builder)| {
                 let scorer = cmd
-                    .spawn((ActorRef(actor), ScoreBuilderRef(idx), Score(0.)))
+                    .spawn((
+                        Name::new("Behavior Scorer"),
+                        ActorRef(actor),
+                        ScoreBuilderRef(idx),
+                        Score(0.),
+                    ))
                     .id();
+
                 let mut e_cmd = cmd.entity(scorer);
 
                 builder.insert(&mut e_cmd);
                 scorer
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         cmd.entity(actor).insert(Scorers { scorers });
     }

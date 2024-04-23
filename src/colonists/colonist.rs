@@ -14,7 +14,7 @@ use bevy::{
     pbr::StandardMaterial,
     prelude::default,
     render::{color::Color, texture::Image, view::Visibility},
-    scene::{Scene, SceneBundle},
+    scene::SceneBundle,
     transform::components::Transform,
 };
 

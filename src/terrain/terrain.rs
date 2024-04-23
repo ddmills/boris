@@ -385,9 +385,7 @@ impl Terrain {
     pub fn get_partition_id_u32(&self, x: u32, y: u32, z: u32) -> Option<u32> {
         let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
 
-        let chunk = self.get_chunk(chunk_idx)?;
-
-        chunk.get_partition_id(block_idx)
+        self.get_partition_id(chunk_idx, block_idx)
     }
 
     pub fn get_neighbors_detail(&self, x: u32, y: u32, z: u32) -> [Block; 26] {

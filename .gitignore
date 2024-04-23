@@ -1,4 +1,6 @@
 /target
+/assets/raw_ignored
 .idea
+.blend1
 rustc-ice-*
 trace-*

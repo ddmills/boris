@@ -57,6 +57,7 @@ where
         depth += 1;
 
         if depth >= settings.max_depth {
+            println!("astar max_depth={} exceeded", settings.max_depth);
             break;
         }
 

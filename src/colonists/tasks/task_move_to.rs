@@ -1,10 +1,7 @@
-use bevy::{
-    ecs::{
-        component::Component,
-        query::With,
-        system::{Commands, Query, Res},
-    },
-    transform::components::Transform,
+use bevy::ecs::{
+    component::Component,
+    query::With,
+    system::{Commands, Query, Res},
 };
 use task_derive::TaskBuilder;
 
@@ -14,7 +11,8 @@ use crate::{
         AnimClip, Animator, Blackboard, BlockMove, GranularPathRequest, NavigationFlags,
         NavigationGraph, PartitionPathRequest, Path, TaskBuilder, TaskState,
     },
-    Terrain,
+    ui::GameSpeed,
+    Position, Terrain,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
@@ -39,12 +37,12 @@ pub fn task_move_to(
     mut q_paths: Query<&mut Path, With<Actor>>,
     q_movers: Query<&BlockMove, With<Actor>>,
     mut q_animators: Query<&mut Animator, With<Actor>>,
-    q_transforms: Query<&Transform, With<Actor>>,
+    q_positions: Query<&Position, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &Blackboard, &mut TaskState, &mut TaskMoveTo)>,
 ) {
     for (ActorRef(actor), blackboard, mut state, mut move_to) in q_behavior.iter_mut() {
-        let Ok(transform) = q_transforms.get(*actor) else {
-            println!("no transform on actor, cannot move to!");
+        let Ok(position) = q_positions.get(*actor) else {
+            println!("no position on actor, cannot move to!");
             cmd.entity(*actor).remove::<Path>();
             *state = TaskState::Failed;
             continue;
@@ -54,11 +52,7 @@ pub fn task_move_to(
             continue;
         }
 
-        let pos = [
-            transform.translation.x as u32,
-            transform.translation.y as u32,
-            transform.translation.z as u32,
-        ];
+        let pos = [position.x, position.y, position.z];
 
         let Ok(mut path) = q_paths.get_mut(*actor) else {
             if blackboard.move_goals.is_empty() {
@@ -81,7 +75,7 @@ pub fn task_move_to(
 
                 move_to.attempts += 1;
                 println!(
-                    "No partition path! entity={} attempts={}",
+                    "Failed to find partition path, should be reachable! entity={} attempts={}",
                     actor.index(),
                     move_to.attempts,
                 );
@@ -94,7 +88,7 @@ pub fn task_move_to(
             };
 
             let path = Path {
-                current_partition_idx: partition_path.goals.len() - 1,
+                current_partition_idx: partition_path.path.len() - 1,
                 goals: partition_path.goals,
                 partition_path: partition_path.path,
                 flags: request.flags,
@@ -119,7 +113,7 @@ pub fn task_move_to(
 
         // what partition are we standing in? if it's not part of the predetermined path, we stay course.
         // if it is part of the path, we set our current index to be the path idx
-        let Some(partition_id) = terrain.get_partition_id_u32(pos[0], pos[1], pos[2]) else {
+        let Some(partition_id) = position.partition_id else {
             println!("Not standing in a partition, cannot path!");
             cmd.entity(*actor).remove::<Path>();
             *state = TaskState::Failed;
@@ -146,10 +140,21 @@ pub fn task_move_to(
                     start: pos,
                     goals: path.goals.clone(),
                     goal_partition_id: *next_partition_id,
-                    flags: path.flags,
+                    partition_path: path.partition_path.clone(),
+                    flags: NavigationFlags::COLONIST,
                 },
             ) else {
+                move_to.attempts += 1;
                 cmd.entity(*actor).remove::<Path>();
+
+                if move_to.attempts >= move_to.max_retries {
+                    println!(
+                        "Granular path attempts failed! attempts={}",
+                        move_to.attempts
+                    );
+                    *state = TaskState::Failed;
+                }
+
                 continue;
             };
 

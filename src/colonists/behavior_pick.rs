@@ -1,11 +1,16 @@
 use std::sync::Arc;
 
-use bevy::ecs::{
-    component::Component,
-    entity::Entity,
-    query::{With, Without},
-    system::{Commands, Query},
+use bevy::{
+    core::Name,
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::{With, Without},
+        system::{Commands, Query},
+    },
+    reflect::Reflect,
 };
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use bevy_trait_query::One;
 
 use super::{
@@ -14,7 +19,8 @@ use super::{
     TaskState,
 };
 
-#[derive(Component, Default)]
+#[derive(Reflect, Component, Default, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Blackboard {
     pub job: Option<Entity>,
     pub bed: u8,
@@ -52,8 +58,10 @@ pub fn behavior_pick_system(
 
         let builder = high_score_builder.unwrap();
         let behavior = builder.build();
+
         let b_entity = cmd
             .spawn((
+                Name::new(behavior.label.clone()),
                 Blackboard::default(),
                 TaskState::Success,
                 ActorRef(actor),
@@ -61,7 +69,9 @@ pub fn behavior_pick_system(
             ))
             .id();
 
-        cmd.entity(actor).insert(HasBehavior {
+        let mut cmd_actor = cmd.entity(actor);
+
+        cmd_actor.insert(HasBehavior {
             behavior_entity: b_entity,
         });
     }

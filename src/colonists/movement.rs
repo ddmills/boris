@@ -9,6 +9,8 @@ use bevy::{
     transform::components::Transform,
 };
 
+use crate::ui::GameSpeed;
+
 #[derive(Component)]
 pub struct BlockMove {
     pub speed: f32,
@@ -19,6 +21,7 @@ pub struct BlockMove {
 pub fn block_move_system(
     mut cmd: Commands,
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
     mut query: Query<(Entity, &BlockMove, &mut Transform)>,
 ) {
     for (entity, block_move, mut transform) in query.iter_mut() {
@@ -30,7 +33,7 @@ pub fn block_move_system(
 
         let direction = (pos - transform.translation).normalize();
         let distance = transform.translation.distance(pos);
-        let move_dist = time.delta_seconds() * block_move.speed;
+        let move_dist = time.delta_seconds() * block_move.speed * game_speed.speed();
 
         if distance < move_dist {
             transform.translation = pos;

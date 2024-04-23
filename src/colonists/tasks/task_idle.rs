@@ -8,7 +8,10 @@ use bevy::{
 };
 use task_derive::TaskBuilder;
 
-use crate::colonists::{Actor, ActorRef, AnimClip, Animator, TaskBuilder, TaskState};
+use crate::{
+    colonists::{Actor, ActorRef, AnimClip, Animator, TaskBuilder, TaskState},
+    ui::GameSpeed,
+};
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskIdle {
@@ -27,6 +30,7 @@ impl Default for TaskIdle {
 
 pub fn task_idle(
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
     mut q_animators: Query<&mut Animator, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut TaskIdle)>,
 ) {
@@ -40,6 +44,6 @@ pub fn task_idle(
             animator.clip = AnimClip::Idle;
         };
 
-        task.progress += time.delta_seconds();
+        task.progress += time.delta_seconds() * game_speed.speed();
     }
 }

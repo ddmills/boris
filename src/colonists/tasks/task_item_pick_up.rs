@@ -2,10 +2,9 @@ use bevy::{
     ecs::{
         component::Component,
         query::With,
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, ResMut},
     },
     render::view::Visibility,
-    transform::components::Transform,
 };
 use task_derive::TaskBuilder;
 
@@ -14,7 +13,7 @@ use crate::{
         Actor, ActorRef, Blackboard, InInventory, Inventory, Item, NavigationGraph, TaskBuilder,
         TaskState,
     },
-    Position, Terrain,
+    Position,
 };
 
 #[derive(Component, Clone, TaskBuilder)]

@@ -1,14 +1,11 @@
 use std::sync::Arc;
 
-use bevy::{
-    ecs::{
-        self,
-        component::Component,
-        entity::Entity,
-        query::{With, Without},
-        system::{Query, Res},
-    },
-    transform::components::Transform,
+use bevy::ecs::{
+    self,
+    component::Component,
+    entity::Entity,
+    query::{With, Without},
+    system::{Query, Res},
 };
 
 use crate::{
@@ -20,7 +17,7 @@ use crate::{
         TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMineBlock, TaskMoveTo,
     },
     common::Distance,
-    Terrain,
+    Position, Terrain,
 };
 
 #[derive(Component, Clone, Default)]
@@ -71,24 +68,17 @@ pub fn score_mine(
         ),
     >,
     q_items: Query<&Item>,
-    q_free_items: Query<(&Item, &Transform), Without<InInventory>>,
-    q_actors: Query<
-        (&Inventory, &Transform, &NavigationFlags),
-        (With<Actor>, Without<HasBehavior>),
-    >,
+    q_free_items: Query<(&Item, &Position), Without<InInventory>>,
+    q_actors: Query<(&Inventory, &Position, &NavigationFlags), (With<Actor>, Without<HasBehavior>)>,
     mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerMine)>,
 ) {
     for (ActorRef(actor), mut score, mut scorer) in q_behaviors.iter_mut() {
-        let Ok((inventory, transform, flags)) = q_actors.get(*actor) else {
+        let Ok((inventory, position, flags)) = q_actors.get(*actor) else {
             *score = Score(0.);
             continue;
         };
 
-        let pos = [
-            transform.translation.x as u32,
-            transform.translation.y as u32,
-            transform.translation.z as u32,
-        ];
+        let pos = [position.x, position.y, position.z];
 
         let mut best = None;
         let mut best_dist = 100000.;
@@ -151,17 +141,13 @@ pub fn score_mine(
         }
 
         // check if any of the items are unreserved and accessible
-        if q_free_items.iter().any(|(i, t)| {
+        if q_free_items.iter().any(|(i, p)| {
             test_item_tags(&i.tags, item_tags)
                 && i.reserved.is_none()
                 && is_reachable(
                     &PartitionPathRequest {
                         start: pos,
-                        goals: vec![[
-                            t.translation.x as u32,
-                            t.translation.y as u32,
-                            t.translation.z as u32,
-                        ]],
+                        goals: vec![[p.x, p.y, p.z]],
                         flags: *flags,
                     },
                     &terrain,

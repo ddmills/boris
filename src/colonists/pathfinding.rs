@@ -1,4 +1,5 @@
-use bevy::ecs::component::Component;
+use bevy::{ecs::component::Component, reflect::Reflect};
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 use itertools::Itertools;
 use ordered_float::*;
 
@@ -9,20 +10,24 @@ use crate::{
 
 use super::{get_block_flags, NavigationFlags, NavigationGraph};
 
-#[derive(Component, Default)]
+#[derive(Reflect, Component, Default, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Path {
     pub partition_path: Vec<u32>,
     pub goals: Vec<[u32; 3]>,
     pub current_partition_idx: usize,
+    #[reflect(ignore)]
     pub flags: NavigationFlags,
     pub blocks: Vec<[i32; 3]>,
     pub current_block_idx: usize,
 }
 
-#[derive(Clone, Component, Debug)]
+#[derive(Clone, Component, Debug, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct PartitionPathRequest {
     pub start: [u32; 3],
     pub goals: Vec<[u32; 3]>,
+    #[reflect(ignore)]
     pub flags: NavigationFlags,
 }
 
@@ -30,6 +35,7 @@ pub struct GranularPathRequest {
     pub start: [u32; 3],
     pub goals: Vec<[u32; 3]>,
     pub goal_partition_id: u32,
+    pub partition_path: Vec<u32>,
     pub flags: NavigationFlags,
 }
 
@@ -143,17 +149,16 @@ pub fn get_granular_path(
                         terrain.get_block_indexes(p[0] as u32, p[1] as u32, p[2] as u32);
 
                     let partition_id = terrain.get_partition_id(chunk_idx, block_idx)?;
-                    let partition = graph.get_partition(&partition_id)?;
 
-                    if partition.flags & request.flags != NavigationFlags::NONE {
-                        Some(*p)
-                    } else {
+                    if !request.partition_path.contains(&partition_id) {
                         None
+                    } else {
+                        Some(*p)
                     }
                 })
                 .collect()
         },
-        max_depth: 3000,
+        max_depth: 10000,
     });
 
     if !result.is_success {
@@ -270,7 +275,7 @@ pub fn get_partition_path(
     let partition_path: crate::common::AStarResult<u32> = astar(AStarSettings {
         start: starting_partition_id,
         is_goal: |p| goal_partition_ids.contains(&p),
-        max_depth: 2000,
+        max_depth: 4000,
         neighbors: |v| {
             let Some(p) = graph.get_partition(&v) else {
                 return vec![];

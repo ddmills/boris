@@ -8,13 +8,17 @@ use bevy::{
 };
 use task_derive::TaskBuilder;
 
-use crate::colonists::{ActorRef, Blackboard, Fatigue, TaskBuilder, TaskState};
+use crate::{
+    colonists::{ActorRef, Blackboard, Fatigue, TaskBuilder, TaskState},
+    ui::GameSpeed,
+};
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskSleep;
 
 pub fn task_sleep(
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
     mut q_fatigues: Query<&mut Fatigue>,
     mut q_behavior: Query<(&ActorRef, &Blackboard, &mut TaskState), With<TaskSleep>>,
 ) {
@@ -26,7 +30,7 @@ pub fn task_sleep(
         };
 
         if fatigue.value > 0. {
-            fatigue.value -= time.delta_seconds() * 40.;
+            fatigue.value -= time.delta_seconds() * 40. * game_speed.speed();
         }
 
         if fatigue.value <= 0. {

@@ -8,29 +8,35 @@ use bevy::{
         system::{Commands, Query, ResMut},
     },
     hierarchy::DespawnRecursiveExt,
+    reflect::Reflect,
 };
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 
 use crate::{Position, Terrain};
 
 use super::NavigationGraph;
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Inventory {
     pub items: Vec<Entity>,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Item {
     pub tags: Vec<ItemTag>,
     pub reserved: Option<Entity>,
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct InInventory {
     pub holder: Entity,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub enum ItemTag {
     Pickaxe,
     Stone,

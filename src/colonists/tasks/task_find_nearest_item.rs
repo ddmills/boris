@@ -7,7 +7,6 @@ use bevy::{
         query::With,
         system::{Query, Res},
     },
-    transform::components::Transform,
     utils::hashbrown::HashSet,
 };
 use task_derive::TaskBuilder;
@@ -27,7 +26,7 @@ pub fn task_find_nearest_item(
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
     mut q_items: Query<(&Position, &mut Item)>,
-    q_actors: Query<&Transform, With<Actor>>,
+    q_actors: Query<&Position, With<Actor>>,
     mut q_behavior: Query<(
         &ActorRef,
         &mut TaskState,
@@ -38,16 +37,13 @@ pub fn task_find_nearest_item(
     for (ActorRef(actor), mut state, mut blackboard, task) in q_behavior.iter_mut() {
         blackboard.item = None;
 
-        let Ok(transform) = q_actors.get(*actor) else {
+        let Ok(position) = q_actors.get(*actor) else {
             *state = TaskState::Failed;
             continue;
         };
 
-        let actor_x = transform.translation.x as u32;
-        let actor_y = transform.translation.y as u32;
-        let actor_z = transform.translation.z as u32;
-
-        let Some(start_id) = terrain.get_partition_id_u32(actor_x, actor_y, actor_z) else {
+        let Some(start_id) = terrain.get_partition_id_u32(position.x, position.y, position.z)
+        else {
             println!("Item cannot be found because seeker is not in a partition!");
             *state = TaskState::Failed;
             continue;

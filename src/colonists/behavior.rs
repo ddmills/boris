@@ -1,10 +1,16 @@
 use std::sync::Arc;
 
-use bevy::ecs::{
-    component::Component,
-    entity::Entity,
-    system::{Commands, EntityCommands, Query},
+use bevy::{
+    ecs::{
+        component::Component,
+        entity::Entity,
+        system::{Commands, EntityCommands, Query, Res},
+    },
+    reflect::Reflect,
 };
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
+
+use crate::ui::GameSpeed;
 
 pub trait TaskBuilder: Send + Sync {
     fn insert(&self, cmd: &mut EntityCommands);
@@ -12,7 +18,8 @@ pub trait TaskBuilder: Send + Sync {
     fn label(&self) -> String;
 }
 
-#[derive(Component, Clone, Copy, PartialEq)]
+#[derive(Component, Clone, Copy, PartialEq, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub enum TaskState {
     Executing,
     Success,
@@ -22,12 +29,14 @@ pub enum TaskState {
 #[derive(Component, Clone)]
 pub struct Actor;
 
-#[derive(Component, Clone)]
+#[derive(Reflect, Component, Clone, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct HasBehavior {
     pub behavior_entity: Entity,
 }
 
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone, Copy, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct ActorRef(pub Entity);
 
 #[derive(Component, Clone)]
@@ -373,9 +382,14 @@ impl BehaviorNodeState {
 
 pub fn behavior_system(
     mut cmd: Commands,
+    game_speed: Res<GameSpeed>,
     mut q_behaviors: Query<(Entity, &ActorRef, &mut Behavior, &mut TaskState)>,
     q_has_behavior: Query<&HasBehavior>,
 ) {
+    if game_speed.is_paused {
+        return;
+    }
+
     for (entity, ActorRef(actor), mut behavior, mut state) in q_behaviors.iter_mut() {
         let Ok(has_behavior) = q_has_behavior.get(*actor) else {
             println!("Detached behavior detected? Despawning it.");
@@ -399,8 +413,8 @@ pub fn behavior_system(
         };
 
         if node_state != NodeState::Executing {
-            cmd.entity(*actor).remove::<HasBehavior>();
             cmd.entity(entity).despawn();
+            cmd.entity(*actor).remove::<HasBehavior>();
         }
 
         // if node_state == NodeState::Failed {

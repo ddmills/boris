@@ -13,6 +13,7 @@ use crate::{
     colonists::{Actor, ActorRef, AnimClip, Animator, Blackboard, TaskBuilder, TaskState},
     common::Rand,
     items::SpawnStoneEvent,
+    ui::GameSpeed,
     BlockType, Terrain,
 };
 
@@ -23,6 +24,7 @@ pub struct TaskMineBlock {
 
 pub fn task_mine_block(
     time: Res<Time>,
+    game_speed: Res<GameSpeed>,
     mut terrain: ResMut<Terrain>,
     mut q_animators: Query<&mut Animator, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &Blackboard, &mut TaskMineBlock)>,
@@ -57,6 +59,6 @@ pub fn task_mine_block(
             animator.clip = AnimClip::SwingPick;
         };
 
-        task.progress += time.delta_seconds();
+        task.progress += time.delta_seconds() * game_speed.speed();
     }
 }

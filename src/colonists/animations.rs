@@ -10,6 +10,8 @@ use bevy::{
     },
 };
 
+use crate::ui::GameSpeed;
+
 #[derive(Resource)]
 pub struct ColonistAnimations {
     pub base: Handle<AnimationClip>,
@@ -44,6 +46,7 @@ pub struct Animator {
 
 pub fn colonist_animations(
     animations: Res<ColonistAnimations>,
+    game_speed: Res<GameSpeed>,
     mut q_animators: Query<&mut Animator>,
     mut q_players: Query<&mut AnimationPlayer>,
 ) {
@@ -77,7 +80,13 @@ pub fn colonist_animations(
             };
 
             animator.prev_clip = animator.clip;
-            player.play_with_transition(clip, Duration::from_millis(160));
+            if game_speed.speed() > 0. {
+                player.play_with_transition(
+                    clip,
+                    Duration::from_millis((160. / game_speed.speed()) as u64),
+                );
+            }
+            player.set_speed(game_speed.speed());
 
             if !one_shot {
                 player.repeat();

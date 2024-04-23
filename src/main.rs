@@ -10,8 +10,10 @@ use colonists::{
     task_check_has_item, task_debug, task_find_bed, task_find_nearest_item, task_get_job_location,
     task_idle, task_is_target_empty, task_item_equip, task_item_pick_up, task_job_assign,
     task_job_cancel, task_job_complete, task_job_unassign, task_mine_block, task_move_to,
-    task_pick_random_spot, task_sleep, ColonistAnimations, DestroyItemEvent, NavigationGraph,
-    PartitionDebug, ScorerPlugin, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobMineEvent,
+    task_pick_random_spot, task_sleep, ActorRef, Blackboard, ColonistAnimations, DestroyItemEvent,
+    HasBehavior, InInventory, Inventory, Item, ItemTag, NavigationGraph, PartitionDebug,
+    PartitionPathRequest, Path, Score, ScorerPlugin, Scorers, SpawnColonistEvent,
+    SpawnJobBuildEvent, SpawnJobMineEvent, TaskState,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -22,7 +24,8 @@ use rendering::{
 };
 use terrain::*;
 use ui::{
-    setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, Tool, Toolbar, Ui,
+    setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, GameSpeed, Tool,
+    Toolbar, Ui,
 };
 
 mod colonists;
@@ -52,6 +55,19 @@ fn main() {
             adj_pos: [0, 0, 0],
             hit_block: Block::OOB,
         })
+        .register_type::<Position>()
+        .register_type::<HasBehavior>()
+        .register_type::<ActorRef>()
+        .register_type::<Path>()
+        .register_type::<PartitionPathRequest>()
+        .register_type::<Score>()
+        .register_type::<Scorers>()
+        .register_type::<Inventory>()
+        .register_type::<Item>()
+        .register_type::<InInventory>()
+        .register_type::<ItemTag>()
+        .register_type::<Blackboard>()
+        .register_type::<TaskState>()
         .add_event::<SpawnColonistEvent>()
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<DestroyItemEvent>()
@@ -61,8 +77,9 @@ fn main() {
         .add_event::<TerrainSliceChanged>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
+        .init_resource::<GameSpeed>()
         .add_plugins((DefaultPlugins, ObjPlugin))
-        // .add_plugins(WorldInspectorPlugin::default())
+        .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,

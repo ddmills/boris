@@ -49,7 +49,7 @@ pub fn on_spawn_pickaxe(
 
         let stone_texture: Handle<Image> =
             asset_server.load_with_settings("textures/stone.png", settings);
-        let mesh = asset_server.load("pickaxe.gltf#Mesh0/Primitive0");
+        let mesh = asset_server.load("axe.gltf#Mesh0/Primitive0");
         let material = materials.add(BasicMaterial {
             texture: Some(stone_texture.clone()),
             sunlight: 8,

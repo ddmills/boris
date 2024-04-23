@@ -1,3 +1,4 @@
+use crate::{colonists::NavigationGraph, Terrain};
 use bevy::{
     ecs::{
         component::Component,
@@ -5,12 +6,13 @@ use bevy::{
         query::Changed,
         system::{Query, ResMut},
     },
+    reflect::Reflect,
     transform::components::GlobalTransform,
 };
+use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 
-use crate::{colonists::NavigationGraph, Terrain};
-
-#[derive(Component, Default)]
+#[derive(Reflect, Component, Default, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct Position {
     pub x: u32,
     pub y: u32,

@@ -1,10 +1,7 @@
-use bevy::{
-    ecs::{
-        component::Component,
-        query::With,
-        system::{Query, Res, ResMut},
-    },
-    transform::components::Transform,
+use bevy::ecs::{
+    component::Component,
+    query::With,
+    system::{Query, Res, ResMut},
 };
 use task_derive::TaskBuilder;
 
@@ -13,7 +10,7 @@ use crate::{
         Actor, ActorRef, Blackboard, NavigationFlags, NavigationGraph, TaskBuilder, TaskState,
     },
     common::Rand,
-    Terrain,
+    Position, Terrain,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
@@ -23,21 +20,17 @@ pub fn task_pick_random_spot(
     mut rand: ResMut<Rand>,
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
-    q_transforms: Query<&Transform, With<Actor>>,
+    q_positions: Query<&Position, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut Blackboard, &mut TaskState), With<TaskPickRandomSpot>>,
 ) {
     for (ActorRef(actor), mut blackboard, mut state) in q_behavior.iter_mut() {
-        let Ok(transform) = q_transforms.get(*actor) else {
+        let Ok(position) = q_positions.get(*actor) else {
             println!("no transform on actor, cannot pick random spot!");
             *state = TaskState::Failed;
             continue;
         };
 
-        let pos = [
-            transform.translation.x as u32,
-            transform.translation.y as u32,
-            transform.translation.z as u32,
-        ];
+        let pos = [position.x, position.y, position.z];
 
         let Some(current_partition_id) = terrain.get_partition_id_u32(pos[0], pos[1], pos[2])
         else {

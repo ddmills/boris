@@ -21,7 +21,7 @@ use crate::{
     BlockType, Cursor, Terrain,
 };
 
-use super::Toolbar;
+use super::{game_speed, GameSpeed, Toolbar};
 
 #[derive(PartialEq, Clone)]
 pub enum Tool {
@@ -33,6 +33,7 @@ pub enum Tool {
     BuildStone,
     BlockInfo,
     Mine,
+    Pause,
 }
 
 #[derive(Default)]
@@ -44,6 +45,7 @@ pub struct ToolState {
 pub fn tool_system(
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
+    mut game_speed: ResMut<GameSpeed>,
     graph: Res<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
     mouse_input: Res<ButtonInput<MouseButton>>,
@@ -291,6 +293,12 @@ pub fn tool_system(
                 ev_spawn_job_build.send(SpawnJobBuildEvent {
                     pos: raycast.adj_pos,
                 });
+            }
+        }
+        Tool::Pause => {
+            if mouse_input.just_released(MouseButton::Left) {
+                game_speed.is_paused = !game_speed.is_paused;
+                println!("paused? {}", game_speed.is_paused);
             }
         }
     }

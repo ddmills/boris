@@ -18,7 +18,7 @@ use bevy::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
         texture::{Image, ImageLoaderSettings, ImageSampler},
-        view::{NoFrustumCulling, Visibility},
+        view::{visibility, NoFrustumCulling, Visibility},
     },
 };
 
@@ -121,10 +121,10 @@ pub fn update_slice_mesh(
     }
 }
 
-pub fn hide_sliced_entities(
+pub fn hide_sliced_objects(
     mut cmd: Commands,
     terrain_slice: Res<TerrainSlice>,
-    q_ents: Query<(Entity, &Position), Without<InInventory>>,
+    q_objects: Query<(Entity, &Position, &Visibility)>,
     mut ev_slice_changed: EventReader<TerrainSliceChanged>,
 ) {
     if ev_slice_changed.is_empty() {
@@ -133,7 +133,11 @@ pub fn hide_sliced_entities(
 
     ev_slice_changed.clear();
 
-    for (entity, position) in q_ents.iter() {
+    for (entity, position, visibility) in q_objects.iter() {
+        if visibility == Visibility::Inherited {
+            continue;
+        }
+
         if position.y <= terrain_slice.get_value() {
             cmd.entity(entity).insert(Visibility::Visible);
         } else {

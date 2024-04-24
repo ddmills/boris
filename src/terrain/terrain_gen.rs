@@ -1,13 +1,17 @@
 use std::cmp::min;
 
-use crate::{common::FractalNoise, BlockType, Terrain};
-use bevy::ecs::system::ResMut;
+use crate::{
+    common::{FractalNoise, Rand},
+    on_spawn_tree, BlockType, SpawnTreeEvent, Terrain, TreeSettings,
+};
+use bevy::ecs::{event::EventWriter, system::ResMut};
 
-pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
+pub fn setup_terrain(mut terrain: ResMut<Terrain>, mut ev_spawn_tree: EventWriter<SpawnTreeEvent>) {
     let seed = 3;
     let mut height = FractalNoise::new(seed, 0.01, 8);
     let mut caverns = FractalNoise::new(seed + 1, 0.01, 4);
     let mut caves = FractalNoise::new(seed + 1, 0.02, 3);
+    let mut trees = Rand::seed(seed as u64);
 
     let top = terrain.world_size_y() - 1;
     let mountain_height = min(top - 4, 49);
@@ -36,6 +40,15 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>) {
                     terrain.init_block(x, y, z, BlockType::EMPTY);
                     if y == surface + 1 {
                         terrain.add_sunlight(x, y, z, 15);
+                        if trees.bool(0.01) {
+                            ev_spawn_tree.send(SpawnTreeEvent {
+                                position: [x, y, z],
+                                settings: TreeSettings {
+                                    height: trees.range_n(5, 10) as u32,
+                                    canopy_radius: 2,
+                                },
+                            });
+                        }
                     } else {
                         terrain.set_sunlight(x, y, z, 15);
                     }

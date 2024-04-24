@@ -38,6 +38,7 @@ pub struct InInventory {
 #[derive(Clone, PartialEq, Debug, Reflect, InspectorOptions)]
 #[reflect(InspectorOptions)]
 pub enum ItemTag {
+    Axe,
     Pickaxe,
     Stone,
 }

@@ -1,8 +1,10 @@
 use bevy::{
     asset::{Asset, AssetServer, Assets, Handle},
     ecs::{
+        entity::Entity,
         event::{Event, EventReader, EventWriter},
-        system::{Commands, Res, ResMut, Resource},
+        query::Without,
+        system::{Commands, Query, Res, ResMut, Resource},
     },
     input::{keyboard::KeyCode, mouse::MouseWheel, ButtonInput},
     pbr::{Material, MaterialMeshBundle, MaterialPipeline, MaterialPipelineKey},
@@ -16,11 +18,11 @@ use bevy::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
         texture::{Image, ImageLoaderSettings, ImageSampler},
-        view::NoFrustumCulling,
+        view::{NoFrustumCulling, Visibility},
     },
 };
 
-use crate::{pack_block, Terrain, ATTRIBUTE_BLOCK_PACKED};
+use crate::{colonists::InInventory, pack_block, Position, Terrain, ATTRIBUTE_BLOCK_PACKED};
 
 #[derive(Resource)]
 pub struct TerrainSlice {
@@ -116,6 +118,27 @@ pub fn update_slice_mesh(
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, mesh_buffer.normals);
         mesh.insert_attribute(ATTRIBUTE_BLOCK_PACKED, mesh_buffer.packed);
         mesh.insert_indices(Indices::U32(mesh_buffer.indicies));
+    }
+}
+
+pub fn hide_sliced_entities(
+    mut cmd: Commands,
+    terrain_slice: Res<TerrainSlice>,
+    q_ents: Query<(Entity, &Position), Without<InInventory>>,
+    mut ev_slice_changed: EventReader<TerrainSliceChanged>,
+) {
+    if ev_slice_changed.is_empty() {
+        return;
+    }
+
+    ev_slice_changed.clear();
+
+    for (entity, position) in q_ents.iter() {
+        if position.y <= terrain_slice.get_value() {
+            cmd.entity(entity).insert(Visibility::Visible);
+        } else {
+            cmd.entity(entity).insert(Visibility::Hidden);
+        }
     }
 }
 

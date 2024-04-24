@@ -18,7 +18,10 @@ use colonists::{
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
-use items::{on_spawn_pickaxe, on_spawn_stone, SpawnPickaxeEvent, SpawnStoneEvent};
+use items::{
+    on_spawn_axe, on_spawn_pickaxe, on_spawn_stone, SpawnAxeEvent, SpawnPickaxeEvent,
+    SpawnStoneEvent,
+};
 use rendering::{
     update_basic_material_children_lighting, update_basic_material_lighting, BasicMaterial,
 };
@@ -69,6 +72,7 @@ fn main() {
         .register_type::<Blackboard>()
         .register_type::<TaskState>()
         .add_event::<SpawnColonistEvent>()
+        .add_event::<SpawnAxeEvent>()
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<DestroyItemEvent>()
         .add_event::<SpawnStoneEvent>()
@@ -113,6 +117,7 @@ fn main() {
         .add_systems(Update, scroll_events)
         .add_systems(Update, on_slice_changed)
         .add_systems(Update, update_slice_mesh)
+        .add_systems(Update, hide_sliced_entities)
         .add_systems(Update, light_system)
         .add_systems(Update, update_camera)
         .add_systems(Update, toolbar_select)
@@ -120,6 +125,7 @@ fn main() {
         .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)
+        .add_systems(Update, on_spawn_axe)
         .add_systems(Update, on_spawn_stone)
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)

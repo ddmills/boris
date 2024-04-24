@@ -50,7 +50,11 @@ impl Block {
 
         !matches!(
             self.block,
-            BlockType::OOB | BlockType::EMPTY | BlockType::LADDER | BlockType::MAGMA
+            BlockType::OOB
+                | BlockType::EMPTY
+                | BlockType::LADDER
+                | BlockType::MAGMA
+                | BlockType::LEAVES
         )
     }
 
@@ -88,6 +92,8 @@ impl Block {
             BlockType::MAGMA => 6,
             BlockType::LADDER => 7,
             BlockType::LAMP => 8,
+            BlockType::LEAVES => 40,
+            BlockType::TREE_TRUNK => 41,
             _ => 0,
         }
     }
@@ -123,7 +129,8 @@ impl BlockType {
     pub const ASHLAR_LARGE: Self = Self(7);
     pub const ASHLAR: Self = Self(8);
     pub const LADDER: Self = Self(9);
-    pub const BLUEPRINT: Self = Self(10);
+    pub const TREE_TRUNK: Self = Self(10);
+    pub const LEAVES: Self = Self(11);
 }
 
 impl BlockType {
@@ -151,7 +158,8 @@ impl BlockType {
             Self::ASHLAR_LARGE => String::from("ashlar (large)"),
             Self::ASHLAR => String::from("ashlar"),
             Self::LADDER => String::from("ladder"),
-            Self::BLUEPRINT => String::from("blueprint"),
+            Self::TREE_TRUNK => String::from("trunk"),
+            Self::LEAVES => String::from("leaves"),
             _ => String::from("unknown"),
         }
     }

@@ -285,6 +285,34 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                 ));
             });
 
+        parent
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(48.0),
+                        height: Val::Px(48.0),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                    background_color: BTN_NONE.into(),
+                    ..default()
+                },
+                BtnTool {
+                    tool: Tool::SpawnAxe,
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "axe",
+                    TextStyle {
+                        font_size: 18.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ));
+            });
+
         vec![
             BlockType::GRASS,
             BlockType::DIRT,
@@ -294,6 +322,8 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
             BlockType::LAMP,
             BlockType::MAGMA,
             BlockType::LADDER,
+            BlockType::TREE_TRUNK,
+            BlockType::LEAVES,
         ]
         .into_iter()
         .for_each(|block: BlockType| {

@@ -49,7 +49,7 @@ pub fn task_item_equip(
         item_transform.rotation = Quat::IDENTITY;
         item_transform.scale = Vec3::ONE;
         let mut item_cmds = cmd.entity(item_entity);
-        item_cmds.insert(Visibility::Visible);
+        item_cmds.insert(Visibility::Inherited);
         item_cmds.set_parent(grasper);
 
         *state = TaskState::Success;

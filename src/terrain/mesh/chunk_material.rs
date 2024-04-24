@@ -62,17 +62,17 @@ impl Material for ChunkMaterial {
 }
 
 pub fn pack_block(block: Block, dir: BlockFace, ao: VertexCornerCount) -> u32 {
-    let t_id = block.texture_idx(); // four bits, 0-15
+    let t_id = block.texture_idx(); // eight bits, 0-256
     let f_id = dir.bit(); // three bits, 0-7
     let ao_id = ao.bit(); // two bits, 0-3
     let mine_bit = if block.flag_mine { 1 } else { 0 }; // one bit;
     let blueprint_bit = if block.flag_blueprint { 1 } else { 0 }; // one bit;
 
-    (t_id & 15)
-        | ((f_id & 7) << 4)
-        | ((ao_id & 3) << 7)
-        | ((mine_bit & 1) << 9)
-        | ((blueprint_bit & 1) << 10)
+    (t_id & 255)
+        | ((f_id & 7) << 8)
+        | ((ao_id & 3) << 11)
+        | ((mine_bit & 1) << 13)
+        | ((blueprint_bit & 1) << 14)
 }
 
 pub enum VertexCornerCount {

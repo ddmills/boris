@@ -7,13 +7,7 @@ use bevy::{
     },
     pbr::MaterialMeshBundle,
     prelude::default,
-    render::{
-        color::Color,
-        texture::{
-            Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
-            ImageSamplerDescriptor,
-        },
-    },
+    render::{color::Color, texture::Image},
     transform::components::Transform,
 };
 
@@ -23,33 +17,23 @@ use crate::{
     Position,
 };
 
+use super::image_loader_settings;
+
 #[derive(Event)]
-pub struct SpawnPickaxeEvent {
+pub struct SpawnAxeEvent {
     pub pos: [u32; 3],
 }
 
-pub fn image_loader_settings(s: &mut ImageLoaderSettings) {
-    s.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        address_mode_w: ImageAddressMode::Repeat,
-        mag_filter: ImageFilterMode::Nearest,
-        min_filter: ImageFilterMode::Nearest,
-        mipmap_filter: ImageFilterMode::Nearest,
-        ..default()
-    })
-}
-
-pub fn on_spawn_pickaxe(
+pub fn on_spawn_axe(
     mut cmd: Commands,
-    mut ev_spawn_pickaxe: EventReader<SpawnPickaxeEvent>,
+    mut ev_spawn_axe: EventReader<SpawnAxeEvent>,
     mut materials: ResMut<Assets<BasicMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    for ev in ev_spawn_pickaxe.read() {
+    for ev in ev_spawn_axe.read() {
         let stone_texture: Handle<Image> =
             asset_server.load_with_settings("textures/stone.png", image_loader_settings);
-        let mesh = asset_server.load("pickaxe.gltf#Mesh0/Primitive0");
+        let mesh = asset_server.load("axe.gltf#Mesh0/Primitive0");
         let material = materials.add(BasicMaterial {
             texture: Some(stone_texture.clone()),
             sunlight: 8,
@@ -58,7 +42,7 @@ pub fn on_spawn_pickaxe(
         });
 
         cmd.spawn((
-            Name::new("Pickaxe"),
+            Name::new("Axe"),
             MaterialMeshBundle {
                 mesh: mesh.clone(),
                 material: material.clone(),
@@ -70,7 +54,7 @@ pub fn on_spawn_pickaxe(
                 ..default()
             },
             Item {
-                tags: vec![ItemTag::Pickaxe],
+                tags: vec![ItemTag::Axe],
                 reserved: None,
             },
             Faller,

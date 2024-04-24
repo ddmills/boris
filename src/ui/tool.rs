@@ -17,11 +17,11 @@ use crate::{
     common::min_max,
     controls::Raycast,
     debug::debug_settings::DebugSettings,
-    items::SpawnPickaxeEvent,
+    items::{SpawnAxeEvent, SpawnPickaxeEvent},
     BlockType, Cursor, Terrain,
 };
 
-use super::{game_speed, GameSpeed, Toolbar};
+use super::{GameSpeed, Toolbar};
 
 #[derive(PartialEq, Clone)]
 pub enum Tool {
@@ -30,6 +30,7 @@ pub enum Tool {
     ClearBlocks,
     SpawnColonist,
     SpawnPickaxe,
+    SpawnAxe,
     BuildStone,
     BlockInfo,
     Mine,
@@ -53,6 +54,7 @@ pub fn tool_system(
     mut cursor_query: Query<&mut Transform, With<Cursor>>,
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
     mut ev_spawn_pickaxe: EventWriter<SpawnPickaxeEvent>,
+    mut ev_spawn_axe: EventWriter<SpawnAxeEvent>,
     mut ev_spawn_job_build: EventWriter<SpawnJobBuildEvent>,
     mut ev_spawn_job_mine: EventWriter<SpawnJobMineEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
@@ -280,6 +282,17 @@ pub fn tool_system(
 
             if mouse_input.just_released(MouseButton::Left) {
                 ev_spawn_pickaxe.send(SpawnPickaxeEvent {
+                    pos: raycast.adj_pos,
+                });
+            }
+        }
+        Tool::SpawnAxe => {
+            if !raycast.is_adj_hit {
+                return;
+            }
+
+            if mouse_input.just_released(MouseButton::Left) {
+                ev_spawn_axe.send(SpawnAxeEvent {
                     pos: raycast.adj_pos,
                 });
             }

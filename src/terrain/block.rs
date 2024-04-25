@@ -85,6 +85,21 @@ impl Block {
         self.get_light_level() > 0
     }
 
+    pub fn is_mineable(&self) -> bool {
+        if self.flag_blueprint {
+            return false;
+        }
+
+        matches!(
+            self.block,
+            BlockType::DIRT
+                | BlockType::GRASS
+                | BlockType::STONE
+                | BlockType::ASHLAR
+                | BlockType::ASHLAR_LARGE
+        )
+    }
+
     pub fn texture_idx(&self) -> u32 {
         match self.block {
             BlockType::DIRT => 1,

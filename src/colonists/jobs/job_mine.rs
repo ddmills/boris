@@ -18,6 +18,12 @@ pub fn on_spawn_job_mine(
     mut ev_spawn_job_mine: EventReader<SpawnJobMineEvent>,
 ) {
     for ev in ev_spawn_job_mine.read() {
+        let block = terrain.get_block(ev.pos[0], ev.pos[1], ev.pos[2]);
+
+        if !block.is_mineable() {
+            continue;
+        }
+
         let is_changed = terrain.set_flag_mine(ev.pos[0], ev.pos[1], ev.pos[2], true);
 
         if !is_changed {

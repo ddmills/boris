@@ -12,7 +12,7 @@ use bevy::{
 
 use crate::{
     colonists::{
-        is_reachable, job_access_points, test_item_tags, tree_aquire_item, Actor, ActorRef,
+        is_reachable, job_access_points_many, test_item_tags, tree_aquire_item, Actor, ActorRef,
         Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible,
         IsJobCancelled, IsJobCompleted, Item, ItemTag, Job, JobBuild, JobLocation, NavigationFlags,
         NavigationGraph, PartitionPathRequest, Score, ScorerBuilder, TaskBuildBlock,
@@ -106,7 +106,7 @@ pub fn score_build(
                 continue;
             }
 
-            let goals = job_access_points(job_location.pos, job.job_type);
+            let goals = job_access_points_many(&job_location.targets, job.job_type);
             let request = PartitionPathRequest {
                 start: pos,
                 goals,
@@ -119,9 +119,9 @@ pub fn score_build(
 
             let job_distance = Distance::manhattan(
                 [
-                    job_location.pos[0] as i32,
-                    job_location.pos[1] as i32,
-                    job_location.pos[2] as i32,
+                    job_location.primary_target[0] as i32,
+                    job_location.primary_target[1] as i32,
+                    job_location.primary_target[2] as i32,
                 ],
                 [pos[0] as i32, pos[1] as i32, pos[2] as i32],
             );

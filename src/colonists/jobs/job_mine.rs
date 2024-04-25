@@ -30,7 +30,10 @@ pub fn on_spawn_job_mine(
                 assignee: None,
             },
             JobMine,
-            JobLocation { pos: ev.pos },
+            JobLocation {
+                targets: vec![ev.pos],
+                primary_target: ev.pos,
+            },
         ));
     }
 }

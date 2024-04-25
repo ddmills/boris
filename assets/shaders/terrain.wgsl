@@ -74,7 +74,8 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let block_face = mesh.packed_block >> 8u & 7u;
     let vertex_ao = mesh.packed_block >> 11u & 3u;
     let vertex_mine = (mesh.packed_block >> 13u & 1u) == 1u;
-    let vertex_blue = (mesh.packed_block >> 14u & 1u) == 1u;
+    let vertex_chop = (mesh.packed_block >> 14u & 1u) == 1u;
+    let vertex_blue = (mesh.packed_block >> 15u & 1u) == 1u;
     let vert = mesh.vertex_index % 4;
 
     var uv: vec2<f32>;
@@ -145,6 +146,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     if (vertex_mine) {
         outc[0] = outc[0] + .1;
+        outc[1] = outc[1] + .1;
         let axe_texture_idx = 60u;
         let axe_ox = f32(axe_texture_idx % texture_count);
         let axe_oy = f32(axe_texture_idx / texture_count);
@@ -152,7 +154,21 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
         var axe_c = textureSample(texture, texture_sampler, uv2);
 
         if (axe_c[3] != 0) {
-            outc = outc - vec4(.1, .2, .2, 1.);
+            outc = outc - vec4(.1, .1, .2, 1.);
+        }
+    }
+
+    if (vertex_chop) {
+        outc[0] = outc[0] + .1;
+        outc[1] = outc[1] + .1;
+        let axe_texture_idx = 61u;
+        let axe_ox = f32(axe_texture_idx % texture_count);
+        let axe_oy = f32(axe_texture_idx / texture_count);
+        var uv2 = (vec2(axe_ox, axe_oy) + uv_px_offset)/ f32(texture_count);
+        var axe_c = textureSample(texture, texture_sampler, uv2);
+
+        if (axe_c[3] != 0) {
+            outc = outc - vec4(.1, .1, .2, 1.);
         }
     }
 

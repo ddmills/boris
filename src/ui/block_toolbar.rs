@@ -104,6 +104,32 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     background_color: BTN_NONE.into(),
                     ..default()
                 },
+                BtnTool { tool: Tool::Chop },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "chop",
+                    TextStyle {
+                        font_size: 18.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ));
+            });
+
+        parent
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(48.0),
+                        height: Val::Px(48.0),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                    background_color: BTN_NONE.into(),
+                    ..default()
+                },
                 BtnTool {
                     tool: Tool::BuildStone,
                 },

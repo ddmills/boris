@@ -2,7 +2,7 @@ use std::cmp::min;
 
 use crate::{
     common::{FractalNoise, Rand},
-    on_spawn_tree, BlockType, SpawnTreeEvent, Terrain, TreeSettings,
+    BlockType, SpawnTreeEvent, Terrain, TreeSettings,
 };
 use bevy::ecs::{event::EventWriter, system::ResMut};
 
@@ -45,7 +45,7 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>, mut ev_spawn_tree: EventWrite
                                 position: [x, y, z],
                                 settings: TreeSettings {
                                     height: trees.range_n(5, 10) as u32,
-                                    canopy_radius: 2,
+                                    canopy_radius: 1,
                                 },
                             });
                         }

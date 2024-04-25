@@ -269,6 +269,28 @@ impl Terrain {
         false
     }
 
+    pub fn get_trees(&self, chunk_idx: u32, block_idx: u32) -> HashSet<Entity> {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_trees(block_idx);
+        }
+
+        HashSet::new()
+    }
+
+    pub fn add_tree(&mut self, chunk_idx: u32, block_idx: u32, tree: Entity) {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.add_tree(block_idx, tree);
+        }
+    }
+
+    pub fn remove_tree(&mut self, chunk_idx: u32, block_idx: u32, tree: &Entity) -> bool {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.remove_tree(block_idx, tree);
+        }
+
+        false
+    }
+
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.set_torchlight(x, y, z, value);
         self.lights_queue_add.push(LightNode { x, y, z, value });
@@ -297,6 +319,16 @@ impl Terrain {
 
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             return chunk.set_flag_blueprint(block_idx, value);
+        }
+
+        false
+    }
+
+    pub fn set_flag_chop(&mut self, x: u32, y: u32, z: u32, value: bool) -> bool {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.set_flag_chop(block_idx, value);
         }
 
         false

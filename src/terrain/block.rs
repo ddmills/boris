@@ -5,6 +5,7 @@ pub struct Block {
     pub sunlight: u8,
     pub partition_id: Option<u32>,
     pub flag_mine: bool,
+    pub flag_chop: bool,
     pub flag_blueprint: bool,
 }
 
@@ -16,6 +17,7 @@ impl Default for Block {
             sunlight: 0,
             partition_id: None,
             flag_mine: false,
+            flag_chop: false,
             flag_blueprint: false,
         }
     }
@@ -28,6 +30,7 @@ impl Block {
         sunlight: 0,
         partition_id: None,
         flag_mine: false,
+        flag_chop: false,
         flag_blueprint: false,
     };
 

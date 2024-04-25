@@ -22,6 +22,7 @@ pub struct Chunk {
     pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
     pub items: Box<[HashSet<Entity>]>,
+    pub trees: Box<[HashSet<Entity>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -37,6 +38,7 @@ impl Chunk {
         Self {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
             items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
+            trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -63,6 +65,14 @@ impl Chunk {
         Block::OOB
     }
 
+    pub fn get_trees(&self, block_idx: u32) -> HashSet<Entity> {
+        if let Some(trees) = self.trees.get(block_idx as usize) {
+            return trees.clone();
+        }
+
+        HashSet::new()
+    }
+
     pub fn get_items(&self, block_idx: u32) -> HashSet<Entity> {
         if let Some(items) = self.items.get(block_idx as usize) {
             return items.clone();
@@ -80,6 +90,20 @@ impl Chunk {
     pub fn remove_item(&mut self, block_idx: u32, item: &Entity) -> bool {
         if let Some(items) = self.items.get_mut(block_idx as usize) {
             return items.remove(item);
+        }
+
+        false
+    }
+
+    pub fn add_tree(&mut self, block_idx: u32, tree: Entity) {
+        if let Some(trees) = self.trees.get_mut(block_idx as usize) {
+            trees.insert(tree);
+        }
+    }
+
+    pub fn remove_tree(&mut self, block_idx: u32, tree: &Entity) -> bool {
+        if let Some(trees) = self.trees.get_mut(block_idx as usize) {
+            return trees.remove(tree);
         }
 
         false
@@ -121,6 +145,16 @@ impl Chunk {
         let block = self.blocks[block_idx as usize];
         let is_changed = block.flag_mine != value;
         self.blocks[block_idx as usize].flag_mine = value;
+        if is_changed {
+            self.is_mesh_dirty = true;
+        }
+        is_changed
+    }
+
+    pub fn set_flag_chop(&mut self, block_idx: u32, value: bool) -> bool {
+        let block = self.blocks[block_idx as usize];
+        let is_changed = block.flag_chop != value;
+        self.blocks[block_idx as usize].flag_chop = value;
         if is_changed {
             self.is_mesh_dirty = true;
         }

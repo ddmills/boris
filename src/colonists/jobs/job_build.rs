@@ -33,7 +33,10 @@ pub fn on_spawn_job_build(
                 assignee: None,
             },
             JobBuild,
-            JobLocation { pos: ev.pos },
+            JobLocation {
+                targets: vec![ev.pos],
+                primary_target: ev.pos,
+            },
         ));
     }
 }

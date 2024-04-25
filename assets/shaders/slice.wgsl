@@ -52,6 +52,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     if (vertex_mine) {
         outc[0] = outc[0] + .1;
+        outc[1] = outc[1] + .1;
         let axe_texture_idx = 60u;
         let axe_ox = f32(axe_texture_idx % texture_count);
         let axe_oy = f32(axe_texture_idx / texture_count);
@@ -59,7 +60,7 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
         var axe_c = textureSample(texture, texture_sampler, uv2);
 
         if (axe_c[3] != 0) {
-            outc = outc - vec4(.1, .2, .2, 1.);
+            outc = outc - vec4(.1, .1, .2, 1.);
         }
     }
 

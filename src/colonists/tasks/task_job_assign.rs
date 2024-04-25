@@ -35,7 +35,7 @@ pub fn task_job_assign(
         }
 
         if let Some(pos) = job_location {
-            blackboard.target_block = Some(pos.pos);
+            blackboard.target_block = Some(pos.primary_target);
         }
 
         job.assignee = Some(*actor);

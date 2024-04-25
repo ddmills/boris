@@ -1,7 +1,9 @@
 use bevy::ecs::{component::Component, query::With, system::Query};
 use task_derive::TaskBuilder;
 
-use crate::colonists::{job_access_points, Blackboard, Job, JobLocation, TaskBuilder, TaskState};
+use crate::colonists::{
+    job_access_points_many, Blackboard, Job, JobLocation, TaskBuilder, TaskState,
+};
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskGetJobLocation;
@@ -23,7 +25,7 @@ pub fn task_get_job_location(
             continue;
         };
 
-        let access_points = job_access_points(job_location.pos, job.job_type);
+        let access_points = job_access_points_many(&job_location.targets, job.job_type);
 
         if access_points.is_empty() {
             println!("Can't get job location: No access points");

@@ -12,7 +12,7 @@ use bevy::{
 use crate::{
     colonists::{
         Job, NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobBuildEvent,
-        SpawnJobMineEvent,
+        SpawnJobChopEvent, SpawnJobMineEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -34,6 +34,7 @@ pub enum Tool {
     BuildStone,
     BlockInfo,
     Mine,
+    Chop,
     Pause,
 }
 
@@ -55,8 +56,9 @@ pub fn tool_system(
     mut ev_spawn_colonist: EventWriter<SpawnColonistEvent>,
     mut ev_spawn_pickaxe: EventWriter<SpawnPickaxeEvent>,
     mut ev_spawn_axe: EventWriter<SpawnAxeEvent>,
-    mut ev_spawn_job_build: EventWriter<SpawnJobBuildEvent>,
+    // mut ev_spawn_job_build: EventWriter<SpawnJobBuildEvent>,
     mut ev_spawn_job_mine: EventWriter<SpawnJobMineEvent>,
+    mut ev_spawn_job_chop: EventWriter<SpawnJobChopEvent>,
     mut partition_debug: ResMut<PartitionDebug>,
     mut debug_settings: ResMut<DebugSettings>,
     q_jobs: Query<&Job>,
@@ -270,6 +272,60 @@ pub fn tool_system(
                 }
             }
         }
+        Tool::Chop => {
+            let mut cursor = cursor_query.get_single_mut().unwrap();
+
+            if mouse_input.just_released(MouseButton::Right) {
+                state.is_dragging = false;
+                cursor.scale = Vec3::ZERO;
+                return;
+            }
+
+            if state.is_dragging {
+                let [min_x, max_x] = min_max(state.start[0], raycast.hit_pos[0]);
+                let [min_y, max_y] = min_max(state.start[1], raycast.hit_pos[1]);
+                let [min_z, max_z] = min_max(state.start[2], raycast.hit_pos[2]);
+
+                let scale = Vec3::new(
+                    ((max_x - min_x) + 1) as f32,
+                    ((max_y - min_y) + 1) as f32,
+                    ((max_z - min_z) + 1) as f32,
+                );
+                cursor.scale = scale;
+                cursor.translation = Vec3::new(min_x as f32, min_y as f32, min_z as f32);
+            }
+
+            if mouse_input.just_released(MouseButton::Left) {
+                if !raycast.is_hit {
+                    state.is_dragging = false;
+                    return;
+                }
+
+                if !state.is_dragging {
+                    state.is_dragging = true;
+                    state.start = raycast.hit_pos;
+                    return;
+                }
+
+                state.is_dragging = false;
+
+                let [min_x, max_x] = min_max(state.start[0], raycast.hit_pos[0]);
+                let [min_y, max_y] = min_max(state.start[1], raycast.hit_pos[1]);
+                let [min_z, max_z] = min_max(state.start[2], raycast.hit_pos[2]);
+
+                cursor.scale = Vec3::ZERO;
+
+                for x in min_x..=max_x {
+                    for y in min_y..=max_y {
+                        for z in min_z..=max_z {
+                            if !terrain.get_block(x, y, z).is_empty() {
+                                ev_spawn_job_chop.send(SpawnJobChopEvent { pos: [x, y, z] });
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Tool::TogglePathDebug => {
             if mouse_input.just_released(MouseButton::Left) {
                 debug_settings.path = !debug_settings.path;
@@ -298,15 +354,15 @@ pub fn tool_system(
             }
         }
         Tool::BuildStone => {
-            if !raycast.is_adj_hit {
-                return;
-            }
+            // if !raycast.is_adj_hit {
+            //     return;
+            // }
 
-            if mouse_input.just_released(MouseButton::Left) {
-                ev_spawn_job_build.send(SpawnJobBuildEvent {
-                    pos: raycast.adj_pos,
-                });
-            }
+            // if mouse_input.just_released(MouseButton::Left) {
+            //     ev_spawn_job_build.send(SpawnJobBuildEvent {
+            //         pos: raycast.adj_pos,
+            //     });
+            // }
         }
         Tool::Pause => {
             if mouse_input.just_released(MouseButton::Left) {

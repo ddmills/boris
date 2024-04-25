@@ -1,6 +1,7 @@
 mod task_animate;
 mod task_build;
 mod task_check_has_item;
+mod task_chop_tree;
 mod task_debug;
 mod task_find_bed;
 mod task_find_nearest_item;
@@ -21,6 +22,7 @@ mod task_sleep;
 pub use task_animate::*;
 pub use task_build::*;
 pub use task_check_has_item::*;
+pub use task_chop_tree::*;
 pub use task_debug::*;
 pub use task_find_bed::*;
 pub use task_find_nearest_item::*;

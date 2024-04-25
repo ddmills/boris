@@ -12,40 +12,44 @@ use crate::{
     colonists::{
         is_reachable, job_access_points_many, test_item_tags, tree_aquire_item, Actor, ActorRef,
         Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible,
-        IsJobCancelled, Item, ItemTag, Job, JobLocation, JobMine, NavigationFlags, NavigationGraph,
-        PartitionPathRequest, Score, ScorerBuilder, TaskGetJobLocation, TaskItemEquip,
-        TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMineBlock, TaskMoveTo,
+        IsJobCancelled, Item, ItemTag, Job, JobChop, JobLocation, NavigationFlags, NavigationGraph,
+        PartitionPathRequest, Score, ScorerBuilder, TaskChopTree, TaskGetJobLocation,
+        TaskItemEquip, TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMoveTo,
     },
     common::Distance,
     Position, Terrain,
 };
 
 #[derive(Component, Clone, Default)]
-pub struct ScorerMine {
+pub struct ScorerChop {
     job: Option<Entity>,
+    tree: Option<Entity>,
 }
 
-impl ScorerBuilder for ScorerMine {
+impl ScorerBuilder for ScorerChop {
     fn insert(&self, cmd: &mut ecs::system::EntityCommands) {
         cmd.insert(self.clone());
     }
 
     fn label(&self) -> String {
-        "Mine".to_string()
+        "Chop".to_string()
     }
 
     fn build(&self) -> Behavior {
         Behavior::new(
-            "Mine",
+            "Chop",
             BehaviorNode::Try(
                 Box::new(BehaviorNode::Sequence(vec![
                     BehaviorNode::Task(Arc::new(TaskJobAssign(self.job.unwrap()))),
-                    tree_aquire_item(vec![ItemTag::Pickaxe]),
+                    tree_aquire_item(vec![ItemTag::Axe]),
                     BehaviorNode::Task(Arc::new(TaskItemEquip)),
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
-                        BehaviorNode::Task(Arc::new(TaskMineBlock { progress: 0. })),
+                        BehaviorNode::Task(Arc::new(TaskChopTree {
+                            progress: 0.,
+                            tree: self.tree.unwrap(),
+                        })),
                         BehaviorNode::Task(Arc::new(TaskJobComplete)),
                     ]),
                 ])),
@@ -55,13 +59,12 @@ impl ScorerBuilder for ScorerMine {
     }
 }
 
-pub fn score_mine(
+pub fn score_chop(
     terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
     q_jobs: Query<
-        (Entity, &Job, &JobLocation),
+        (Entity, &Job, &JobChop, &JobLocation),
         (
-            With<JobMine>,
             With<IsJobAccessible>,
             Without<IsJobCancelled>,
             Without<TaskJobComplete>,
@@ -70,7 +73,7 @@ pub fn score_mine(
     q_items: Query<&Item>,
     q_free_items: Query<(&Item, &Position), Without<InInventory>>,
     q_actors: Query<(&Inventory, &Position, &NavigationFlags), (With<Actor>, Without<HasBehavior>)>,
-    mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerMine)>,
+    mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerChop)>,
 ) {
     for (ActorRef(actor), mut score, mut scorer) in q_behaviors.iter_mut() {
         let Ok((inventory, position, flags)) = q_actors.get(*actor) else {
@@ -81,9 +84,10 @@ pub fn score_mine(
         let pos = [position.x, position.y, position.z];
 
         let mut best = None;
+        let mut best_tree = None;
         let mut best_dist = 100000.;
 
-        for (e, job, job_location) in q_jobs.iter() {
+        for (e, job, job_chop, job_location) in q_jobs.iter() {
             if job.assignee.is_some() {
                 continue;
             }
@@ -111,22 +115,24 @@ pub fn score_mine(
             if job_distance < best_dist {
                 best = Some(e);
                 best_dist = job_distance;
+                best_tree = Some(job_chop.tree);
                 if job_distance < 2. {
                     break;
                 }
             }
         }
 
-        if best.is_none() {
+        if best.is_none() || best_tree.is_none() {
             *score = Score(0.);
             continue;
         };
 
         scorer.job = best;
+        scorer.tree = best_tree;
 
-        let item_tags = &[ItemTag::Pickaxe];
+        let item_tags = &[ItemTag::Axe];
 
-        let has_pickaxe = inventory.items.iter().any(|e| {
+        let has_axe = inventory.items.iter().any(|e| {
             let Ok(item) = q_items.get(*e) else {
                 return false;
             };
@@ -135,7 +141,7 @@ pub fn score_mine(
         });
 
         // if we have a pickaxe, score is higher
-        if has_pickaxe {
+        if has_axe {
             *score = Score(0.6);
             continue;
         }

@@ -139,9 +139,9 @@ pub fn hide_sliced_objects(
         }
 
         if position.y <= terrain_slice.get_value() {
-            cmd.entity(entity).insert(Visibility::Visible);
+            cmd.entity(entity).try_insert(Visibility::Visible);
         } else {
-            cmd.entity(entity).insert(Visibility::Hidden);
+            cmd.entity(entity).try_insert(Visibility::Hidden);
         }
     }
 }

@@ -2,7 +2,6 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::EventWriter,
         query::With,
         system::{Commands, Query, Res, ResMut},
     },
@@ -12,9 +11,8 @@ use bevy::{
 use task_derive::TaskBuilder;
 
 use crate::{
-    colonists::{Actor, ActorRef, AnimClip, Animator, Blackboard, TaskBuilder, TaskState},
+    colonists::{Actor, ActorRef, AnimClip, Animator, TaskBuilder, TaskState},
     common::Rand,
-    items::SpawnStoneEvent,
     ui::GameSpeed,
     BlockType, Terrain, Tree,
 };
@@ -45,6 +43,7 @@ pub fn task_chop_tree(
             for part in tree.canopy.iter() {
                 let [chunk_idx, block_idx] = terrain.get_block_indexes(part[0], part[1], part[2]);
                 terrain.remove_tree(chunk_idx, block_idx, &task.tree);
+                terrain.set_flag_chop(part[0], part[1], part[2], false);
 
                 let other_trees = terrain.get_trees(chunk_idx, block_idx);
 
@@ -59,6 +58,7 @@ pub fn task_chop_tree(
             for part in tree.trunk.iter() {
                 let [chunk_idx, block_idx] = terrain.get_block_indexes(part[0], part[1], part[2]);
                 terrain.remove_tree(chunk_idx, block_idx, &task.tree);
+                terrain.set_flag_chop(part[0], part[1], part[2], false);
 
                 let other_trees = terrain.get_trees(chunk_idx, block_idx);
 

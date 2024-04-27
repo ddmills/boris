@@ -158,32 +158,6 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     background_color: BTN_NONE.into(),
                     ..default()
                 },
-                BtnTool { tool: Tool::Pause },
-            ))
-            .with_children(|parent| {
-                parent.spawn(TextBundle::from_section(
-                    "pause",
-                    TextStyle {
-                        font_size: 18.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
-                        ..default()
-                    },
-                ));
-            });
-
-        parent
-            .spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(48.0),
-                        height: Val::Px(48.0),
-                        justify_content: JustifyContent::Center,
-                        align_content: AlignContent::Center,
-                        ..default()
-                    },
-                    background_color: BTN_NONE.into(),
-                    ..default()
-                },
                 BtnTool {
                     tool: Tool::BlockInfo,
                 },
@@ -339,6 +313,90 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                 ));
             });
 
+        parent
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(48.0),
+                        height: Val::Px(48.0),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                    background_color: BTN_NONE.into(),
+                    ..default()
+                },
+                BtnTool {
+                    tool: Tool::SpawnTemplate(crate::furniture::TemplateType::Workbench),
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "workbench",
+                    TextStyle {
+                        font_size: 18.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ));
+            });
+
+        parent
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(48.0),
+                        height: Val::Px(48.0),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                    background_color: BTN_NONE.into(),
+                    ..default()
+                },
+                BtnTool {
+                    tool: Tool::SpawnTemplate(crate::furniture::TemplateType::Bigbench),
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "bigbench",
+                    TextStyle {
+                        font_size: 18.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ));
+            });
+
+        parent
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(48.0),
+                        height: Val::Px(48.0),
+                        justify_content: JustifyContent::Center,
+                        align_content: AlignContent::Center,
+                        ..default()
+                    },
+                    background_color: BTN_NONE.into(),
+                    ..default()
+                },
+                BtnTool {
+                    tool: Tool::SpawnTemplate(crate::furniture::TemplateType::Ladder),
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "ladder",
+                    TextStyle {
+                        font_size: 18.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                        ..default()
+                    },
+                ));
+            });
+
         vec![
             BlockType::GRASS,
             BlockType::DIRT,
@@ -347,7 +405,6 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
             BlockType::ASHLAR_LARGE,
             BlockType::LAMP,
             BlockType::MAGMA,
-            BlockType::LADDER,
             BlockType::TREE_TRUNK,
             BlockType::LEAVES,
         ]

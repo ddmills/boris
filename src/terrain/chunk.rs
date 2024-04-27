@@ -2,7 +2,7 @@ use bevy::{
     asset::Handle,
     ecs::{component::Component, entity::Entity},
     render::mesh::Mesh,
-    utils::hashbrown::HashSet,
+    utils::hashbrown::{HashMap, HashSet},
 };
 use ndshape::{AbstractShape, RuntimeShape};
 
@@ -23,6 +23,7 @@ pub struct Chunk {
     pub blocks: Box<[Block]>,
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
+    // pub furniture: Box<[HashMap<Entity, TemplateTileType>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -39,6 +40,7 @@ impl Chunk {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
             items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
+            // furniture: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -65,14 +67,6 @@ impl Chunk {
         Block::OOB
     }
 
-    pub fn get_trees(&self, block_idx: u32) -> HashSet<Entity> {
-        if let Some(trees) = self.trees.get(block_idx as usize) {
-            return trees.clone();
-        }
-
-        HashSet::new()
-    }
-
     pub fn get_items(&self, block_idx: u32) -> HashSet<Entity> {
         if let Some(items) = self.items.get(block_idx as usize) {
             return items.clone();
@@ -95,6 +89,14 @@ impl Chunk {
         false
     }
 
+    pub fn get_trees(&self, block_idx: u32) -> HashSet<Entity> {
+        if let Some(trees) = self.trees.get(block_idx as usize) {
+            return trees.clone();
+        }
+
+        HashSet::new()
+    }
+
     pub fn add_tree(&mut self, block_idx: u32, tree: Entity) {
         if let Some(trees) = self.trees.get_mut(block_idx as usize) {
             trees.insert(tree);
@@ -108,6 +110,35 @@ impl Chunk {
 
         false
     }
+
+    // pub fn get_furniture(&self, block_idx: u32) -> HashMap<Entity, TemplateTileType> {
+    //     if let Some(furniture) = self.furniture.get(block_idx as usize) {
+    //         return furniture.clone();
+    //     }
+
+    //     HashMap::new()
+    // }
+
+    // pub fn add_furniture(
+    //     &mut self,
+    //     block_idx: u32,
+    //     furniture: Entity,
+    //     tile_type: TemplateTileType,
+    // ) {
+    //     if let Some(furnitures) = self.furniture.get_mut(block_idx as usize) {
+    //         self.is_nav_dirty = true;
+    //         furnitures.insert(furniture, tile_type);
+    //     }
+    // }
+
+    // pub fn remove_furniture(&mut self, block_idx: u32, furniture: &Entity) -> bool {
+    //     if let Some(furnitures) = self.furniture.get_mut(block_idx as usize) {
+    //         self.is_nav_dirty = true;
+    //         return furnitures.remove(furniture).is_some();
+    //     }
+
+    //     false
+    // }
 
     pub fn set_partition_id(&mut self, block_idx: u32, value: u32) {
         self.blocks[block_idx as usize].partition_id = Some(value);

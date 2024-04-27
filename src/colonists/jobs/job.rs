@@ -6,6 +6,7 @@ use bevy::{
         system::{Commands, Query, Res},
     },
     hierarchy::DespawnRecursiveExt,
+    time::Time,
 };
 
 use crate::Terrain;
@@ -38,6 +39,7 @@ pub struct Job {
 pub struct JobLocation {
     pub targets: Vec<[u32; 3]>,
     pub primary_target: [u32; 3],
+    pub last_accessibility_check: f32,
 }
 
 #[derive(Component)]
@@ -56,13 +58,27 @@ pub struct JobAssignment {
 
 pub fn job_accessibility(
     mut cmd: Commands,
+    time: Res<Time>,
     terrain: Res<Terrain>,
-    q_jobs: Query<(Entity, &Job, &JobLocation), (Without<IsJobCancelled>, Without<IsJobCompleted>)>,
+    mut q_jobs: Query<
+        (Entity, &Job, &mut JobLocation),
+        (Without<IsJobCancelled>, Without<IsJobCompleted>),
+    >,
 ) {
-    for (entity, job, job_location) in q_jobs.iter() {
+    let now = time.elapsed_seconds();
+
+    for (entity, job, mut job_location) in q_jobs.iter_mut() {
         if job.assignee.is_some() {
             continue;
         }
+
+        let time_since_last_check = now - job_location.last_accessibility_check;
+
+        if time_since_last_check < 2.0 {
+            continue;
+        }
+
+        job_location.last_accessibility_check = now;
 
         let goals = job_access_points_many(&job_location.targets, job.job_type);
 

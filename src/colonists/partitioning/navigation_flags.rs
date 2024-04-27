@@ -7,12 +7,12 @@ bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Component)]
     pub struct NavigationFlags: u8 {
         const NONE = 0;
-        const SOLID_GROUND = 1;
+        const SHORT = 1;
         const LADDER = 2;
         const TALL = 4;
         const CLIMB = 8;
         const COLONIST = Self::TALL.bits() | Self::LADDER.bits() | Self::CLIMB.bits();
-        const CAT = Self::SOLID_GROUND.bits();
+        const CAT = Self::SHORT.bits();
     }
 }
 

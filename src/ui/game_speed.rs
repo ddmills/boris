@@ -2,7 +2,7 @@ use bevy::ecs::system::Resource;
 
 #[derive(Resource)]
 pub struct GameSpeed {
-    speed: f32,
+    pub speed: f32,
     pub is_paused: bool,
 }
 
@@ -19,7 +19,7 @@ impl GameSpeed {
 impl Default for GameSpeed {
     fn default() -> Self {
         Self {
-            speed: 2.,
+            speed: 1.,
             is_paused: false,
         }
     }

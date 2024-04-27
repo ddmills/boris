@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{entity::Entity, system::Resource},
-    utils::hashbrown::HashSet,
+    utils::hashbrown::{HashMap, HashSet},
 };
 use ndshape::{RuntimeShape, Shape};
 
@@ -290,6 +290,38 @@ impl Terrain {
 
         false
     }
+
+    // pub fn get_furniture(
+    //     &self,
+    //     chunk_idx: u32,
+    //     block_idx: u32,
+    // ) -> HashMap<Entity, TemplateTileType> {
+    //     if let Some(chunk) = self.get_chunk(chunk_idx) {
+    //         return chunk.get_furniture(block_idx);
+    //     }
+
+    //     HashMap::new()
+    // }
+
+    // pub fn add_furniture(
+    //     &mut self,
+    //     chunk_idx: u32,
+    //     block_idx: u32,
+    //     furniture: Entity,
+    //     tile_type: TemplateTileType,
+    // ) {
+    //     if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+    //         chunk.add_furniture(block_idx, furniture, tile_type);
+    //     }
+    // }
+
+    // pub fn remove_furniture(&mut self, chunk_idx: u32, block_idx: u32, furniture: &Entity) -> bool {
+    //     if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+    //         return chunk.remove_furniture(block_idx, furniture);
+    //     }
+
+    //     false
+    // }
 
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.set_torchlight(x, y, z, value);

@@ -4,7 +4,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::With,
+        query::{With, Without},
         system::{Query, Res},
     },
     utils::hashbrown::HashSet,
@@ -13,19 +13,18 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        test_item_tags, Actor, ActorRef, Blackboard, Item, ItemTag, NavigationGraph, TaskBuilder,
-        TaskState,
+        test_item_tags, Actor, ActorRef, Blackboard, InInventory, Item, ItemTag, NavigationGraph,
+        TaskBuilder, TaskState,
     },
-    Position, Terrain,
+    Position,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskFindNearestItem(pub Vec<ItemTag>);
 
 pub fn task_find_nearest_item(
-    terrain: Res<Terrain>,
     graph: Res<NavigationGraph>,
-    mut q_items: Query<(&Position, &mut Item)>,
+    mut q_items: Query<(&Position, &mut Item), Without<InInventory>>,
     q_actors: Query<&Position, With<Actor>>,
     mut q_behavior: Query<(
         &ActorRef,
@@ -42,8 +41,7 @@ pub fn task_find_nearest_item(
             continue;
         };
 
-        let Some(start_id) = terrain.get_partition_id_u32(position.x, position.y, position.z)
-        else {
+        let Some(start_id) = position.partition_id else {
             println!("Item cannot be found because seeker is not in a partition!");
             *state = TaskState::Failed;
             continue;
@@ -78,7 +76,7 @@ fn find_nearest(
     start_id: u32,
     tags: Vec<ItemTag>,
     graph: &NavigationGraph,
-    q_items: &Query<(&Position, &mut Item)>,
+    q_items: &Query<(&Position, &mut Item), Without<InInventory>>,
 ) -> Option<Vec<Entity>> {
     let mut visited = HashSet::new();
     let mut queue = VecDeque::new();

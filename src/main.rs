@@ -1,6 +1,6 @@
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, colonist_animations,
@@ -19,6 +19,7 @@ use colonists::{
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
+use furniture::{on_spawn_template, setup_templates, template_material_update, SpawnTemplateEvent};
 use items::{
     on_spawn_axe, on_spawn_pickaxe, on_spawn_stone, SpawnAxeEvent, SpawnPickaxeEvent,
     SpawnStoneEvent,
@@ -28,14 +29,17 @@ use rendering::{
 };
 use terrain::*;
 use ui::{
-    setup_block_toolbar_ui, tool_system, toolbar_select, ui_capture_pointer, GameSpeed, Tool,
-    Toolbar, Ui,
+    job_toolbar, setup_block_toolbar_ui, tool_block_info, tool_build_stone, tool_chop,
+    tool_clear_block, tool_mine, tool_place_blocks, tool_spawn_axe, tool_spawn_colonist,
+    tool_spawn_pickaxe, tool_spawn_template, tool_toggle_path, toolbar_select, ui_capture_pointer,
+    GameSpeed, Tool, Toolbar, Ui,
 };
 
 mod colonists;
 mod common;
 mod controls;
 mod debug;
+mod furniture;
 mod items;
 mod rendering;
 mod terrain;
@@ -81,12 +85,14 @@ fn main() {
         .add_event::<SpawnJobBuildEvent>()
         .add_event::<SpawnJobMineEvent>()
         .add_event::<SpawnJobChopEvent>()
+        .add_event::<SpawnTemplateEvent>()
         .add_event::<TerrainSliceChanged>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
         .add_plugins((DefaultPlugins, ObjPlugin))
-        .add_plugins(WorldInspectorPlugin::default())
+        .add_plugins(EguiPlugin)
+        // .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
@@ -106,6 +112,7 @@ fn main() {
             Startup,
             (
                 setup,
+                setup_templates,
                 setup_terrain,
                 setup_terrain_slice,
                 setup_chunk_meshes,
@@ -124,13 +131,14 @@ fn main() {
         .add_systems(Update, light_system)
         .add_systems(Update, update_camera)
         .add_systems(Update, toolbar_select)
+        .add_systems(Update, job_toolbar)
         .add_systems(Update, path_debug)
-        .add_systems(Update, tool_system)
         .add_systems(Update, on_spawn_tree)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, on_spawn_axe)
         .add_systems(Update, on_spawn_stone)
+        .add_systems(Update, on_spawn_template)
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
         .add_systems(Update, job_accessibility)
@@ -144,10 +152,22 @@ fn main() {
         .add_systems(Update, on_spawn_job_mine)
         .add_systems(Update, on_spawn_job_chop)
         .add_systems(Update, behavior_pick_system)
+        .add_systems(Update, template_material_update)
         .add_systems(
             Update,
             (score_wander, score_mine, score_chop, score_build).before(behavior_pick_system),
         )
+        .add_systems(Update, tool_place_blocks)
+        .add_systems(Update, tool_clear_block)
+        .add_systems(Update, tool_spawn_colonist)
+        .add_systems(Update, tool_block_info)
+        .add_systems(Update, tool_mine)
+        .add_systems(Update, tool_chop)
+        .add_systems(Update, tool_toggle_path)
+        .add_systems(Update, tool_spawn_pickaxe)
+        .add_systems(Update, tool_spawn_template)
+        .add_systems(Update, tool_spawn_axe)
+        .add_systems(Update, tool_build_stone)
         .add_systems(Update, task_job_assign)
         .add_systems(Update, task_find_bed)
         .add_systems(Update, task_sleep)

@@ -36,6 +36,7 @@ pub fn on_spawn_job_build(
             JobLocation {
                 targets: vec![ev.pos],
                 primary_target: ev.pos,
+                last_accessibility_check: 0.,
             },
         ));
     }

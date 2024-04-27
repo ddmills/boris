@@ -61,6 +61,21 @@ impl Block {
         )
     }
 
+    pub fn is_attachable(&self) -> bool {
+        if self.flag_blueprint {
+            return false;
+        }
+
+        !matches!(
+            self.block,
+            BlockType::OOB
+                | BlockType::EMPTY
+                | BlockType::LADDER
+                | BlockType::MAGMA
+                | BlockType::LEAVES
+        )
+    }
+
     pub fn is_empty(&self) -> bool {
         self.flag_blueprint || matches!(self.block, BlockType::EMPTY)
     }

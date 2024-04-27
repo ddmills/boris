@@ -13,6 +13,7 @@ use bevy::{
             Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
             ImageSamplerDescriptor,
         },
+        view::Visibility,
     },
     transform::components::Transform,
 };
@@ -67,6 +68,7 @@ pub fn on_spawn_pickaxe(
                     ev.pos[1] as f32,
                     ev.pos[2] as f32 + 0.5,
                 ),
+                visibility: Visibility::Visible,
                 ..default()
             },
             Item {

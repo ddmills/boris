@@ -15,6 +15,15 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationF
         return NavigationFlags::NONE;
     }
 
+    if !block.is_oob() {
+        let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
+        // let furniture = terrain.get_furniture(chunk_idx, block_idx);
+
+        // if furniture.values().any(|t| *t == TemplateTileType::Filled) {
+        //     return NavigationFlags::NONE;
+        // }
+    }
+
     let nblock_below = terrain.get_block_i32(x, y - 1, z);
 
     if nblock_below.block == BlockType::LADDER {
@@ -22,7 +31,7 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationF
     }
 
     if nblock_below.is_walkable() {
-        flags |= NavigationFlags::SOLID_GROUND;
+        flags |= NavigationFlags::SHORT;
 
         let nblock_above = terrain.get_block_i32(x, y + 1, z);
 

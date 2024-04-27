@@ -7,7 +7,7 @@ use bevy::{
     },
     pbr::MaterialMeshBundle,
     prelude::default,
-    render::{color::Color, texture::Image},
+    render::{color::Color, texture::Image, view::Visibility},
     transform::components::Transform,
 };
 
@@ -51,6 +51,7 @@ pub fn on_spawn_axe(
                     ev.pos[1] as f32,
                     ev.pos[2] as f32 + 0.5,
                 ),
+                visibility: Visibility::Visible,
                 ..default()
             },
             Item {

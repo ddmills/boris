@@ -54,7 +54,7 @@ pub fn task_pick_random_spot(
 
                     if !p
                         .flags
-                        .intersects(NavigationFlags::SOLID_GROUND | NavigationFlags::TALL)
+                        .intersects(NavigationFlags::SHORT | NavigationFlags::TALL)
                     {
                         return None;
                     }

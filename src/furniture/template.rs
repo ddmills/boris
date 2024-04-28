@@ -4,11 +4,10 @@ use bevy::{
     hierarchy::BuildChildren,
     math::{Quat, Vec3},
     render::{mesh::Mesh, texture::Image},
-    transform::commands::BuildChildrenTransformExt,
     utils::hashbrown::HashMap,
 };
 
-use crate::items::image_loader_settings;
+use crate::{colonists::NavigationFlags, items::image_loader_settings, Position};
 
 use bevy::{
     asset::Assets,
@@ -31,12 +30,14 @@ use std::fmt::{Display, Formatter};
 
 use bitflags::bitflags;
 
+use super::Blueprint;
+
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
     pub struct TemplateTileRequirement: u16 {
-        const WALKABLE = 1;
-        const EMPTY = 2;
-        const ATTACHABLE = 4;
+        const IS_WALKABLE = 1;
+        const IS_EMPTY = 2;
+        const IS_ATTACHABLE = 4;
     }
 }
 
@@ -66,32 +67,30 @@ impl DirectionSimple {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TemplateInterface {
+pub struct TemplateHotspot {
     pub is_optional: bool,
     pub direction: DirectionSimple,
+    pub nav_flag_requirements: NavigationFlags,
+}
+
+#[derive(Debug, Clone, Component)]
+pub struct BlueprintGuide {
+    pub tile_idx: usize,
+    pub is_valid: bool,
+    pub is_hotspot: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TemplateTile {
     pub requirements: TemplateTileRequirement,
-    pub interface: Option<TemplateInterface>,
+    pub nav_flags: NavigationFlags,
+    pub is_blocker: bool,
+    pub hotspot: Option<TemplateHotspot>,
     pub position: [i32; 3],
 }
 
-#[derive(Component)]
-pub struct TemplateInstance {
-    pub is_valid: bool,
-    pub position: [u32; 3],
-    pub template_type: TemplateType,
-}
-
-#[derive(Component)]
-pub struct TemplateInterfaces {
-    pub interfaces: Vec<Entity>,
-}
-
 #[derive(Event)]
-pub struct SpawnTemplateEvent {
+pub struct SpawnBlueprintEvent {
     pub pos: [u32; 3],
     pub entity: Entity,
     pub template_type: TemplateType,
@@ -105,6 +104,7 @@ pub enum TemplateType {
 }
 
 pub struct Template {
+    pub name: String,
     pub center: [u32; 3],
     pub tiles: Vec<TemplateTile>,
     pub texture: Handle<Image>,
@@ -114,17 +114,16 @@ pub struct Template {
 #[derive(Resource)]
 pub struct Templates {
     pub templates: HashMap<TemplateType, Template>,
-    pub interfaces: Vec<Entity>,
 }
 
-pub fn on_spawn_template(
+pub fn on_spawn_blueprint(
     mut cmd: Commands,
-    mut ev_spawn_template: EventReader<SpawnTemplateEvent>,
+    mut ev_spawn_blueprint: EventReader<SpawnBlueprintEvent>,
     mut materials: ResMut<Assets<BasicMaterial>>,
     asset_server: Res<AssetServer>,
     templates: Res<Templates>,
 ) {
-    for ev in ev_spawn_template.read() {
+    for ev in ev_spawn_blueprint.read() {
         let Some(template) = templates.templates.get(&ev.template_type) else {
             println!("Missing template type");
             continue;
@@ -137,13 +136,97 @@ pub fn on_spawn_template(
             color: Color::RED,
         });
 
+        let hotspot_mesh_req = asset_server.load("interface.gltf#Mesh0/Primitive0");
+        let hotspot_mesh_opt = asset_server.load("interface_opt.gltf#Mesh0/Primitive0");
+        let wire_tile_mesh = asset_server.load("tile_wire.gltf#Mesh0/Primitive0");
+        let hotspot_material = materials.add(BasicMaterial::from_color(Color::GREEN));
+
+        let guides = template
+            .tiles
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, tile)| {
+                let center = [
+                    (template.center[0] as i32),
+                    template.center[1] as i32,
+                    (template.center[2] as i32),
+                ];
+
+                let transform = Transform::from_translation(Vec3::new(
+                    (tile.position[0] - center[0]) as f32,
+                    (tile.position[1] - center[1]) as f32,
+                    -(tile.position[2] - center[2]) as f32,
+                ));
+
+                if let Some(hotspot) = tile.hotspot {
+                    let hotspot_e = cmd
+                        .spawn((
+                            MaterialMeshBundle {
+                                mesh: match hotspot.is_optional {
+                                    true => hotspot_mesh_opt.clone(),
+                                    false => hotspot_mesh_req.clone(),
+                                },
+                                material: hotspot_material.clone(),
+                                visibility: Visibility::Inherited,
+                                transform: transform.with_rotation(hotspot.direction.to_quat()),
+                                ..default()
+                            },
+                            BlueprintGuide {
+                                tile_idx: idx,
+                                is_valid: false,
+                                is_hotspot: true,
+                            },
+                        ))
+                        .id();
+
+                    cmd.entity(hotspot_e).set_parent(ev.entity);
+                    return Some(hotspot_e);
+                };
+
+                if tile
+                    .requirements
+                    .contains(TemplateTileRequirement::IS_WALKABLE)
+                {
+                    let hotspot_e = cmd
+                        .spawn((
+                            MaterialMeshBundle {
+                                mesh: wire_tile_mesh.clone(),
+                                material: hotspot_material.clone(),
+                                visibility: Visibility::Inherited,
+                                transform,
+                                ..default()
+                            },
+                            BlueprintGuide {
+                                tile_idx: idx,
+                                is_valid: false,
+                                is_hotspot: false,
+                            },
+                        ))
+                        .id();
+
+                    cmd.entity(hotspot_e).set_parent(ev.entity);
+                    return Some(hotspot_e);
+                }
+
+                None
+            })
+            .collect::<Vec<_>>();
+
         cmd.entity(ev.entity).insert((
-            Name::new("Workbench template"),
-            TemplateInstance {
+            Name::new(template.name.clone()),
+            Blueprint {
                 position: ev.pos,
                 is_valid: false,
+                is_dirty: false,
+                is_hotspots_valid: false,
                 template_type: ev.template_type,
+                guides,
+                rotation: 0,
+                is_flipped: true,
+                is_placed: false,
+                tiles: vec![],
             },
+            Position::default(),
             MaterialMeshBundle {
                 mesh: template.mesh.clone(),
                 material: material.clone(),
@@ -156,98 +239,57 @@ pub fn on_spawn_template(
                 ..default()
             },
         ));
-
-        let interface_mesh = asset_server.load("interface.gltf#Mesh0/Primitive0");
-        let interface_material = materials.add(BasicMaterial {
-            color: Color::GREEN,
-            texture: None,
-            sunlight: 15,
-            torchlight: 15,
-        });
-
-        let interfaces = template
-            .tiles
-            .iter()
-            .filter_map(|tile| {
-                let interface: TemplateInterface = tile.interface?;
-
-                let center = [
-                    (template.center[0] as i32),
-                    template.center[1] as i32,
-                    (template.center[2] as i32),
-                ];
-
-                let transform = Transform::from_translation(Vec3::new(
-                    (tile.position[0] - center[0]) as f32,
-                    (tile.position[1] - center[1]) as f32,
-                    -(tile.position[2] - center[2]) as f32,
-                ))
-                .with_rotation(interface.direction.to_quat());
-                // .with_scale(Vec3::new(1., 1., -1.));
-
-                let interface_e = cmd
-                    .spawn(MaterialMeshBundle {
-                        mesh: interface_mesh.clone(),
-                        material: interface_material.clone(),
-                        visibility: Visibility::Inherited,
-                        transform,
-                        ..default()
-                    })
-                    .id();
-
-                cmd.entity(interface_e).set_parent(ev.entity);
-
-                // cmd.entity(ev.entity).add_child(interface_e);
-                Some(interface_e)
-            })
-            .collect::<Vec<_>>();
-
-        cmd.entity(ev.entity)
-            .insert(TemplateInterfaces { interfaces });
     }
 }
 
-pub fn template_material_update(
-    q_templates: Query<(&TemplateInstance, &Handle<BasicMaterial>)>,
+pub fn blueprint_material_update(
+    mut cmd: Commands,
+    q_blueprints: Query<(&Blueprint, &Handle<BasicMaterial>)>,
+    q_guides: Query<(&BlueprintGuide, &Handle<BasicMaterial>)>,
     mut basic_materials: ResMut<Assets<BasicMaterial>>,
 ) {
-    for (template, material_handle) in q_templates.iter() {
+    for (blueprint, material_handle) in q_blueprints.iter() {
+        for guide_e in blueprint.guides.iter() {
+            let Ok((guide, guide_mat_handle)) = q_guides.get(*guide_e) else {
+                continue;
+            };
+
+            let Some(guide_material) = basic_materials.get_mut(guide_mat_handle) else {
+                continue;
+            };
+
+            if guide.is_hotspot {
+                if blueprint.is_valid && guide.is_valid {
+                    cmd.entity(*guide_e).insert(Visibility::Inherited);
+                } else {
+                    cmd.entity(*guide_e).insert(Visibility::Hidden);
+                }
+            }
+
+            guide_material.color = match blueprint.is_valid {
+                true => match blueprint.is_hotspots_valid {
+                    true => Color::GREEN,
+                    false => Color::YELLOW,
+                },
+                false => Color::RED,
+            };
+        }
+
         let Some(material) = basic_materials.get_mut(material_handle) else {
             continue;
         };
 
-        material.color = match template.is_valid {
-            true => Color::GREEN,
+        material.color = match blueprint.is_valid {
+            true => match blueprint.is_hotspots_valid {
+                true => Color::GREEN,
+                false => Color::YELLOW,
+            },
             false => Color::RED,
-        }
+        };
     }
 }
 
-pub fn setup_templates(
-    mut cmd: Commands,
-    asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<BasicMaterial>>,
-) {
-    let interface_mesh = asset_server.load("interface.gltf#Mesh0/Primitive0");
-    let interface_material = materials.add(BasicMaterial {
-        color: Color::GREEN,
-        texture: None,
-        sunlight: 15,
-        torchlight: 15,
-    });
-
-    let interfaces = (0..20)
-        .map(|_| {
-            cmd.spawn(MaterialMeshBundle {
-                mesh: interface_mesh.clone(),
-                material: interface_material.clone(),
-                visibility: Visibility::Hidden,
-                ..default()
-            })
-            .id()
-        })
-        .collect::<Vec<_>>();
-
+pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
     let mut templates = HashMap::new();
 
     let stone_texture: Handle<Image> =
@@ -256,45 +298,60 @@ pub fn setup_templates(
     templates.insert(
         TemplateType::Workbench,
         Template {
+            name: "Workbench".to_string(),
             center: [0, 0, 0],
             tiles: vec![
                 TemplateTile {
                     position: [0, 0, 0],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 0, 0],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [0, 0, -1],
-                    interface: Some(TemplateInterface {
+                    hotspot: Some(TemplateHotspot {
                         is_optional: true,
                         direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [1, 0, -1],
-                    interface: Some(TemplateInterface {
-                        is_optional: true,
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: false,
                         direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [0, 1, 0],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 1, 0],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
             ],
             texture: stone_texture.clone(),
@@ -305,20 +362,26 @@ pub fn setup_templates(
     templates.insert(
         TemplateType::Ladder,
         Template {
+            name: "Ladder".to_string(),
             center: [0, 0, 0],
             tiles: vec![
                 TemplateTile {
                     position: [0, 0, 0],
-                    interface: Some(TemplateInterface {
+                    hotspot: Some(TemplateHotspot {
                         is_optional: true,
                         direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
-                    requirements: TemplateTileRequirement::EMPTY,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::LADDER,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [0, 0, 1],
-                    interface: None,
-                    requirements: TemplateTileRequirement::ATTACHABLE,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_ATTACHABLE,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
             ],
             texture: stone_texture.clone(),
@@ -329,105 +392,142 @@ pub fn setup_templates(
     templates.insert(
         TemplateType::Bigbench,
         Template {
-            center: [1, 0, 2],
+            name: "Big workbench".to_string(),
+            center: [1, 0, 3],
             tiles: vec![
                 TemplateTile {
                     position: [0, 0, 0],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [0, 1, 0],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 0, 0],
-                    interface: Some(TemplateInterface {
+                    hotspot: Some(TemplateHotspot {
                         is_optional: true,
                         direction: DirectionSimple::West,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [0, 0, 1],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [0, 1, 1],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 0, 1],
-                    interface: Some(TemplateInterface {
-                        is_optional: true,
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: false,
                         direction: DirectionSimple::West,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [0, 0, 2],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [0, 1, 2],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 0, 2],
-                    interface: Some(TemplateInterface {
-                        is_optional: true,
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: false,
                         direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [2, 0, 2],
-                    interface: Some(TemplateInterface {
+                    hotspot: Some(TemplateHotspot {
                         is_optional: true,
                         direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
                 },
                 TemplateTile {
                     position: [0, 0, 3],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [0, 1, 3],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 0, 3],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [1, 1, 3],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [2, 0, 3],
-                    interface: None,
-                    requirements: TemplateTileRequirement::WALKABLE
-                        | TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_WALKABLE
+                        | TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
                 TemplateTile {
                     position: [2, 1, 3],
-                    interface: None,
-                    requirements: TemplateTileRequirement::EMPTY,
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
                 },
             ],
             texture: stone_texture.clone(),
@@ -435,8 +535,5 @@ pub fn setup_templates(
         },
     );
 
-    cmd.insert_resource(Templates {
-        templates,
-        interfaces,
-    });
+    cmd.insert_resource(Templates { templates });
 }

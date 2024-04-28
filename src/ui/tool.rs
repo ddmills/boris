@@ -35,7 +35,7 @@ pub enum Tool {
     ClearBlocks,
     SpawnColonist,
     SpawnPickaxe,
-    SpawnTemplate(TemplateType),
+    SpawnBlueprint(TemplateType),
     SpawnAxe,
     BuildStone,
     BlockInfo,

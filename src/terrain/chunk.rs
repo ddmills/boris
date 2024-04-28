@@ -2,7 +2,7 @@ use bevy::{
     asset::Handle,
     ecs::{component::Component, entity::Entity},
     render::mesh::Mesh,
-    utils::hashbrown::{HashMap, HashSet},
+    utils::hashbrown::HashSet,
 };
 use ndshape::{AbstractShape, RuntimeShape};
 
@@ -24,6 +24,7 @@ pub struct Chunk {
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
     // pub furniture: Box<[HashMap<Entity, TemplateTileType>]>,
+    pub blueprints: Box<[HashSet<Entity>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -40,6 +41,7 @@ impl Chunk {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
             items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
+            blueprints: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             // furniture: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
@@ -106,6 +108,28 @@ impl Chunk {
     pub fn remove_tree(&mut self, block_idx: u32, tree: &Entity) -> bool {
         if let Some(trees) = self.trees.get_mut(block_idx as usize) {
             return trees.remove(tree);
+        }
+
+        false
+    }
+
+    pub fn get_blueprints(&self, block_idx: u32) -> HashSet<Entity> {
+        if let Some(blueprints) = self.blueprints.get(block_idx as usize) {
+            return blueprints.clone();
+        }
+
+        HashSet::new()
+    }
+
+    pub fn add_blueprint(&mut self, block_idx: u32, blueprint: Entity) {
+        if let Some(blueprints) = self.blueprints.get_mut(block_idx as usize) {
+            blueprints.insert(blueprint);
+        }
+    }
+
+    pub fn remove_blueprint(&mut self, block_idx: u32, blueprint: &Entity) -> bool {
+        if let Some(blueprints) = self.blueprints.get_mut(block_idx as usize) {
+            return blueprints.remove(blueprint);
         }
 
         false

@@ -291,6 +291,28 @@ impl Terrain {
         false
     }
 
+    pub fn get_blueprints(&self, chunk_idx: u32, block_idx: u32) -> HashSet<Entity> {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_blueprints(block_idx);
+        }
+
+        HashSet::new()
+    }
+
+    pub fn add_blueprint(&mut self, chunk_idx: u32, block_idx: u32, blueprint: Entity) {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.add_blueprint(block_idx, blueprint);
+        }
+    }
+
+    pub fn remove_blueprint(&mut self, chunk_idx: u32, block_idx: u32, blueprint: &Entity) -> bool {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.remove_blueprint(block_idx, blueprint);
+        }
+
+        false
+    }
+
     // pub fn get_furniture(
     //     &self,
     //     chunk_idx: u32,

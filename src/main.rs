@@ -19,7 +19,10 @@ use colonists::{
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
-use furniture::{on_spawn_template, setup_templates, template_material_update, SpawnTemplateEvent};
+use furniture::{
+    blueprint_material_update, check_blueprints, on_spawn_blueprint, setup_templates,
+    SpawnBlueprintEvent,
+};
 use items::{
     on_spawn_axe, on_spawn_pickaxe, on_spawn_stone, SpawnAxeEvent, SpawnPickaxeEvent,
     SpawnStoneEvent,
@@ -47,7 +50,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(6, 2, 6, 16))
+        .insert_resource(Terrain::new(6, 4, 6, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
@@ -85,7 +88,7 @@ fn main() {
         .add_event::<SpawnJobBuildEvent>()
         .add_event::<SpawnJobMineEvent>()
         .add_event::<SpawnJobChopEvent>()
-        .add_event::<SpawnTemplateEvent>()
+        .add_event::<SpawnBlueprintEvent>()
         .add_event::<TerrainSliceChanged>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
@@ -138,7 +141,7 @@ fn main() {
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, on_spawn_axe)
         .add_systems(Update, on_spawn_stone)
-        .add_systems(Update, on_spawn_template)
+        .add_systems(Update, on_spawn_blueprint)
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
         .add_systems(Update, job_accessibility)
@@ -152,7 +155,6 @@ fn main() {
         .add_systems(Update, on_spawn_job_mine)
         .add_systems(Update, on_spawn_job_chop)
         .add_systems(Update, behavior_pick_system)
-        .add_systems(Update, template_material_update)
         .add_systems(
             Update,
             (score_wander, score_mine, score_chop, score_build).before(behavior_pick_system),
@@ -165,7 +167,15 @@ fn main() {
         .add_systems(Update, tool_chop)
         .add_systems(Update, tool_toggle_path)
         .add_systems(Update, tool_spawn_pickaxe)
-        .add_systems(Update, tool_spawn_template)
+        .add_systems(
+            Update,
+            (
+                tool_spawn_template,
+                check_blueprints,
+                blueprint_material_update,
+            )
+                .chain(),
+        )
         .add_systems(Update, tool_spawn_axe)
         .add_systems(Update, tool_build_stone)
         .add_systems(Update, task_job_assign)

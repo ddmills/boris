@@ -7,17 +7,18 @@ use crate::{
 use bevy::ecs::{event::EventWriter, system::ResMut};
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>, mut ev_spawn_tree: EventWriter<SpawnTreeEvent>) {
-    let seed = 3;
+    let seed = 6;
     let mut height = FractalNoise::new(seed, 0.01, 8);
-    let mut caverns = FractalNoise::new(seed + 1, 0.01, 4);
-    let mut caves = FractalNoise::new(seed + 1, 0.02, 3);
+    let mut caverns = FractalNoise::new(seed + 1, 0.01, 6);
+    let mut caves = FractalNoise::new(seed + 2, 0.02, 2);
     let mut trees = Rand::seed(seed as u64);
 
-    let top = terrain.world_size_y() - 1;
-    let mountain_height = min(top - 4, 49);
-    let magma_level = 3;
+    let sky_height = 8;
+    let top = terrain.world_size_y() - sky_height;
+    let mountain_height = min(top - 4, 38);
+    let magma_level = 4;
     let dirt_depth = 3;
-    let cavern_depth = 0.35;
+    let cavern_depth = 0.3;
 
     for chunk_idx in 0..terrain.chunk_count {
         terrain.init_chunk(chunk_idx);
@@ -44,7 +45,7 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>, mut ev_spawn_tree: EventWrite
                             ev_spawn_tree.send(SpawnTreeEvent {
                                 position: [x, y, z],
                                 settings: TreeSettings {
-                                    height: trees.range_n(5, 10) as u32,
+                                    height: trees.range_n(6, 14) as u32,
                                     canopy_radius: 1,
                                 },
                             });
@@ -64,7 +65,7 @@ pub fn setup_terrain(mut terrain: ResMut<Terrain>, mut ev_spawn_tree: EventWrite
                 let c = caverns.get_3d(x_f32, y_f32, z_f32);
 
                 let c_depth = cavern_depth * terrain.world_size_y() as f32;
-                let depth = ((c_depth - (y + 6) as f32) / c_depth).abs();
+                let depth = ((c_depth - (y + 1) as f32) / c_depth).abs();
 
                 if c > depth {
                     let cave = caves.get_3d(x_f32, y_f32, z_f32);

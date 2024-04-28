@@ -11,7 +11,6 @@ use crate::{
         AnimClip, Animator, Blackboard, BlockMove, GranularPathRequest, NavigationFlags,
         NavigationGraph, PartitionPathRequest, Path, TaskBuilder, TaskState,
     },
-    ui::GameSpeed,
     Position, Terrain,
 };
 

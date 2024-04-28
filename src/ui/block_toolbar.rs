@@ -327,7 +327,7 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnTemplate(crate::furniture::TemplateType::Workbench),
+                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::Workbench),
                 },
             ))
             .with_children(|parent| {
@@ -355,7 +355,7 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnTemplate(crate::furniture::TemplateType::Bigbench),
+                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::Bigbench),
                 },
             ))
             .with_children(|parent| {
@@ -383,7 +383,7 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnTemplate(crate::furniture::TemplateType::Ladder),
+                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::Ladder),
                 },
             ))
             .with_children(|parent| {

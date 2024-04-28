@@ -28,6 +28,17 @@ pub struct BasicMaterial {
     pub color: Color,
 }
 
+impl BasicMaterial {
+    pub fn from_color(color: Color) -> Self {
+        Self {
+            texture: None,
+            sunlight: 15,
+            torchlight: 15,
+            color,
+        }
+    }
+}
+
 impl Material for BasicMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/basic.wgsl".into()

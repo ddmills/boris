@@ -1,5 +1,4 @@
 mod task_animate;
-mod task_build;
 mod task_check_has_item;
 mod task_chop_tree;
 mod task_debug;
@@ -17,10 +16,10 @@ mod task_job_unassign;
 mod task_mine_block;
 mod task_move_to;
 mod task_pick_random_spot;
+mod task_place_block;
 mod task_sleep;
 
 pub use task_animate::*;
-pub use task_build::*;
 pub use task_check_has_item::*;
 pub use task_chop_tree::*;
 pub use task_debug::*;
@@ -38,4 +37,5 @@ pub use task_job_unassign::*;
 pub use task_mine_block::*;
 pub use task_move_to::*;
 pub use task_pick_random_spot::*;
+pub use task_place_block::*;
 pub use task_sleep::*;

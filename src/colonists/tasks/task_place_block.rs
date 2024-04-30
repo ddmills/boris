@@ -15,16 +15,16 @@ use crate::{
 };
 
 #[derive(Component, Clone, TaskBuilder)]
-pub struct TaskBuildBlock {
+pub struct TaskPlaceBlock {
     pub progress: f32,
-    pub block: BlockType,
+    pub block_type: BlockType,
 }
 
-pub fn task_build_block(
+pub fn task_place_block(
     time: Res<Time>,
     game_speed: Res<GameSpeed>,
     mut terrain: ResMut<Terrain>,
-    mut q_behavior: Query<(&mut TaskState, &Blackboard, &mut TaskBuildBlock)>,
+    mut q_behavior: Query<(&mut TaskState, &Blackboard, &mut TaskPlaceBlock)>,
     mut ev_destroy_item: EventWriter<DestroyItemEvent>,
 ) {
     for (mut state, blackboard, mut task) in q_behavior.iter_mut() {
@@ -55,7 +55,7 @@ pub fn task_build_block(
 
         if task.progress >= 1. {
             terrain.set_flag_blueprint(x, y, z, false);
-            terrain.set_block_type(x, y, z, task.block);
+            terrain.set_block_type(x, y, z, task.block_type);
 
             let item = blackboard.item.unwrap();
             ev_destroy_item.send(DestroyItemEvent { entity: item });

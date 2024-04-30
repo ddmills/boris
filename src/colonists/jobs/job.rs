@@ -9,13 +9,13 @@ use bevy::{
     time::Time,
 };
 
-use crate::Terrain;
+use crate::{BlockType, Terrain};
 
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum JobType {
     Mine,
     Chop,
-    BuildWall,
+    PlaceBlock(BlockType),
 }
 
 #[derive(Component, Clone, Copy)]
@@ -27,7 +27,7 @@ pub struct JobChop {
 }
 
 #[derive(Component, Clone, Copy)]
-pub struct JobBuild;
+pub struct JobPlaceBlock;
 
 #[derive(Component, Clone, Copy)]
 pub struct Job {
@@ -181,7 +181,7 @@ pub fn job_access_points(pos: [u32; 3], job: JobType) -> Vec<[u32; 3]> {
 
             goals
         }
-        JobType::BuildWall => {
+        JobType::PlaceBlock(_) => {
             let mut goals = vec![
                 [x + 1, y, z],
                 [x + 1, y + 1, z],

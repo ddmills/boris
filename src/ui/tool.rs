@@ -15,8 +15,8 @@ use bevy::{
 
 use crate::{
     colonists::{
-        Job, NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobBuildEvent,
-        SpawnJobChopEvent, SpawnJobMineEvent,
+        Job, NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobChopEvent,
+        SpawnJobMineEvent, SpawnJobPlaceBlockEvent,
     },
     common::min_max,
     controls::Raycast,
@@ -37,7 +37,7 @@ pub enum Tool {
     SpawnPickaxe,
     SpawnBlueprint(TemplateType),
     SpawnAxe,
-    BuildStone,
+    PlaceStone,
     BlockInfo,
     Mine,
     Chop,
@@ -437,13 +437,13 @@ pub fn tool_spawn_axe(
     }
 }
 
-pub fn tool_build_stone(
+pub fn tool_place_stone(
     toolbar: Res<Toolbar>,
     raycast: Res<Raycast>,
     mouse_input: Res<ButtonInput<MouseButton>>,
-    mut ev_spawn_job_build: EventWriter<SpawnJobBuildEvent>,
+    mut ev_spawn_job_place_block: EventWriter<SpawnJobPlaceBlockEvent>,
 ) {
-    let Tool::BuildStone = toolbar.tool else {
+    let Tool::PlaceStone = toolbar.tool else {
         return;
     };
 
@@ -452,8 +452,9 @@ pub fn tool_build_stone(
     }
 
     if mouse_input.just_released(MouseButton::Left) {
-        ev_spawn_job_build.send(SpawnJobBuildEvent {
+        ev_spawn_job_place_block.send(SpawnJobPlaceBlockEvent {
             pos: raycast.adj_pos,
+            block_type: BlockType::ASHLAR,
         });
     }
 }

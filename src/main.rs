@@ -5,16 +5,16 @@ use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, colonist_animations,
     destroy_items, fatigue_system, job_accessibility, job_despawn_cancelled, job_despawn_complete,
-    on_spawn_colonist, on_spawn_job_build, on_spawn_job_chop, on_spawn_job_mine, partition,
-    partition_debug, score_build, score_chop, score_mine, score_wander, setup_colonists,
-    task_animate, task_build_block, task_check_has_item, task_chop_tree, task_debug, task_find_bed,
+    on_spawn_colonist, on_spawn_job_chop, on_spawn_job_mine, on_spawn_job_place_block, partition,
+    partition_debug, score_chop, score_mine, score_place_block, score_wander, setup_colonists,
+    task_animate, task_check_has_item, task_chop_tree, task_debug, task_find_bed,
     task_find_nearest_item, task_get_job_location, task_idle, task_is_target_empty,
     task_item_equip, task_item_pick_up, task_job_assign, task_job_cancel, task_job_complete,
-    task_job_unassign, task_mine_block, task_move_to, task_pick_random_spot, task_sleep, ActorRef,
-    Blackboard, ColonistAnimations, DestroyItemEvent, HasBehavior, InInventory, Inventory, Item,
-    ItemTag, NavigationGraph, PartitionDebug, PartitionPathRequest, Path, Score, ScorerPlugin,
-    Scorers, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobChopEvent, SpawnJobMineEvent,
-    TaskState,
+    task_job_unassign, task_mine_block, task_move_to, task_pick_random_spot, task_place_block,
+    task_sleep, ActorRef, Blackboard, ColonistAnimations, DestroyItemEvent, HasBehavior,
+    InInventory, Inventory, Item, ItemTag, NavigationGraph, PartitionDebug, PartitionPathRequest,
+    Path, Score, ScorerPlugin, Scorers, SpawnColonistEvent, SpawnJobChopEvent, SpawnJobMineEvent,
+    SpawnJobPlaceBlockEvent, TaskState,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -32,10 +32,10 @@ use rendering::{
 };
 use terrain::*;
 use ui::{
-    job_toolbar, setup_block_toolbar_ui, tool_block_info, tool_build_stone, tool_chop,
-    tool_clear_block, tool_mine, tool_place_blocks, tool_spawn_axe, tool_spawn_colonist,
-    tool_spawn_pickaxe, tool_spawn_template, tool_toggle_path, toolbar_select, ui_capture_pointer,
-    GameSpeed, Tool, Toolbar, Ui,
+    job_toolbar, setup_block_toolbar_ui, tool_block_info, tool_chop, tool_clear_block, tool_mine,
+    tool_place_blocks, tool_place_stone, tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe,
+    tool_spawn_template, tool_toggle_path, toolbar_select, ui_capture_pointer, GameSpeed, Tool,
+    Toolbar, Ui,
 };
 
 mod colonists;
@@ -85,7 +85,7 @@ fn main() {
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<DestroyItemEvent>()
         .add_event::<SpawnStoneEvent>()
-        .add_event::<SpawnJobBuildEvent>()
+        .add_event::<SpawnJobPlaceBlockEvent>()
         .add_event::<SpawnJobMineEvent>()
         .add_event::<SpawnJobChopEvent>()
         .add_event::<SpawnBlueprintEvent>()
@@ -153,13 +153,13 @@ fn main() {
         .add_systems(PreUpdate, job_despawn_complete)
         .add_systems(PreUpdate, job_despawn_cancelled)
         .add_systems(PreUpdate, behavior_system)
-        .add_systems(Update, on_spawn_job_build)
+        .add_systems(Update, on_spawn_job_place_block)
         .add_systems(Update, on_spawn_job_mine)
         .add_systems(Update, on_spawn_job_chop)
         .add_systems(Update, behavior_pick_system)
         .add_systems(
             Update,
-            (score_wander, score_mine, score_chop, score_build).before(behavior_pick_system),
+            (score_wander, score_mine, score_chop, score_place_block).before(behavior_pick_system),
         )
         .add_systems(Update, tool_place_blocks)
         .add_systems(Update, tool_clear_block)
@@ -179,7 +179,7 @@ fn main() {
                 .chain(),
         )
         .add_systems(Update, tool_spawn_axe)
-        .add_systems(Update, tool_build_stone)
+        .add_systems(Update, tool_place_stone)
         .add_systems(Update, task_job_assign)
         .add_systems(Update, task_find_bed)
         .add_systems(Update, task_sleep)
@@ -189,7 +189,7 @@ fn main() {
         .add_systems(Update, task_chop_tree)
         .add_systems(Update, task_get_job_location)
         .add_systems(Update, task_mine_block)
-        .add_systems(Update, task_build_block)
+        .add_systems(Update, task_place_block)
         .add_systems(Update, task_debug)
         .add_systems(Update, task_job_unassign)
         .add_systems(Update, task_job_cancel)

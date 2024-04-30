@@ -14,7 +14,7 @@ use bevy::{
 };
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 
-use crate::colonists::{ScorerBuild, ScorerChop, ScorerMine, ScorerWander};
+use crate::colonists::{ScorerChop, ScorerMine, ScorerPlaceBlock, ScorerWander};
 
 use super::{ActorRef, Behavior};
 
@@ -50,7 +50,7 @@ impl Plugin for ScorerPlugin {
         use bevy_trait_query::RegisterExt;
 
         app.register_component_as::<dyn ScorerBuilder, ScorerMine>()
-            .register_component_as::<dyn ScorerBuilder, ScorerBuild>()
+            .register_component_as::<dyn ScorerBuilder, ScorerPlaceBlock>()
             .register_component_as::<dyn ScorerBuilder, ScorerWander>()
             .register_component_as::<dyn ScorerBuilder, ScorerChop>()
             .add_systems(PreUpdate, spawn_scorers);

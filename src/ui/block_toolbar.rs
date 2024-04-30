@@ -131,7 +131,7 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::BuildStone,
+                    tool: Tool::PlaceStone,
                 },
             ))
             .with_children(|parent| {

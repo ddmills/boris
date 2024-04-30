@@ -22,7 +22,7 @@ use crate::{colonists::AnimState, rendering::BasicMaterial, HumanGltf, Position}
 
 use super::{
     get_child_by_name_recursive, Actor, AnimClip, Animator, Faller, Fatigue, Inventory,
-    NavigationFlags, ScorerChop, ScorerMine, ScorerPlaceBlock, ScorerWander, Thinker,
+    NavigationFlags, ScorerBuild, ScorerChop, ScorerMine, ScorerPlaceBlock, ScorerWander, Thinker,
 };
 
 #[derive(Component, Default)]
@@ -67,6 +67,7 @@ pub fn on_spawn_colonist(
                     Arc::new(ScorerMine::default()),
                     Arc::new(ScorerChop::default()),
                     Arc::new(ScorerPlaceBlock::default()),
+                    Arc::new(ScorerBuild::default()),
                 ],
             },
             Faller,

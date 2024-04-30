@@ -4,11 +4,11 @@ use bevy::{
         event::EventWriter,
         system::{Commands, Local, Query, Res},
     },
-    hierarchy::DespawnRecursiveExt,
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
 };
 
 use crate::{
+    colonists::SpawnJobBuildEvent,
     controls::Raycast,
     furniture::{Blueprint, RemoveBlueprintEvent, SpawnBlueprintEvent},
     ui::{Tool, Toolbar},
@@ -29,6 +29,7 @@ pub fn tool_spawn_template(
     mut ev_spawn_blueprint: EventWriter<SpawnBlueprintEvent>,
     mut state: Local<BlueprintPlacementState>,
     mut ev_remove_blueprint: EventWriter<RemoveBlueprintEvent>,
+    mut ev_spawn_build_job: EventWriter<SpawnJobBuildEvent>,
 ) {
     let Tool::SpawnBlueprint(template_type) = toolbar.tool else {
         if let Some(entity) = state.blueprint {
@@ -63,6 +64,7 @@ pub fn tool_spawn_template(
         if blueprint.is_valid {
             blueprint.is_placed = true;
             blueprint.is_dirty = true;
+            ev_spawn_build_job.send(SpawnJobBuildEvent { blueprint: entity });
             state.blueprint = None;
         } else {
             println!("invalid placement!");

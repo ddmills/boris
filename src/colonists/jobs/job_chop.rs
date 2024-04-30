@@ -1,15 +1,22 @@
 use bevy::ecs::{
+    component::Component,
+    entity::Entity,
     event::{Event, EventReader},
     system::{Commands, Query, ResMut},
 };
 
 use crate::{Terrain, Tree};
 
-use super::{Job, JobChop, JobLocation, JobType};
+use super::{Job, JobLocation, JobType};
 
 #[derive(Event)]
 pub struct SpawnJobChopEvent {
     pub pos: [u32; 3],
+}
+
+#[derive(Component, Clone, Copy)]
+pub struct JobChop {
+    pub tree: Entity,
 }
 
 pub fn on_spawn_job_chop(

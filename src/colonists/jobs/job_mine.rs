@@ -1,16 +1,20 @@
 use bevy::ecs::{
+    component::Component,
     event::{Event, EventReader},
     system::{Commands, ResMut},
 };
 
 use crate::Terrain;
 
-use super::{Job, JobLocation, JobMine, JobType};
+use super::{Job, JobLocation, JobType};
 
 #[derive(Event)]
 pub struct SpawnJobMineEvent {
     pub pos: [u32; 3],
 }
+
+#[derive(Component, Clone, Copy)]
+pub struct JobMine;
 
 pub fn on_spawn_job_mine(
     mut terrain: ResMut<Terrain>,

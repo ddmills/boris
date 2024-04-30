@@ -16,18 +16,8 @@ pub enum JobType {
     Mine,
     Chop,
     PlaceBlock(BlockType),
+    Build,
 }
-
-#[derive(Component, Clone, Copy)]
-pub struct JobMine;
-
-#[derive(Component, Clone, Copy)]
-pub struct JobChop {
-    pub tree: Entity,
-}
-
-#[derive(Component, Clone, Copy)]
-pub struct JobPlaceBlock;
 
 #[derive(Component, Clone, Copy)]
 pub struct Job {
@@ -181,7 +171,7 @@ pub fn job_access_points(pos: [u32; 3], job: JobType) -> Vec<[u32; 3]> {
 
             goals
         }
-        JobType::PlaceBlock(_) => {
+        JobType::PlaceBlock(_) | JobType::Build => {
             let mut goals = vec![
                 [x + 1, y, z],
                 [x + 1, y + 1, z],

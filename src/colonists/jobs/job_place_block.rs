@@ -1,17 +1,21 @@
 use bevy::ecs::{
+    component::Component,
     event::{Event, EventReader},
     system::{Commands, ResMut},
 };
 
 use crate::{BlockType, Terrain};
 
-use super::{Job, JobLocation, JobPlaceBlock, JobType};
+use super::{Job, JobLocation, JobType};
 
 #[derive(Event)]
 pub struct SpawnJobPlaceBlockEvent {
     pub pos: [u32; 3],
     pub block_type: BlockType,
 }
+
+#[derive(Component, Clone, Copy)]
+pub struct JobPlaceBlock;
 
 pub fn on_spawn_job_place_block(
     mut cmd: Commands,

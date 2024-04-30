@@ -20,8 +20,8 @@ use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use furniture::{
-    blueprint_material_update, check_blueprints, on_spawn_blueprint, setup_templates,
-    SpawnBlueprintEvent,
+    blueprint_material_update, check_blueprints, on_remove_blueprint, on_spawn_blueprint,
+    setup_templates, RemoveBlueprintEvent, SpawnBlueprintEvent,
 };
 use items::{
     on_spawn_axe, on_spawn_pickaxe, on_spawn_stone, SpawnAxeEvent, SpawnPickaxeEvent,
@@ -89,7 +89,8 @@ fn main() {
         .add_event::<SpawnJobMineEvent>()
         .add_event::<SpawnJobChopEvent>()
         .add_event::<SpawnBlueprintEvent>()
-        .add_event::<TerrainSliceChanged>()
+        .add_event::<RemoveBlueprintEvent>()
+        .add_event::<TerrainSliceChangeEvent>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
@@ -129,6 +130,7 @@ fn main() {
         .add_systems(Update, raycast)
         .add_systems(Update, scroll_events)
         .add_systems(Update, on_slice_changed)
+        .add_systems(Update, on_remove_blueprint)
         .add_systems(Update, update_slice_mesh)
         .add_systems(Update, hide_sliced_objects)
         .add_systems(Update, light_system)

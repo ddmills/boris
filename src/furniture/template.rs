@@ -101,6 +101,8 @@ pub enum TemplateType {
     Workbench,
     Bigbench,
     Ladder,
+    TorchStanding,
+    TorchWall,
 }
 
 pub struct Template {
@@ -139,7 +141,7 @@ pub fn on_spawn_blueprint(
         let hotspot_mesh_req = asset_server.load("interface.gltf#Mesh0/Primitive0");
         let hotspot_mesh_opt = asset_server.load("interface_opt.gltf#Mesh0/Primitive0");
         let wire_tile_mesh = asset_server.load("tile_wire.gltf#Mesh0/Primitive0");
-        let hotspot_material = materials.add(BasicMaterial::from_color(Color::GREEN));
+        let hotspot_material = materials.add(BasicMaterial::from_color(Color::BLUE));
 
         let guides = template
             .tiles
@@ -258,6 +260,11 @@ pub fn blueprint_material_update(
                 continue;
             };
 
+            if blueprint.is_placed {
+                cmd.entity(*guide_e).insert(Visibility::Hidden);
+                continue;
+            }
+
             if guide.is_hotspot {
                 if blueprint.is_valid && guide.is_valid {
                     cmd.entity(*guide_e).insert(Visibility::Inherited);
@@ -268,7 +275,7 @@ pub fn blueprint_material_update(
 
             guide_material.color = match blueprint.is_valid {
                 true => match blueprint.is_hotspots_valid {
-                    true => Color::GREEN,
+                    true => Color::rgb_from_array([0.435, 0.656, 0.851]),
                     false => Color::YELLOW,
                 },
                 false => Color::RED,
@@ -279,9 +286,14 @@ pub fn blueprint_material_update(
             continue;
         };
 
+        if !blueprint.is_placed && blueprint.is_valid {
+            material.color = Color::WHITE;
+            continue;
+        }
+
         material.color = match blueprint.is_valid {
             true => match blueprint.is_hotspots_valid {
-                true => Color::GREEN,
+                true => Color::rgb_from_array([0.435, 0.656, 0.851]),
                 false => Color::YELLOW,
             },
             false => Color::RED,
@@ -386,6 +398,118 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
             ],
             texture: stone_texture.clone(),
             mesh: asset_server.load("ladder.gltf#Mesh0/Primitive0"),
+        },
+    );
+
+    templates.insert(
+        TemplateType::TorchWall,
+        Template {
+            name: "Wall torch".to_string(),
+            center: [0, 0, 0],
+            tiles: vec![
+                TemplateTile {
+                    position: [0, 0, 0],
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: true,
+                        direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
+                    }),
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::LADDER,
+                    is_blocker: false,
+                },
+                TemplateTile {
+                    position: [0, -1, 0],
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: true,
+                        direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
+                    }),
+                    requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::LADDER,
+                    is_blocker: false,
+                },
+                TemplateTile {
+                    position: [0, 0, 1],
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_ATTACHABLE,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
+                },
+            ],
+            texture: stone_texture.clone(),
+            mesh: asset_server.load("torch_wall.gltf#Mesh0/Primitive0"),
+        },
+    );
+
+    templates.insert(
+        TemplateType::TorchStanding,
+        Template {
+            name: "Standing torch".to_string(),
+            center: [0, 0, 0],
+            tiles: vec![
+                TemplateTile {
+                    position: [-1, 0, 0],
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: true,
+                        direction: DirectionSimple::East,
+                        nav_flag_requirements: NavigationFlags::TALL,
+                    }),
+                    requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
+                },
+                TemplateTile {
+                    position: [1, 0, 0],
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: true,
+                        direction: DirectionSimple::West,
+                        nav_flag_requirements: NavigationFlags::TALL,
+                    }),
+                    requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
+                },
+                TemplateTile {
+                    position: [0, 0, 1],
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: true,
+                        direction: DirectionSimple::South,
+                        nav_flag_requirements: NavigationFlags::TALL,
+                    }),
+                    requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
+                },
+                TemplateTile {
+                    position: [0, 0, -1],
+                    hotspot: Some(TemplateHotspot {
+                        is_optional: true,
+                        direction: DirectionSimple::North,
+                        nav_flag_requirements: NavigationFlags::TALL,
+                    }),
+                    requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: false,
+                },
+                TemplateTile {
+                    position: [0, 0, 0],
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY
+                        | TemplateTileRequirement::IS_WALKABLE,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
+                },
+                TemplateTile {
+                    position: [0, 1, 0],
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::NONE,
+                    is_blocker: true,
+                },
+            ],
+            texture: stone_texture.clone(),
+            mesh: asset_server.load("torch_standing.gltf#Mesh0/Primitive0"),
         },
     );
 

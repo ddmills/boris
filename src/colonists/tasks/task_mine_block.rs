@@ -47,7 +47,7 @@ pub fn task_mine_block(
             terrain.set_block_type(x, y, z, BlockType::EMPTY);
             terrain.set_flag_mine(x, y, z, false);
 
-            if rand.bool(0.25) {
+            if rand.bool(0.15) {
                 ev_spawn_stone.send(SpawnStoneEvent { pos: [x, y, z] });
             }
 

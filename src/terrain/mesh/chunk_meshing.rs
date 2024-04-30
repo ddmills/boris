@@ -13,7 +13,7 @@ use ndshape::AbstractShape;
 
 use crate::{
     pack_block, Block, BlockFace, ChunkMaterial, ChunkMaterialRes, ChunkMesh, Neighbor, Terrain,
-    TerrainSlice, TerrainSliceChanged, VertexCornerCount,
+    TerrainSlice, TerrainSliceChangeEvent, VertexCornerCount,
 };
 
 pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
@@ -100,7 +100,7 @@ pub fn chunk_meshing(
     mut terrain: ResMut<Terrain>,
     mut meshes: ResMut<Assets<Mesh>>,
     chunks: Query<&ChunkMesh>,
-    mut ev_terrain_slice: EventWriter<TerrainSliceChanged>,
+    mut ev_terrain_slice: EventWriter<TerrainSliceChangeEvent>,
 ) {
     let maximum = 1;
     let mut cur = 0;
@@ -133,14 +133,14 @@ pub fn chunk_meshing(
     });
 
     if update_slice {
-        ev_terrain_slice.send(TerrainSliceChanged);
+        ev_terrain_slice.send(TerrainSliceChangeEvent);
     }
 }
 
 pub fn on_slice_changed(
     terrain_slice: Res<TerrainSlice>,
     chunk_material_res: Res<ChunkMaterialRes>,
-    mut ev_slice_changed: EventReader<TerrainSliceChanged>,
+    mut ev_slice_changed: EventReader<TerrainSliceChangeEvent>,
     mut terrain_material: ResMut<Assets<ChunkMaterial>>,
 ) {
     if ev_slice_changed.is_empty() {

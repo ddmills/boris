@@ -10,7 +10,7 @@ use bevy::{
 
 use crate::{
     controls::Raycast,
-    furniture::{Blueprint, SpawnBlueprintEvent},
+    furniture::{Blueprint, RemoveBlueprintEvent, SpawnBlueprintEvent},
     ui::{Tool, Toolbar},
 };
 
@@ -28,10 +28,11 @@ pub fn tool_spawn_template(
     mut q_blueprints: Query<&mut Blueprint>,
     mut ev_spawn_blueprint: EventWriter<SpawnBlueprintEvent>,
     mut state: Local<BlueprintPlacementState>,
+    mut ev_remove_blueprint: EventWriter<RemoveBlueprintEvent>,
 ) {
     let Tool::SpawnBlueprint(template_type) = toolbar.tool else {
         if let Some(entity) = state.blueprint {
-            cmd.entity(entity).despawn_recursive();
+            ev_remove_blueprint.send(RemoveBlueprintEvent { entity });
             state.blueprint = None;
         }
         return;
@@ -53,7 +54,7 @@ pub fn tool_spawn_template(
     };
 
     if blueprint.template_type != template_type {
-        cmd.entity(entity).despawn_recursive();
+        ev_remove_blueprint.send(RemoveBlueprintEvent { entity });
         state.blueprint = None;
         return;
     }

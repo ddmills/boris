@@ -4,8 +4,10 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        system::{Query, Res, ResMut},
+        event::{Event, EventReader},
+        system::{Commands, Query, Res, ResMut},
     },
+    hierarchy::DespawnRecursiveExt,
     math::{Quat, Vec3},
     transform::components::Transform,
 };
@@ -26,6 +28,31 @@ pub struct Blueprint {
     pub position: [u32; 3],
     pub rotation: u8,
     pub is_flipped: bool,
+}
+
+#[derive(Event)]
+pub struct RemoveBlueprintEvent {
+    pub entity: Entity,
+}
+
+pub fn on_remove_blueprint(
+    mut cmd: Commands,
+    mut terrain: ResMut<Terrain>,
+    q_blueprints: Query<&Blueprint>,
+    mut ev_remove_blueprint: EventReader<RemoveBlueprintEvent>,
+) {
+    for ev in ev_remove_blueprint.read() {
+        cmd.entity(ev.entity).despawn_recursive();
+
+        let Ok(blueprint) = q_blueprints.get(ev.entity) else {
+            continue;
+        };
+
+        for [x, y, z] in blueprint.tiles.iter() {
+            let [chunk_idx, block_idx] = terrain.get_block_indexes(*x as u32, *y as u32, *z as u32);
+            terrain.remove_blueprint(chunk_idx, block_idx, &ev.entity);
+        }
+    }
 }
 
 pub fn check_blueprints(
@@ -151,7 +178,6 @@ pub fn check_blueprints(
             let [chunk_idx, block_idx] = terrain.get_block_indexes(*x as u32, *y as u32, *z as u32);
             terrain.add_blueprint(chunk_idx, block_idx, entity);
         }
-        blueprint.is_dirty = false;
         // }
     }
 }

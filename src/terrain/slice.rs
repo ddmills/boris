@@ -102,7 +102,7 @@ pub fn setup_terrain_slice(
 pub fn update_slice_mesh(
     terrain_slice: Res<TerrainSlice>,
     terrain: Res<Terrain>,
-    mut ev_slice_changed: EventReader<TerrainSliceChanged>,
+    mut ev_slice_changed: EventReader<TerrainSliceChangeEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     if ev_slice_changed.is_empty() {
@@ -125,7 +125,7 @@ pub fn hide_sliced_objects(
     mut cmd: Commands,
     terrain_slice: Res<TerrainSlice>,
     q_objects: Query<(Entity, &Position, &Visibility)>,
-    mut ev_slice_changed: EventReader<TerrainSliceChanged>,
+    mut ev_slice_changed: EventReader<TerrainSliceChangeEvent>,
 ) {
     if ev_slice_changed.is_empty() {
         return;
@@ -147,13 +147,13 @@ pub fn hide_sliced_objects(
 }
 
 #[derive(Event)]
-pub struct TerrainSliceChanged;
+pub struct TerrainSliceChangeEvent;
 
 pub fn scroll_events(
     mut scroll_evt: EventReader<MouseWheel>,
     input_keys: Res<ButtonInput<KeyCode>>,
     mut terrain_slice: ResMut<TerrainSlice>,
-    mut ev_terrain_slice: EventWriter<TerrainSliceChanged>,
+    mut ev_terrain_slice: EventWriter<TerrainSliceChangeEvent>,
 ) {
     for ev in scroll_evt.read() {
         match ev.unit {
@@ -164,7 +164,7 @@ pub fn scroll_events(
                 let scroll = ev.y as i32;
                 let slice = terrain_slice.y as i32;
                 terrain_slice.set_value(slice + scroll);
-                ev_terrain_slice.send(TerrainSliceChanged);
+                ev_terrain_slice.send(TerrainSliceChangeEvent);
             }
             bevy::input::mouse::MouseScrollUnit::Pixel => {}
         }

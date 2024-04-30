@@ -141,7 +141,7 @@ pub fn setup_camera(mut cmd: Commands) {
         Camera3dBundle {
             transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
             projection: Projection::Perspective(PerspectiveProjection {
-                fov: std::f32::consts::PI / 7.0,
+                fov: std::f32::consts::PI / 5.0,
                 ..Default::default()
             }),
             ..Default::default()

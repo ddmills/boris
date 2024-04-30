@@ -41,7 +41,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     out.vertex_index = vertex.instance_index;
 
-    let vertex_ao = vertex.packed_block >> 7u & 3u;
+    let vertex_ao = vertex.packed_block >> 11u & 3u;
 
     switch vertex_ao {
         case 0u: {
@@ -137,8 +137,12 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     uv = uv / f32(texture_count);
     let tex = textureSample(texture, texture_sampler, uv);
     var outc = light * tex * mesh.ao * mesh.light;
+    // var outc = vec4(.5, .5, .5, 1.) * light * mesh.ao * mesh.light;
 
     outc[3] = 1.0;
+
+    // let gray = 0.299 * outc[0] + 0.587 * outc[1] + 0.114 * outc[2];
+    // outc = vec4(gray, gray, gray, 1.);
     
     if (vertex_blue) {
         outc[2] = 0.25;

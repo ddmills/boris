@@ -33,7 +33,13 @@ pub fn on_spawn_job_build(
         let targets = blueprint
             .tiles
             .iter()
-            .map(|t| [t[0] as u32, t[1] as u32, t[2] as u32])
+            .map(|t| {
+                [
+                    t.position[0] as u32,
+                    t.position[1] as u32,
+                    t.position[2] as u32,
+                ]
+            })
             .collect::<Vec<_>>();
 
         cmd.spawn((

@@ -10,7 +10,7 @@ use bevy::{
 use crate::{
     colonists::SpawnJobBuildEvent,
     controls::Raycast,
-    furniture::{Blueprint, RemoveBlueprintEvent, SpawnBlueprintEvent},
+    furniture::{Blueprint, BlueprintMode, RemoveBlueprintEvent, SpawnBlueprintEvent},
     ui::{Tool, Toolbar},
 };
 
@@ -62,7 +62,7 @@ pub fn tool_spawn_template(
 
     if mouse_input.just_released(MouseButton::Right) {
         if blueprint.is_valid {
-            blueprint.is_placed = true;
+            blueprint.mode = BlueprintMode::Placed;
             blueprint.is_dirty = true;
             ev_spawn_build_job.send(SpawnJobBuildEvent { blueprint: entity });
             state.blueprint = None;
@@ -89,4 +89,5 @@ pub fn tool_spawn_template(
     }
 
     blueprint.position = raycast.adj_pos;
+    blueprint.is_dirty = true;
 }

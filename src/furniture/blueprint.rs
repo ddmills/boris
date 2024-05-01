@@ -1,5 +1,3 @@
-use std::vec;
-
 use bevy::{
     ecs::{
         component::Component,
@@ -12,19 +10,40 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::{colonists::get_block_flags, Terrain};
+use crate::{
+    colonists::{get_block_flags, NavigationFlags},
+    EmplacementTileDetail, Terrain,
+};
 
-use super::{BlueprintGuide, TemplateTile, TemplateTileRequirement, TemplateType, Templates};
+use super::{
+    BlueprintGuide, TemplateHotspot, TemplateTile, TemplateTileRequirement, TemplateType, Templates,
+};
+
+pub enum BlueprintMode {
+    Placing,
+    Placed,
+    Built,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct BlueprintTile {
+    pub requirements: TemplateTileRequirement,
+    pub nav_flags: NavigationFlags,
+    pub is_blocker: bool,
+    pub is_occupied: bool,
+    pub hotspot: Option<TemplateHotspot>,
+    pub position: [i32; 3],
+}
 
 #[derive(Component)]
 pub struct Blueprint {
     pub is_valid: bool,
-    pub is_placed: bool,
     pub is_dirty: bool,
+    pub mode: BlueprintMode,
     pub is_hotspots_valid: bool,
     pub template_type: TemplateType,
     pub guides: Vec<Entity>,
-    pub tiles: Vec<[i32; 3]>,
+    pub tiles: Vec<BlueprintTile>,
     pub position: [u32; 3],
     pub rotation: u8,
     pub is_flipped: bool,
@@ -48,8 +67,9 @@ pub fn on_remove_blueprint(
             continue;
         };
 
-        for [x, y, z] in blueprint.tiles.iter() {
-            let [chunk_idx, block_idx] = terrain.get_block_indexes(*x as u32, *y as u32, *z as u32);
+        for tile in blueprint.tiles.iter() {
+            let [x, y, z] = tile.position;
+            let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
             terrain.remove_blueprint(chunk_idx, block_idx, &ev.entity);
         }
     }
@@ -62,6 +82,10 @@ pub fn check_blueprints(
     templates: Res<Templates>,
 ) {
     for (entity, mut blueprint, mut transform) in q_blueprints.iter_mut() {
+        if !blueprint.is_dirty {
+            continue;
+        }
+
         let Some(template) = templates.templates.get(&blueprint.template_type) else {
             println!("Missing template type!");
             continue;
@@ -97,20 +121,20 @@ pub fn check_blueprints(
 
         blueprint.is_valid = true;
         blueprint.is_hotspots_valid = true;
+        blueprint.is_dirty = false;
 
         // remove current tiles affecting terrain
-        // if blueprint.is_placed {
-        for [x, y, z] in blueprint.tiles.iter() {
-            let [chunk_idx, block_idx] = terrain.get_block_indexes(*x as u32, *y as u32, *z as u32);
+        for tile in blueprint.tiles.iter() {
+            let [x, y, z] = tile.position;
+            let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
             terrain.remove_blueprint(chunk_idx, block_idx, &entity);
         }
-        // }
 
         blueprint.tiles = template
             .tiles
             .iter()
             .enumerate()
-            .filter_map(|(idx, tile)| {
+            .map(|(idx, tile)| {
                 let tr = apply_transforms(
                     center,
                     tile.position,
@@ -123,17 +147,12 @@ pub fn check_blueprints(
                     blueprint.position[2] as i32 + tr[2],
                 ];
 
-                let tile_is_valid = is_blueprint_tile_valid(tile, pos_i32, &terrain);
                 let mut guide_is_valid = true;
-
-                if !tile_is_valid {
-                    blueprint.is_valid = false;
-                }
 
                 if let Some(hotspot) = tile.hotspot {
                     let block_flags = get_block_flags(&terrain, pos_i32[0], pos_i32[1], pos_i32[2]);
 
-                    guide_is_valid = block_flags.intersects(hotspot.nav_flag_requirements);
+                    guide_is_valid = block_flags.contains(hotspot.nav_flag_requirements);
 
                     let [chunk_idx, block_idx] = terrain.get_block_indexes(
                         pos_i32[0] as u32,
@@ -143,13 +162,23 @@ pub fn check_blueprints(
 
                     let blueprints = terrain.get_blueprints(chunk_idx, block_idx);
 
-                    if !blueprints.is_empty() {
-                        guide_is_valid = false;
+                    if guide_is_valid {
+                        if tile.is_blocker {
+                            guide_is_valid = blueprints.is_empty();
+                        } else {
+                            guide_is_valid = !blueprints.values().any(|v| v.is_blocker)
+                        }
                     }
 
                     if !hotspot.is_optional && !guide_is_valid {
                         blueprint.is_hotspots_valid = false;
                     }
+                }
+
+                let tile_is_valid = is_blueprint_tile_valid(tile, pos_i32, &terrain);
+                if !tile_is_valid {
+                    blueprint.is_valid = false;
+                    guide_is_valid = false;
                 }
 
                 blueprint.guides.iter().enumerate().for_each(|(_, h)| {
@@ -164,21 +193,39 @@ pub fn check_blueprints(
                     guide.is_valid = guide_is_valid;
                 });
 
-                if tile.is_blocker {
-                    Some(pos_i32)
-                } else {
-                    None
+                BlueprintTile {
+                    requirements: tile.requirements,
+                    nav_flags: tile.nav_flags,
+                    is_blocker: tile.is_blocker,
+                    is_occupied: tile.is_occupied,
+                    hotspot: tile.hotspot,
+                    position: pos_i32,
                 }
             })
             .collect::<Vec<_>>();
 
         // set tiles affecting terrain
-        // if blueprint.is_placed {
-        for [x, y, z] in blueprint.tiles.iter() {
-            let [chunk_idx, block_idx] = terrain.get_block_indexes(*x as u32, *y as u32, *z as u32);
-            terrain.add_blueprint(chunk_idx, block_idx, entity);
+        for tile in blueprint.tiles.iter() {
+            let [x, y, z] = tile.position;
+            let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
+            let flags = if tile.nav_flags == NavigationFlags::NONE {
+                None
+            } else {
+                Some(tile.nav_flags)
+            };
+
+            terrain.add_blueprint(
+                chunk_idx,
+                block_idx,
+                entity,
+                EmplacementTileDetail {
+                    is_built: matches!(blueprint.mode, BlueprintMode::Built),
+                    flags,
+                    is_blocker: tile.is_blocker,
+                    is_occupied: tile.is_occupied,
+                },
+            );
         }
-        // }
     }
 }
 
@@ -217,7 +264,12 @@ fn is_blueprint_tile_valid(tile: &TemplateTile, pos: [i32; 3], terrain: &Terrain
             }
 
             let blueprints = terrain.get_blueprints(chunk_idx, block_idx);
-            blueprints.is_empty()
+
+            if tile.is_blocker || tile.is_occupied {
+                !blueprints.values().any(|v| v.is_blocker || v.is_occupied)
+            } else {
+                !blueprints.values().any(|v| v.is_blocker)
+            }
         }
         TemplateTileRequirement::IS_ATTACHABLE => block.is_attachable(),
         TemplateTileRequirement::IS_WALKABLE => {

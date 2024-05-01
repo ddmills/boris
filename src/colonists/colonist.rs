@@ -18,7 +18,10 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::{colonists::AnimState, rendering::BasicMaterial, HumanGltf, Position};
+use crate::{
+    colonists::AnimState, items::image_loader_settings, rendering::BasicMaterial, HumanGltf,
+    Position,
+};
 
 use super::{
     get_child_by_name_recursive, Actor, AnimClip, Animator, Faller, Fatigue, Inventory,
@@ -103,7 +106,8 @@ pub fn setup_colonists(
         {
             let mut mesh_cmd = cmd.entity(mesh);
 
-            let texture: Handle<Image> = asset_server.load("textures/colonist.png");
+            let texture: Handle<Image> =
+                asset_server.load_with_settings("textures/colonist.png", image_loader_settings);
 
             let basic_material = basic_materials.add(BasicMaterial {
                 color: Color::WHITE,

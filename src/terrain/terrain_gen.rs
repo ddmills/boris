@@ -7,7 +7,7 @@ use crate::{
 use bevy::ecs::{event::EventWriter, system::ResMut};
 
 pub fn setup_terrain(mut terrain: ResMut<Terrain>, mut ev_spawn_tree: EventWriter<SpawnTreeEvent>) {
-    let seed = 6;
+    let seed = 7;
     let mut height = FractalNoise::new(seed, 0.01, 8);
     let mut caverns = FractalNoise::new(seed + 1, 0.01, 6);
     let mut caves = FractalNoise::new(seed + 2, 0.02, 2);

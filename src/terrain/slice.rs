@@ -3,7 +3,6 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
-        query::Without,
         system::{Commands, Query, Res, ResMut, Resource},
     },
     input::{keyboard::KeyCode, mouse::MouseWheel, ButtonInput},
@@ -17,12 +16,12 @@ use bevy::{
         render_resource::{
             AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
-        texture::{Image, ImageLoaderSettings, ImageSampler},
-        view::{visibility, NoFrustumCulling, Visibility},
+        texture::Image,
+        view::{NoFrustumCulling, Visibility},
     },
 };
 
-use crate::{colonists::InInventory, pack_block, Position, Terrain, ATTRIBUTE_BLOCK_PACKED};
+use crate::{items::image_loader_settings, pack_block, Position, Terrain, ATTRIBUTE_BLOCK_PACKED};
 
 #[derive(Resource)]
 pub struct TerrainSlice {
@@ -55,9 +54,8 @@ pub fn setup_terrain_slice(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<SliceMaterial>>,
 ) {
-    let settings = |s: &mut ImageLoaderSettings| s.sampler = ImageSampler::nearest();
     let slice_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/comfy.png", settings);
+        asset_server.load_with_settings("textures/comfy.png", image_loader_settings);
 
     let slice_material = materials.add(SliceMaterial {
         texture: slice_texture,

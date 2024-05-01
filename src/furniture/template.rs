@@ -30,7 +30,7 @@ use std::fmt::{Display, Formatter};
 
 use bitflags::bitflags;
 
-use super::Blueprint;
+use super::{Blueprint, BlueprintMode};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -56,7 +56,7 @@ pub enum DirectionSimple {
 }
 
 impl DirectionSimple {
-    pub fn to_quat(&self) -> Quat {
+    pub fn as_quat(&self) -> Quat {
         match self {
             Self::North => Quat::from_rotation_y(0.),
             Self::East => Quat::from_rotation_y(std::f32::consts::PI + std::f32::consts::FRAC_PI_2),
@@ -85,6 +85,7 @@ pub struct TemplateTile {
     pub requirements: TemplateTileRequirement,
     pub nav_flags: NavigationFlags,
     pub is_blocker: bool,
+    pub is_occupied: bool,
     pub hotspot: Option<TemplateHotspot>,
     pub position: [i32; 3],
 }
@@ -170,7 +171,7 @@ pub fn on_spawn_blueprint(
                                 },
                                 material: hotspot_material.clone(),
                                 visibility: Visibility::Inherited,
-                                transform: transform.with_rotation(hotspot.direction.to_quat()),
+                                transform: transform.with_rotation(hotspot.direction.as_quat()),
                                 ..default()
                             },
                             BlueprintGuide {
@@ -225,8 +226,8 @@ pub fn on_spawn_blueprint(
                 guides,
                 rotation: 0,
                 is_flipped: true,
-                is_placed: false,
                 tiles: vec![],
+                mode: BlueprintMode::Placing,
             },
             Position::default(),
             MaterialMeshBundle {
@@ -260,7 +261,7 @@ pub fn blueprint_material_update(
                 continue;
             };
 
-            if blueprint.is_placed {
+            if matches!(blueprint.mode, BlueprintMode::Placed | BlueprintMode::Built) {
                 cmd.entity(*guide_e).insert(Visibility::Hidden);
                 continue;
             }
@@ -286,7 +287,9 @@ pub fn blueprint_material_update(
             continue;
         };
 
-        if !blueprint.is_placed && blueprint.is_valid {
+        if (matches!(blueprint.mode, BlueprintMode::Placing) && blueprint.is_valid)
+            || matches!(blueprint.mode, BlueprintMode::Built)
+        {
             material.color = Color::WHITE;
             continue;
         }
@@ -320,6 +323,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 0, 0],
@@ -328,6 +332,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, 0, -1],
@@ -339,6 +344,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [1, 0, -1],
@@ -350,6 +356,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 1, 0],
@@ -357,6 +364,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 1, 0],
@@ -364,6 +372,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
             ],
             texture: stone_texture.clone(),
@@ -387,6 +396,15 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::LADDER,
                     is_blocker: false,
+                    is_occupied: true,
+                },
+                TemplateTile {
+                    position: [0, 1, 0],
+                    hotspot: None,
+                    requirements: TemplateTileRequirement::empty(),
+                    nav_flags: NavigationFlags::LADDER,
+                    is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 1],
@@ -394,6 +412,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_ATTACHABLE,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
             ],
             texture: stone_texture.clone(),
@@ -415,8 +434,9 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::IS_EMPTY,
-                    nav_flags: NavigationFlags::LADDER,
+                    nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, -1, 0],
@@ -426,8 +446,9 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TemplateTileRequirement::empty(),
-                    nav_flags: NavigationFlags::LADDER,
+                    nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 1],
@@ -435,6 +456,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_ATTACHABLE,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
             ],
             texture: stone_texture.clone(),
@@ -458,6 +480,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [1, 0, 0],
@@ -469,6 +492,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 1],
@@ -480,6 +504,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, -1],
@@ -491,6 +516,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 0],
@@ -499,6 +525,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_WALKABLE,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, 1, 0],
@@ -506,6 +533,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
             ],
             texture: stone_texture.clone(),
@@ -526,6 +554,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, 1, 0],
@@ -533,6 +562,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 0, 0],
@@ -544,6 +574,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 1],
@@ -552,6 +583,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, 1, 1],
@@ -559,6 +591,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 0, 1],
@@ -570,6 +603,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 2],
@@ -578,6 +612,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, 1, 2],
@@ -585,6 +620,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 0, 2],
@@ -596,6 +632,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [2, 0, 2],
@@ -607,6 +644,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::empty(),
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
+                    is_occupied: false,
                 },
                 TemplateTile {
                     position: [0, 0, 3],
@@ -615,6 +653,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [0, 1, 3],
@@ -622,6 +661,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 0, 3],
@@ -630,6 +670,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [1, 1, 3],
@@ -637,6 +678,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [2, 0, 3],
@@ -645,6 +687,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                         | TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
                 TemplateTile {
                     position: [2, 1, 3],
@@ -652,6 +695,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     requirements: TemplateTileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
                     is_blocker: true,
+                    is_occupied: true,
                 },
             ],
             texture: stone_texture.clone(),

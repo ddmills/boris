@@ -126,7 +126,7 @@ impl Block {
             BlockType::LADDER => 7,
             BlockType::LAMP => 8,
             BlockType::LEAVES => 40,
-            BlockType::TREE_TRUNK => 41,
+            BlockType::TREE_TRUNK => 32,
             _ => 0,
         }
     }

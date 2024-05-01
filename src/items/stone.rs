@@ -7,14 +7,7 @@ use bevy::{
     },
     pbr::MaterialMeshBundle,
     prelude::default,
-    render::{
-        color::Color,
-        texture::{
-            Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
-            ImageSamplerDescriptor,
-        },
-        view::Visibility,
-    },
+    render::{color::Color, texture::Image, view::Visibility},
     transform::components::Transform,
 };
 
@@ -23,6 +16,8 @@ use crate::{
     rendering::BasicMaterial,
     Position,
 };
+
+use super::image_loader_settings;
 
 #[derive(Event)]
 pub struct SpawnStoneEvent {
@@ -36,20 +31,8 @@ pub fn on_spawn_stone(
     asset_server: Res<AssetServer>,
 ) {
     for ev in ev_spawn_stone.read() {
-        let settings = |s: &mut ImageLoaderSettings| {
-            s.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-                address_mode_u: ImageAddressMode::Repeat,
-                address_mode_v: ImageAddressMode::Repeat,
-                address_mode_w: ImageAddressMode::Repeat,
-                mag_filter: ImageFilterMode::Nearest,
-                min_filter: ImageFilterMode::Nearest,
-                mipmap_filter: ImageFilterMode::Nearest,
-                ..default()
-            });
-        };
-
         let stone_texture: Handle<Image> =
-            asset_server.load_with_settings("textures/stone.png", settings);
+            asset_server.load_with_settings("textures/stone.png", image_loader_settings);
         let mesh = asset_server.load("sphere.gltf#Mesh0/Primitive0");
         let material = materials.add(BasicMaterial {
             texture: Some(stone_texture.clone()),

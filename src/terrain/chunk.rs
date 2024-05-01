@@ -2,11 +2,11 @@ use bevy::{
     asset::Handle,
     ecs::{component::Component, entity::Entity},
     render::mesh::Mesh,
-    utils::hashbrown::HashSet,
+    utils::hashbrown::{HashMap, HashSet},
 };
 use ndshape::{AbstractShape, RuntimeShape};
 
-use crate::{Block, BlockType};
+use crate::{colonists::NavigationFlags, Block, BlockType};
 
 #[derive(Component)]
 pub struct ChunkMesh {
@@ -24,7 +24,7 @@ pub struct Chunk {
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
     // pub furniture: Box<[HashMap<Entity, TemplateTileType>]>,
-    pub blueprints: Box<[HashSet<Entity>]>,
+    pub blueprints: Box<[HashMap<Entity, EmplacementTileDetail>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -35,13 +35,21 @@ pub struct Chunk {
     pub is_nav_dirty: bool,
 }
 
+#[derive(Clone, Copy)]
+pub struct EmplacementTileDetail {
+    pub flags: Option<NavigationFlags>,
+    pub is_built: bool,
+    pub is_blocker: bool,
+    pub is_occupied: bool,
+}
+
 impl Chunk {
     pub fn new(shape: RuntimeShape<u32, 3>) -> Self {
         Self {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
             items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
-            blueprints: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
+            blueprints: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             // furniture: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
@@ -113,26 +121,35 @@ impl Chunk {
         false
     }
 
-    pub fn get_blueprints(&self, block_idx: u32) -> HashSet<Entity> {
+    pub fn get_blueprints(&self, block_idx: u32) -> HashMap<Entity, EmplacementTileDetail> {
         if let Some(blueprints) = self.blueprints.get(block_idx as usize) {
             return blueprints.clone();
         }
 
-        HashSet::new()
+        HashMap::new()
     }
 
-    pub fn add_blueprint(&mut self, block_idx: u32, blueprint: Entity) {
+    pub fn add_blueprint(
+        &mut self,
+        block_idx: u32,
+        blueprint: Entity,
+        detail: EmplacementTileDetail,
+    ) {
         if let Some(blueprints) = self.blueprints.get_mut(block_idx as usize) {
-            blueprints.insert(blueprint);
+            blueprints.insert(blueprint, detail);
         }
     }
 
-    pub fn remove_blueprint(&mut self, block_idx: u32, blueprint: &Entity) -> bool {
+    pub fn remove_blueprint(
+        &mut self,
+        block_idx: u32,
+        blueprint: &Entity,
+    ) -> Option<EmplacementTileDetail> {
         if let Some(blueprints) = self.blueprints.get_mut(block_idx as usize) {
             return blueprints.remove(blueprint);
         }
 
-        false
+        None
     }
 
     // pub fn get_furniture(&self, block_idx: u32) -> HashMap<Entity, TemplateTileType> {

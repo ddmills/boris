@@ -51,7 +51,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(6, 4, 6, 16))
+        .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Toolbar {
@@ -238,10 +238,11 @@ fn setup(
 
     cmd.insert_resource(ColonistAnimations {
         base: asset_server.load("human.gltf#Animation0"),
-        idle: asset_server.load("human.gltf#Animation1"),
-        swing_pick: asset_server.load("human.gltf#Animation2"),
-        pick_up: asset_server.load("human.gltf#Animation3"),
-        run: asset_server.load("human.gltf#Animation4"),
+        swing_hammer: asset_server.load("human.gltf#Animation1"),
+        idle: asset_server.load("human.gltf#Animation2"),
+        swing_pick: asset_server.load("human.gltf#Animation3"),
+        pick_up: asset_server.load("human.gltf#Animation4"),
+        run: asset_server.load("human.gltf#Animation5"),
     });
 
     let mesh = asset_server.load("cube_offset.gltf#Mesh0/Primitive0");

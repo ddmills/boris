@@ -1,10 +1,13 @@
 use bevy::{
     ecs::{entity::Entity, system::Resource},
+    scene::ron::de,
     utils::hashbrown::{HashMap, HashSet},
 };
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{common::sig_num, Block, BlockFace, BlockType, Chunk, LightNode};
+use crate::{
+    common::sig_num, Block, BlockFace, BlockType, Chunk, EmplacementTileDetail, LightNode,
+};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -291,26 +294,41 @@ impl Terrain {
         false
     }
 
-    pub fn get_blueprints(&self, chunk_idx: u32, block_idx: u32) -> HashSet<Entity> {
+    pub fn get_blueprints(
+        &self,
+        chunk_idx: u32,
+        block_idx: u32,
+    ) -> HashMap<Entity, EmplacementTileDetail> {
         if let Some(chunk) = self.get_chunk(chunk_idx) {
             return chunk.get_blueprints(block_idx);
         }
 
-        HashSet::new()
+        HashMap::new()
     }
 
-    pub fn add_blueprint(&mut self, chunk_idx: u32, block_idx: u32, blueprint: Entity) {
+    pub fn add_blueprint(
+        &mut self,
+        chunk_idx: u32,
+        block_idx: u32,
+        blueprint: Entity,
+        detail: EmplacementTileDetail,
+    ) {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-            chunk.add_blueprint(block_idx, blueprint);
+            chunk.add_blueprint(block_idx, blueprint, detail);
         }
     }
 
-    pub fn remove_blueprint(&mut self, chunk_idx: u32, block_idx: u32, blueprint: &Entity) -> bool {
+    pub fn remove_blueprint(
+        &mut self,
+        chunk_idx: u32,
+        block_idx: u32,
+        blueprint: &Entity,
+    ) -> Option<EmplacementTileDetail> {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             return chunk.remove_blueprint(block_idx, blueprint);
         }
 
-        false
+        None
     }
 
     // pub fn get_furniture(

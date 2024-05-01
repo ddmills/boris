@@ -6,14 +6,13 @@ use bevy::{
         primitives::Aabb,
         render_asset::RenderAssetUsages,
         render_resource::VertexFormat,
-        texture::{ImageLoaderSettings, ImageSampler},
     },
 };
 use ndshape::AbstractShape;
 
 use crate::{
-    pack_block, Block, BlockFace, ChunkMaterial, ChunkMaterialRes, ChunkMesh, Neighbor, Terrain,
-    TerrainSlice, TerrainSliceChangeEvent, VertexCornerCount,
+    items::image_loader_settings, pack_block, Block, BlockFace, ChunkMaterial, ChunkMaterialRes,
+    ChunkMesh, Neighbor, Terrain, TerrainSlice, TerrainSliceChangeEvent, VertexCornerCount,
 };
 
 pub const ATTRIBUTE_BLOCK_PACKED: MeshVertexAttribute =
@@ -29,9 +28,8 @@ pub fn setup_chunk_meshes(
     terrain: Res<Terrain>,
     slice: Res<TerrainSlice>,
 ) {
-    let settings = |s: &mut ImageLoaderSettings| s.sampler = ImageSampler::nearest();
     let terrain_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/comfy.png", settings);
+        asset_server.load_with_settings("textures/comfy.png", image_loader_settings);
 
     let chunk_material = materials.add(ChunkMaterial {
         color: Color::YELLOW_GREEN,

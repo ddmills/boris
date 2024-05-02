@@ -4,6 +4,7 @@ use bevy::{
     render::mesh::Mesh,
     utils::hashbrown::{HashMap, HashSet},
 };
+use itertools::Itertools;
 use ndshape::{AbstractShape, RuntimeShape};
 
 use crate::{colonists::NavigationFlags, Block, BlockType};

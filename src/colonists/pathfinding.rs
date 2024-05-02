@@ -275,7 +275,7 @@ pub fn get_partition_path(
     let partition_path: crate::common::AStarResult<u32> = astar(AStarSettings {
         start: starting_partition_id,
         is_goal: |p| goal_partition_ids.contains(&p),
-        max_depth: 4000,
+        max_depth: 6000,
         neighbors: |v| {
             let Some(p) = graph.get_partition(&v) else {
                 return vec![];

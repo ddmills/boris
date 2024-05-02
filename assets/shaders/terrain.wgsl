@@ -48,13 +48,13 @@ fn vertex(vertex: Vertex) -> VertexOutput {
             out.ao = 1.0;
         }
         case 1u: {
-            out.ao = 0.8;
-        }
-        case 2u: {
             out.ao = 0.6;
         }
-        case 3u: {
+        case 2u: {
             out.ao = 0.4;
+        }
+        case 3u: {
+            out.ao = 0.2;
         }
         default: {
             out.ao = 0.0;

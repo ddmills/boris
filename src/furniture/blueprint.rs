@@ -2,7 +2,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::{Event, EventReader},
+        event::{Event, EventReader, EventWriter},
         system::{Commands, Query, Res, ResMut},
     },
     hierarchy::DespawnRecursiveExt,
@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{get_block_flags, NavigationFlags},
+    colonists::{get_block_flags, JobBuild, JobCancelEvent, NavigationFlags},
     EmplacementTileDetail, Terrain,
 };
 
@@ -59,6 +59,8 @@ pub fn on_remove_blueprint(
     mut terrain: ResMut<Terrain>,
     q_blueprints: Query<&Blueprint>,
     mut ev_remove_blueprint: EventReader<RemoveBlueprintEvent>,
+    q_jobs: Query<(Entity, &JobBuild)>,
+    mut ev_job_cancel: EventWriter<JobCancelEvent>,
 ) {
     for ev in ev_remove_blueprint.read() {
         cmd.entity(ev.entity).despawn_recursive();
@@ -72,6 +74,16 @@ pub fn on_remove_blueprint(
             let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
             terrain.remove_blueprint(chunk_idx, block_idx, &ev.entity);
         }
+
+        if matches!(blueprint.mode, BlueprintMode::Placed) {
+            for (job_entity, job_build) in q_jobs.iter() {
+                if job_build.blueprint == ev.entity {
+                    ev_job_cancel.send(JobCancelEvent(job_entity));
+
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -79,6 +91,7 @@ pub fn check_blueprints(
     mut terrain: ResMut<Terrain>,
     mut q_blueprints: Query<(Entity, &mut Blueprint, &mut Transform)>,
     mut q_guides: Query<&mut BlueprintGuide>,
+    mut ev_remove_blueprint: EventWriter<RemoveBlueprintEvent>,
     templates: Res<Templates>,
 ) {
     for (entity, mut blueprint, mut transform) in q_blueprints.iter_mut() {
@@ -203,6 +216,13 @@ pub fn check_blueprints(
                 }
             })
             .collect::<Vec<_>>();
+
+        if matches!(blueprint.mode, BlueprintMode::Built | BlueprintMode::Placed)
+            && !blueprint.is_valid
+        {
+            println!("invalid!");
+            ev_remove_blueprint.send(RemoveBlueprintEvent { entity });
+        }
 
         // set tiles affecting terrain
         for tile in blueprint.tiles.iter() {

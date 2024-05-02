@@ -5,7 +5,7 @@ use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, colonist_animations,
     destroy_items, fatigue_system, job_accessibility, job_despawn_cancelled, job_despawn_complete,
-    on_spawn_colonist, on_spawn_job_build, on_spawn_job_chop, on_spawn_job_mine,
+    on_cancel_job, on_spawn_colonist, on_spawn_job_build, on_spawn_job_chop, on_spawn_job_mine,
     on_spawn_job_place_block, partition, partition_debug, score_build, score_chop, score_mine,
     score_place_block, score_wander, setup_colonists, task_animate, task_build,
     task_check_has_item, task_chop_tree, task_debug, task_find_bed, task_find_nearest_item,
@@ -13,9 +13,9 @@ use colonists::{
     task_job_assign, task_job_cancel, task_job_complete, task_job_unassign, task_mine_block,
     task_move_to, task_pick_random_spot, task_place_block, task_sleep, ActorRef, Blackboard,
     ColonistAnimations, DestroyItemEvent, HasBehavior, InInventory, Inventory, Item, ItemTag,
-    NavigationGraph, PartitionDebug, PartitionPathRequest, Path, Score, ScorerPlugin, Scorers,
-    SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobChopEvent, SpawnJobMineEvent,
-    SpawnJobPlaceBlockEvent, TaskState,
+    JobCancelEvent, NavigationGraph, PartitionDebug, PartitionPathRequest, Path, Score,
+    ScorerPlugin, Scorers, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobChopEvent,
+    SpawnJobMineEvent, SpawnJobPlaceBlockEvent, TaskState,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
@@ -93,6 +93,7 @@ fn main() {
         .add_event::<SpawnBlueprintEvent>()
         .add_event::<RemoveBlueprintEvent>()
         .add_event::<TerrainSliceChangeEvent>()
+        .add_event::<JobCancelEvent>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
@@ -146,6 +147,7 @@ fn main() {
         .add_systems(Update, on_spawn_axe)
         .add_systems(Update, on_spawn_stone)
         .add_systems(Update, on_spawn_blueprint)
+        .add_systems(Update, on_cancel_job)
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
         .add_systems(Update, job_accessibility)

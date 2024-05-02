@@ -2,6 +2,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
+        event::{Event, EventReader},
         query::{With, Without},
         system::{Commands, Query, Res},
     },
@@ -93,6 +94,34 @@ pub fn job_despawn_complete(mut cmd: Commands, q_jobs: Query<Entity, With<IsJobC
 pub fn job_despawn_cancelled(mut cmd: Commands, q_jobs: Query<Entity, With<IsJobCancelled>>) {
     for e in q_jobs.iter() {
         cmd.entity(e).despawn_recursive();
+    }
+}
+
+#[derive(Event)]
+pub struct JobCancelEvent(pub Entity);
+
+pub fn on_cancel_job(
+    mut cmd: Commands,
+    job_holders: Query<Entity>,
+    mut ev_job_cancel: EventReader<JobCancelEvent>,
+    mut q_jobs: Query<&mut Job>,
+) {
+    for JobCancelEvent(entity) in ev_job_cancel.read() {
+        let Ok(mut job) = q_jobs.get_mut(*entity) else {
+            println!("ERR: job does not exist!?");
+            continue;
+        };
+
+        if let Some(job_assignee) = job.assignee {
+            if let Ok(holder) = job_holders.get(job_assignee) {
+                cmd.entity(holder).remove::<JobAssignment>();
+            } else {
+                println!("ERR: no holder for job!?");
+            };
+        }
+
+        cmd.entity(*entity).insert(IsJobCancelled);
+        job.assignee = None;
     }
 }
 

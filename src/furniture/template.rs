@@ -6,8 +6,13 @@ use bevy::{
     render::{mesh::Mesh, texture::Image},
     utils::hashbrown::HashMap,
 };
+use itertools::Itertools;
 
-use crate::{colonists::NavigationFlags, items::image_loader_settings, Position};
+use crate::{
+    colonists::{ItemTag, NavigationFlags},
+    items::image_loader_settings,
+    Position,
+};
 
 use bevy::{
     asset::Assets,
@@ -30,7 +35,7 @@ use std::fmt::{Display, Formatter};
 
 use bitflags::bitflags;
 
-use super::{Blueprint, BlueprintMode};
+use super::{Blueprint, BlueprintMode, BlueprintSlot, BlueprintSlots};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -106,12 +111,18 @@ pub enum TemplateType {
     TorchWall,
 }
 
+#[derive(Clone)]
+pub struct BuildSlot {
+    pub tags: Vec<ItemTag>,
+}
+
 pub struct Template {
     pub name: String,
     pub center: [u32; 3],
     pub tiles: Vec<TemplateTile>,
     pub texture: Handle<Image>,
     pub mesh: Handle<Mesh>,
+    pub slots: Vec<BuildSlot>,
 }
 
 #[derive(Resource)]
@@ -229,6 +240,16 @@ pub fn on_spawn_blueprint(
                 tiles: vec![],
                 mode: BlueprintMode::Placing,
             },
+            BlueprintSlots {
+                slots: template
+                    .slots
+                    .iter()
+                    .map(|s| BlueprintSlot {
+                        tags: s.tags.clone(),
+                        content: None,
+                    })
+                    .collect_vec(),
+            },
             Position::default(),
             MaterialMeshBundle {
                 mesh: template.mesh.clone(),
@@ -309,11 +330,21 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
 
     let stone_texture: Handle<Image> =
         asset_server.load_with_settings("textures/stone.png", image_loader_settings);
+    let wood_texture: Handle<Image> =
+        asset_server.load_with_settings("textures/wood.png", image_loader_settings);
 
     templates.insert(
         TemplateType::Workbench,
         Template {
             name: "Workbench".to_string(),
+            slots: vec![
+                BuildSlot {
+                    tags: vec![ItemTag::BasicBuildMaterial],
+                },
+                BuildSlot {
+                    tags: vec![ItemTag::BasicBuildMaterial],
+                },
+            ],
             center: [0, 0, 0],
             tiles: vec![
                 TemplateTile {
@@ -384,6 +415,14 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
         TemplateType::Ladder,
         Template {
             name: "Ladder".to_string(),
+            slots: vec![
+                BuildSlot {
+                    tags: vec![ItemTag::Log],
+                },
+                BuildSlot {
+                    tags: vec![ItemTag::Log],
+                },
+            ],
             center: [0, 0, 0],
             tiles: vec![
                 TemplateTile {
@@ -415,7 +454,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     is_occupied: false,
                 },
             ],
-            texture: stone_texture.clone(),
+            texture: wood_texture.clone(),
             mesh: asset_server.load("ladder.gltf#Mesh0/Primitive0"),
         },
     );
@@ -424,6 +463,9 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
         TemplateType::TorchWall,
         Template {
             name: "Wall torch".to_string(),
+            slots: vec![BuildSlot {
+                tags: vec![ItemTag::Log],
+            }],
             center: [0, 0, 0],
             tiles: vec![
                 TemplateTile {
@@ -459,7 +501,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     is_occupied: false,
                 },
             ],
-            texture: stone_texture.clone(),
+            texture: wood_texture.clone(),
             mesh: asset_server.load("torch_wall.gltf#Mesh0/Primitive0"),
         },
     );
@@ -468,6 +510,9 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
         TemplateType::TorchStanding,
         Template {
             name: "Standing torch".to_string(),
+            slots: vec![BuildSlot {
+                tags: vec![ItemTag::Log],
+            }],
             center: [0, 0, 0],
             tiles: vec![
                 TemplateTile {
@@ -536,7 +581,7 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
                     is_occupied: true,
                 },
             ],
-            texture: stone_texture.clone(),
+            texture: wood_texture.clone(),
             mesh: asset_server.load("torch_standing.gltf#Mesh0/Primitive0"),
         },
     );
@@ -545,6 +590,17 @@ pub fn setup_templates(mut cmd: Commands, asset_server: Res<AssetServer>) {
         TemplateType::Bigbench,
         Template {
             name: "Big workbench".to_string(),
+            slots: vec![
+                BuildSlot {
+                    tags: vec![ItemTag::BasicBuildMaterial],
+                },
+                BuildSlot {
+                    tags: vec![ItemTag::BasicBuildMaterial],
+                },
+                BuildSlot {
+                    tags: vec![ItemTag::BasicBuildMaterial],
+                },
+            ],
             center: [1, 0, 3],
             tiles: vec![
                 TemplateTile {

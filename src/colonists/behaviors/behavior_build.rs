@@ -15,6 +15,7 @@ use crate::{
         TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMoveTo,
     },
     common::Distance,
+    furniture::BlueprintSlots,
     Position, Terrain,
 };
 
@@ -68,6 +69,7 @@ pub fn score_build(
             Without<TaskJobComplete>,
         ),
     >,
+    q_slots: Query<&BlueprintSlots>,
     q_actors: Query<(&Position, &NavigationFlags), (With<Actor>, Without<HasBehavior>)>,
     mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerBuild)>,
 ) {
@@ -87,6 +89,12 @@ pub fn score_build(
             if job.assignee.is_some() {
                 continue;
             }
+
+            if let Ok(slots) = q_slots.get(job_build.blueprint) {
+                if slots.slots.iter().any(|s| s.is_empty()) {
+                    continue;
+                }
+            };
 
             let goals = job_access_points_many(&job_location.targets, job.job_type);
             let request = PartitionPathRequest {

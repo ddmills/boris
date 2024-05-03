@@ -5,9 +5,9 @@ use bevy::ecs::{
     system::{Commands, Query},
 };
 
-use crate::furniture::Blueprint;
+use crate::furniture::{Blueprint, BlueprintSlot, BlueprintSlots};
 
-use super::{Job, JobLocation};
+use super::{Job, JobLocation, JobSupply};
 
 #[derive(Event)]
 pub struct SpawnJobBuildEvent {
@@ -22,10 +22,10 @@ pub struct JobBuild {
 pub fn on_spawn_job_build(
     mut cmd: Commands,
     mut ev_spawn_job_build: EventReader<SpawnJobBuildEvent>,
-    q_blueprints: Query<&Blueprint>,
+    q_blueprints: Query<(&Blueprint, &BlueprintSlots)>,
 ) {
     for ev in ev_spawn_job_build.read() {
-        let Ok(blueprint) = q_blueprints.get(ev.blueprint) else {
+        let Ok((blueprint, blueprint_slots)) = q_blueprints.get(ev.blueprint) else {
             println!("blueprint doesn't exist? Cannot build");
             continue;
         };
@@ -42,6 +42,31 @@ pub fn on_spawn_job_build(
             })
             .collect::<Vec<_>>();
 
+        for (idx, slot) in blueprint_slots.slots.iter().enumerate() {
+            println!(
+                "spawning job to set slot{} {}",
+                idx,
+                slot.tags.first().unwrap()
+            );
+            cmd.spawn((
+                Job {
+                    job_type: super::JobType::Supply,
+                    assignee: None,
+                },
+                JobSupply {
+                    tags: slot.tags.clone(),
+                    slot_target_idx: idx,
+                    target: ev.blueprint,
+                },
+                JobLocation {
+                    targets: targets.clone(),
+                    primary_target: blueprint.position,
+                    last_accessibility_check: 0.,
+                    source: None,
+                },
+            ));
+        }
+
         cmd.spawn((
             Job {
                 job_type: super::JobType::Build,
@@ -54,6 +79,7 @@ pub fn on_spawn_job_build(
                 targets,
                 primary_target: blueprint.position,
                 last_accessibility_check: 0.,
+                source: None,
             },
         ));
     }

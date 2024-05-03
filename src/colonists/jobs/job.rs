@@ -18,6 +18,7 @@ pub enum JobType {
     Chop,
     PlaceBlock(BlockType),
     Build,
+    Supply,
 }
 
 #[derive(Component, Clone, Copy)]
@@ -30,6 +31,7 @@ pub struct Job {
 pub struct JobLocation {
     pub targets: Vec<[u32; 3]>,
     pub primary_target: [u32; 3],
+    pub source: Option<[u32; 3]>,
     pub last_accessibility_check: f32,
 }
 
@@ -59,10 +61,6 @@ pub fn job_accessibility(
     let now = time.elapsed_seconds();
 
     for (entity, job, mut job_location) in q_jobs.iter_mut() {
-        if job.assignee.is_some() {
-            continue;
-        }
-
         let time_since_last_check = now - job_location.last_accessibility_check;
 
         if time_since_last_check < 2.0 {
@@ -125,7 +123,7 @@ pub fn on_cancel_job(
     }
 }
 
-pub fn job_access_points_many(targets: &Vec<[u32; 3]>, job: JobType) -> Vec<[u32; 3]> {
+pub fn job_access_points_many(targets: &[[u32; 3]], job: JobType) -> Vec<[u32; 3]> {
     targets
         .iter()
         .flat_map(|t| job_access_points(*t, job))
@@ -136,6 +134,7 @@ pub fn job_access_points(pos: [u32; 3], job: JobType) -> Vec<[u32; 3]> {
     let [x, y, z] = pos;
 
     match job {
+        JobType::Supply => vec![pos],
         JobType::Chop => {
             let mut goals = vec![[x + 1, y, z], [x, y, z + 1], [x + 1, y, z + 1]];
 

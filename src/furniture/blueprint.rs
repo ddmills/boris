@@ -11,7 +11,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{get_block_flags, JobBuild, JobCancelEvent, NavigationFlags},
+    colonists::{get_block_flags, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
     EmplacementTileDetail, Terrain,
 };
 
@@ -33,6 +33,22 @@ pub struct BlueprintTile {
     pub is_occupied: bool,
     pub hotspot: Option<TemplateHotspot>,
     pub position: [i32; 3],
+}
+
+pub struct BlueprintSlot {
+    pub tags: Vec<ItemTag>,
+    pub content: Option<Entity>,
+}
+
+impl BlueprintSlot {
+    pub fn is_empty(&self) -> bool {
+        self.content.is_none()
+    }
+}
+
+#[derive(Component)]
+pub struct BlueprintSlots {
+    pub slots: Vec<BlueprintSlot>,
 }
 
 #[derive(Component)]

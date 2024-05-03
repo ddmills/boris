@@ -2,6 +2,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
+        event::EventWriter,
         query::With,
         system::{Commands, Query, Res, ResMut},
     },
@@ -13,6 +14,7 @@ use task_derive::TaskBuilder;
 use crate::{
     colonists::{Actor, ActorRef, AnimClip, Animator, TaskBuilder, TaskState},
     common::Rand,
+    items::SpawnLogEvent,
     ui::GameSpeed,
     BlockType, Terrain, Tree,
 };
@@ -32,6 +34,7 @@ pub fn task_chop_tree(
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut TaskChopTree)>,
     q_trees: Query<&Tree>,
     mut rand: ResMut<Rand>,
+    mut ev_spawn_log: EventWriter<SpawnLogEvent>,
 ) {
     for (ActorRef(actor), mut state, mut task) in q_behavior.iter_mut() {
         let Ok(tree) = q_trees.get(task.tree) else {
@@ -68,10 +71,10 @@ pub fn task_chop_tree(
                         terrain.set_block_type(part[0], part[1], part[2], BlockType::EMPTY);
                     }
                 }
-            }
 
-            if rand.bool(0.25) {
-                // ev_spawn_stone.send(SpawnStoneEvent { pos: [x, y, z] });
+                if rand.bool(0.8) {
+                    ev_spawn_log.send(SpawnLogEvent { pos: *part });
+                }
             }
 
             cmd.entity(task.tree).despawn_recursive();

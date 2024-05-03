@@ -13,7 +13,7 @@ use bevy::{
 use crate::{
     colonists::{
         is_reachable, job_access_points_many, test_item_tags, tree_aquire_item, Actor, ActorRef,
-        Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible,
+        Behavior, BehaviorNode, HasBehavior, InInventory, InSlot, Inventory, IsJobAccessible,
         IsJobCancelled, IsJobCompleted, Item, ItemTag, Job, JobLocation, JobPlaceBlock, JobType,
         NavigationFlags, NavigationGraph, PartitionPathRequest, Score, ScorerBuilder,
         TaskGetJobLocation, TaskIsTargetEmpty, TaskJobAssign, TaskJobCancel, TaskJobComplete,
@@ -80,7 +80,7 @@ pub fn score_place_block(
         ),
     >,
     q_items: Query<&Item>,
-    q_free_items: Query<(&Item, &Transform), Without<InInventory>>,
+    q_free_items: Query<(&Item, &Transform), (Without<InInventory>, Without<InSlot>)>,
     q_actors: Query<
         (&Inventory, &Transform, &NavigationFlags),
         (With<Actor>, Without<HasBehavior>),

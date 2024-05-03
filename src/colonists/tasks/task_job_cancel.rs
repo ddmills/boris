@@ -1,15 +1,7 @@
-use bevy::ecs::{
-    component::Component,
-    entity::Entity,
-    event::EventWriter,
-    query::With,
-    system::{Commands, Query},
-};
+use bevy::ecs::{component::Component, event::EventWriter, query::With, system::Query};
 use task_derive::TaskBuilder;
 
-use crate::colonists::{
-    Blackboard, IsJobCancelled, Job, JobAssignment, JobCancelEvent, TaskBuilder, TaskState,
-};
+use crate::colonists::{Blackboard, JobCancelEvent, TaskBuilder, TaskState};
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskJobCancel;

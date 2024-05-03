@@ -1,6 +1,5 @@
 use bevy::{
     ecs::{entity::Entity, system::Resource},
-    scene::ron::de,
     utils::hashbrown::{HashMap, HashSet},
 };
 use ndshape::{RuntimeShape, Shape};
@@ -248,14 +247,6 @@ impl Terrain {
         }
 
         Block::OOB
-    }
-
-    pub fn get_items(&self, chunk_idx: u32, block_idx: u32) -> HashSet<Entity> {
-        if let Some(chunk) = self.get_chunk(chunk_idx) {
-            return chunk.get_items(block_idx);
-        }
-
-        HashSet::new()
     }
 
     pub fn add_item(&mut self, chunk_idx: u32, block_idx: u32, item: Entity) {

@@ -61,7 +61,7 @@ pub fn task_item_pick_up(
 
         let mut ecmd = cmd.entity(item);
 
-        inventory.items.push(item);
+        inventory.items.insert(item);
         ecmd.insert(Visibility::Hidden);
         ecmd.insert(InInventory { holder: *actor });
 

@@ -19,6 +19,7 @@ mod task_move_to;
 mod task_pick_random_spot;
 mod task_place_block;
 mod task_sleep;
+mod task_supply;
 
 pub use task_animate::*;
 pub use task_build::*;
@@ -41,3 +42,4 @@ pub use task_move_to::*;
 pub use task_pick_random_spot::*;
 pub use task_place_block::*;
 pub use task_sleep::*;
+pub use task_supply::*;

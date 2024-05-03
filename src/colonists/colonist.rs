@@ -25,7 +25,8 @@ use crate::{
 
 use super::{
     get_child_by_name_recursive, Actor, AnimClip, Animator, Faller, Fatigue, Inventory,
-    NavigationFlags, ScorerBuild, ScorerChop, ScorerMine, ScorerPlaceBlock, ScorerWander, Thinker,
+    NavigationFlags, ScorerBuild, ScorerChop, ScorerMine, ScorerPlaceBlock, ScorerSupply,
+    ScorerWander, Thinker,
 };
 
 #[derive(Component, Default)]
@@ -71,6 +72,7 @@ pub fn on_spawn_colonist(
                     Arc::new(ScorerChop::default()),
                     Arc::new(ScorerPlaceBlock::default()),
                     Arc::new(ScorerBuild::default()),
+                    Arc::new(ScorerSupply::default()),
                 ],
             },
             Faller,

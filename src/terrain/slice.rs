@@ -3,6 +3,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::{Event, EventReader, EventWriter},
+        query::Without,
         system::{Commands, Query, Res, ResMut, Resource},
     },
     input::{keyboard::KeyCode, mouse::MouseWheel, ButtonInput},
@@ -21,7 +22,11 @@ use bevy::{
     },
 };
 
-use crate::{items::image_loader_settings, pack_block, Position, Terrain, ATTRIBUTE_BLOCK_PACKED};
+use crate::{
+    colonists::{InInventory, InSlot},
+    items::image_loader_settings,
+    pack_block, Position, Terrain, ATTRIBUTE_BLOCK_PACKED,
+};
 
 #[derive(Resource)]
 pub struct TerrainSlice {
@@ -122,7 +127,7 @@ pub fn update_slice_mesh(
 pub fn hide_sliced_objects(
     mut cmd: Commands,
     terrain_slice: Res<TerrainSlice>,
-    q_objects: Query<(Entity, &Position, &Visibility)>,
+    q_objects: Query<(Entity, &Position, &Visibility), (Without<InInventory>, Without<InSlot>)>,
     mut ev_slice_changed: EventReader<TerrainSliceChangeEvent>,
 ) {
     if ev_slice_changed.is_empty() {

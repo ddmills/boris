@@ -22,6 +22,12 @@ pub struct Position {
     pub partition_id: Option<u32>,
 }
 
+impl Position {
+    pub fn as_vec(&self) -> [u32; 3] {
+        [self.x, self.y, self.z]
+    }
+}
+
 pub fn update_positions(
     mut graph: ResMut<NavigationGraph>,
     mut terrain: ResMut<Terrain>,

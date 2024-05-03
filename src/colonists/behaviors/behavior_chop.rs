@@ -11,7 +11,7 @@ use bevy::ecs::{
 use crate::{
     colonists::{
         is_reachable, job_access_points_many, test_item_tags, tree_aquire_item, Actor, ActorRef,
-        Behavior, BehaviorNode, HasBehavior, InInventory, Inventory, IsJobAccessible,
+        Behavior, BehaviorNode, HasBehavior, InInventory, InSlot, Inventory, IsJobAccessible,
         IsJobCancelled, Item, ItemTag, Job, JobChop, JobLocation, NavigationFlags, NavigationGraph,
         PartitionPathRequest, Score, ScorerBuilder, TaskChopTree, TaskGetJobLocation,
         TaskItemEquip, TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMoveTo,
@@ -71,7 +71,7 @@ pub fn score_chop(
         ),
     >,
     q_items: Query<&Item>,
-    q_free_items: Query<(&Item, &Position), Without<InInventory>>,
+    q_free_items: Query<(&Item, &Position), (Without<InInventory>, Without<InSlot>)>,
     q_actors: Query<(&Inventory, &Position, &NavigationFlags), (With<Actor>, Without<HasBehavior>)>,
     mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerChop)>,
 ) {

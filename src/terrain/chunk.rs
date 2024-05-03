@@ -4,7 +4,6 @@ use bevy::{
     render::mesh::Mesh,
     utils::hashbrown::{HashMap, HashSet},
 };
-use itertools::Itertools;
 use ndshape::{AbstractShape, RuntimeShape};
 
 use crate::{colonists::NavigationFlags, Block, BlockType};
@@ -76,14 +75,6 @@ impl Chunk {
         }
 
         Block::OOB
-    }
-
-    pub fn get_items(&self, block_idx: u32) -> HashSet<Entity> {
-        if let Some(items) = self.items.get(block_idx as usize) {
-            return items.clone();
-        }
-
-        HashSet::new()
     }
 
     pub fn add_item(&mut self, block_idx: u32, item: Entity) {

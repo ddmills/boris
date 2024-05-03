@@ -9,6 +9,7 @@ use bevy::{
     },
     hierarchy::DespawnRecursiveExt,
     reflect::Reflect,
+    utils::HashSet,
 };
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 
@@ -19,7 +20,7 @@ use super::NavigationGraph;
 #[derive(Component, Default, Reflect, InspectorOptions)]
 #[reflect(InspectorOptions)]
 pub struct Inventory {
-    pub items: Vec<Entity>,
+    pub items: HashSet<Entity>,
 }
 
 #[derive(Component, Reflect, InspectorOptions)]
@@ -35,12 +36,21 @@ pub struct InInventory {
     pub holder: Entity,
 }
 
-#[derive(Clone, PartialEq, Debug, Reflect, InspectorOptions)]
+#[derive(Component, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
+pub struct InSlot {
+    pub holder: Entity,
+    pub slot_idx: usize,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug, Reflect, InspectorOptions)]
 #[reflect(InspectorOptions)]
 pub enum ItemTag {
     Axe,
     Pickaxe,
     Stone,
+    Log,
+    BasicBuildMaterial,
 }
 
 impl Display for ItemTag {

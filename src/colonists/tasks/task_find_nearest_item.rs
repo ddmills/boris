@@ -13,8 +13,8 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{
-        test_item_tags, Actor, ActorRef, Blackboard, InInventory, Item, ItemTag, NavigationGraph,
-        TaskBuilder, TaskState,
+        test_item_tags, Actor, ActorRef, Blackboard, InInventory, InSlot, Item, ItemTag,
+        NavigationGraph, TaskBuilder, TaskState,
     },
     Position,
 };
@@ -24,7 +24,7 @@ pub struct TaskFindNearestItem(pub Vec<ItemTag>);
 
 pub fn task_find_nearest_item(
     graph: Res<NavigationGraph>,
-    mut q_items: Query<(&Position, &mut Item), Without<InInventory>>,
+    mut q_items: Query<(&Position, &mut Item), (Without<InInventory>, Without<InSlot>)>,
     q_actors: Query<&Position, With<Actor>>,
     mut q_behavior: Query<(
         &ActorRef,
@@ -65,7 +65,6 @@ pub fn task_find_nearest_item(
         };
 
         item.reserved = Some(*actor);
-
         blackboard.item = Some(*item_entity);
         blackboard.move_goals = vec![[item_position.x, item_position.y, item_position.z]];
         *state = TaskState::Success;
@@ -76,14 +75,25 @@ fn find_nearest(
     start_id: u32,
     tags: Vec<ItemTag>,
     graph: &NavigationGraph,
-    q_items: &Query<(&Position, &mut Item), Without<InInventory>>,
+    q_items: &Query<(&Position, &mut Item), (Without<InInventory>, Without<InSlot>)>,
 ) -> Option<Vec<Entity>> {
     let mut visited = HashSet::new();
     let mut queue = VecDeque::new();
 
     queue.push_back(start_id);
 
+    let max_depth = 1000;
+
     while let Some(partition_id) = queue.pop_front() {
+        if visited.len() >= max_depth {
+            println!(
+                "max item search depth exceeded. Searching for {} in {}",
+                tags.first().unwrap(),
+                partition_id
+            );
+            return None;
+        }
+
         visited.insert(partition_id);
 
         let Some(partition) = graph.get_partition(&partition_id) else {

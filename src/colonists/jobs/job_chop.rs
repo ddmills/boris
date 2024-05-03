@@ -57,6 +57,7 @@ pub fn on_spawn_job_chop(
                         targets: tree.trunk.clone(),
                         primary_target: ev.pos,
                         last_accessibility_check: 0.,
+                        source: None,
                     },
                 ));
             }

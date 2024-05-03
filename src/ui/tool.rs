@@ -1,13 +1,9 @@
-use std::process::Command;
-
 use bevy::{
     ecs::{
-        entity::Entity,
         event::EventWriter,
         query::With,
-        system::{Commands, Local, Query, Res, ResMut},
+        system::{Local, Query, Res, ResMut},
     },
-    hierarchy::DespawnRecursiveExt,
     input::{mouse::MouseButton, ButtonInput},
     math::Vec3,
     transform::components::Transform,

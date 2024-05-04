@@ -12,7 +12,7 @@ use task_derive::TaskBuilder;
 use crate::{
     colonists::{Actor, ActorRef, AnimClip, Animator, Blackboard, TaskBuilder, TaskState},
     common::Rand,
-    items::SpawnStoneEvent,
+    items::{Commodity::StoneShaleBoulder, SpawnCommodityEvent},
     ui::GameSpeed,
     BlockType, Terrain,
 };
@@ -28,7 +28,7 @@ pub fn task_mine_block(
     mut terrain: ResMut<Terrain>,
     mut q_animators: Query<&mut Animator, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &Blackboard, &mut TaskMineBlock)>,
-    mut ev_spawn_stone: EventWriter<SpawnStoneEvent>,
+    mut ev_spawn_commodity: EventWriter<SpawnCommodityEvent>,
     mut rand: ResMut<Rand>,
 ) {
     for (ActorRef(actor), mut state, blackboard, mut task) in q_behavior.iter_mut() {
@@ -48,7 +48,10 @@ pub fn task_mine_block(
             terrain.set_flag_mine(x, y, z, false);
 
             if rand.bool(0.15) {
-                ev_spawn_stone.send(SpawnStoneEvent { pos: [x, y, z] });
+                ev_spawn_commodity.send(SpawnCommodityEvent {
+                    commodity: StoneShaleBoulder,
+                    position: [x, y, z],
+                });
             }
 
             *state = TaskState::Success;

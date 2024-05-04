@@ -25,10 +25,10 @@ pub fn setup_blueprint_ladder(mut blueprints: ResMut<Blueprints>, asset_server: 
             name: "Ladder".to_string(),
             slots: vec![
                 BuildSlot {
-                    tags: vec![ItemTag::Log],
+                    flags: vec![ItemTag::Log],
                 },
                 BuildSlot {
-                    tags: vec![ItemTag::Log],
+                    flags: vec![ItemTag::Log],
                 },
             ],
             center: [0, 0, 0],

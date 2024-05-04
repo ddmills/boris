@@ -1,9 +1,7 @@
 mod axe;
-mod log;
+mod commodities;
 mod pickaxe;
-mod stone;
 
 pub use axe::*;
-pub use log::*;
+pub use commodities::*;
 pub use pickaxe::*;
-pub use stone::*;

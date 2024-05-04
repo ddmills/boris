@@ -122,7 +122,7 @@ pub fn score_supply(
                 best_dist = job_distance;
                 best_target = Some(job_supply.target);
                 best_idx = job_supply.slot_target_idx;
-                best_tags = Some(job_supply.tags.clone());
+                best_tags = Some(job_supply.flags.clone());
                 if job_distance < 2. {
                     break;
                 }

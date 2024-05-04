@@ -11,7 +11,7 @@ use super::{Job, JobLocation};
 
 #[derive(Event)]
 pub struct SpawnJobSupplyEvent {
-    pub tags: Vec<ItemTag>,
+    pub flags: Vec<ItemTag>,
     pub slot_taget_idx: usize,
     pub target: Entity,
     pub targets: Vec<[u32; 3]>,
@@ -20,7 +20,7 @@ pub struct SpawnJobSupplyEvent {
 
 #[derive(Component, Clone)]
 pub struct JobSupply {
-    pub tags: Vec<ItemTag>,
+    pub flags: Vec<ItemTag>,
     pub slot_target_idx: usize,
     pub target: Entity,
 }
@@ -36,7 +36,7 @@ pub fn on_spawn_job_supply(
                 assignee: None,
             },
             JobSupply {
-                tags: ev.tags.clone(),
+                flags: ev.flags.clone(),
                 slot_target_idx: ev.slot_taget_idx,
                 target: ev.target,
             },

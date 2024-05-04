@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
-    items::image_loader_settings,
+    items::{image_loader_settings, CommodityFlag},
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
         DirectionSimple, TileRequirement,
@@ -24,7 +24,7 @@ pub fn setup_blueprint_torches(mut blueprints: ResMut<Blueprints>, asset_server:
         Blueprint {
             name: "Wall torch".to_string(),
             slots: vec![BuildSlot {
-                tags: vec![ItemTag::Log],
+                flags: vec![ItemTag::Log],
             }],
             center: [0, 0, 0],
             tiles: vec![
@@ -71,7 +71,7 @@ pub fn setup_blueprint_torches(mut blueprints: ResMut<Blueprints>, asset_server:
         Blueprint {
             name: "Standing torch".to_string(),
             slots: vec![BuildSlot {
-                tags: vec![ItemTag::Log],
+                flags: vec![ItemTag::Log],
             }],
             center: [0, 0, 0],
             tiles: vec![

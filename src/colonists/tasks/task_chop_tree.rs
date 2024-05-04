@@ -14,7 +14,7 @@ use task_derive::TaskBuilder;
 use crate::{
     colonists::{Actor, ActorRef, AnimClip, Animator, TaskBuilder, TaskState},
     common::Rand,
-    items::SpawnLogEvent,
+    items::{Commodity::WoodBirchLog, SpawnCommodityEvent},
     ui::GameSpeed,
     BlockType, Terrain, Tree,
 };
@@ -34,7 +34,7 @@ pub fn task_chop_tree(
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut TaskChopTree)>,
     q_trees: Query<&Tree>,
     mut rand: ResMut<Rand>,
-    mut ev_spawn_log: EventWriter<SpawnLogEvent>,
+    mut ev_spawn_commodity: EventWriter<SpawnCommodityEvent>,
 ) {
     for (ActorRef(actor), mut state, mut task) in q_behavior.iter_mut() {
         let Ok(tree) = q_trees.get(task.tree) else {
@@ -73,7 +73,10 @@ pub fn task_chop_tree(
                 }
 
                 if rand.bool(0.8) {
-                    ev_spawn_log.send(SpawnLogEvent { pos: *part });
+                    ev_spawn_commodity.send(SpawnCommodityEvent {
+                        commodity: WoodBirchLog,
+                        position: *part,
+                    });
                 }
             }
 

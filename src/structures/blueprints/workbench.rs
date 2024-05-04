@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
-    items::image_loader_settings,
+    items::{image_loader_settings, CommodityFlag},
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
         DirectionSimple, TileRequirement,
@@ -28,10 +28,10 @@ pub fn setup_blueprint_workbench(
             name: "Workbench".to_string(),
             slots: vec![
                 BuildSlot {
-                    tags: vec![ItemTag::BasicBuildMaterial],
+                    flags: vec![ItemTag::BasicBuildMaterial],
                 },
                 BuildSlot {
-                    tags: vec![ItemTag::BasicBuildMaterial],
+                    flags: vec![ItemTag::BasicBuildMaterial],
                 },
             ],
             center: [0, 0, 0],

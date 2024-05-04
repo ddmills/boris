@@ -22,16 +22,18 @@ use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use items::{
-    on_spawn_axe, on_spawn_log, on_spawn_pickaxe, on_spawn_stone, SpawnAxeEvent, SpawnLogEvent,
-    SpawnPickaxeEvent, SpawnStoneEvent,
+    on_set_slot, on_spawn_axe, on_spawn_commodity, on_spawn_pickaxe,
+    setup_commodity_stone_shale_boulder, setup_commodity_wood_birch_log, Commodities, SetSlotEvent,
+    SpawnAxeEvent, SpawnCommodityEvent, SpawnPickaxeEvent,
 };
 use rendering::{
     update_basic_material_children_lighting, update_basic_material_lighting, BasicMaterial,
 };
 use structures::{
-    check_structures, on_remove_structure, on_spawn_structure, setup_blueprint_ladder,
-    setup_blueprint_torches, setup_blueprint_workbench, structure_material_update, Blueprints,
-    RemoveStructureEvent, SpawnStructureEvent,
+    check_structures, on_build_structure, on_remove_structure, on_spawn_structure,
+    setup_blueprint_ladder, setup_blueprint_torches, setup_blueprint_workbench,
+    structure_material_update, Blueprints, BuildStructureEvent, RemoveStructureEvent,
+    SpawnStructureEvent,
 };
 use terrain::*;
 use ui::{
@@ -57,6 +59,7 @@ fn main() {
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Blueprints::default())
+        .insert_resource(Commodities::default())
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(BlockType::STONE),
         })
@@ -88,8 +91,6 @@ fn main() {
         .add_event::<SpawnAxeEvent>()
         .add_event::<SpawnPickaxeEvent>()
         .add_event::<DestroyItemEvent>()
-        .add_event::<SpawnStoneEvent>()
-        .add_event::<SpawnLogEvent>()
         .add_event::<SpawnJobPlaceBlockEvent>()
         .add_event::<SpawnJobMineEvent>()
         .add_event::<SpawnJobChopEvent>()
@@ -97,8 +98,11 @@ fn main() {
         .add_event::<SpawnJobBuildEvent>()
         .add_event::<SpawnStructureEvent>()
         .add_event::<RemoveStructureEvent>()
+        .add_event::<BuildStructureEvent>()
         .add_event::<TerrainSliceChangeEvent>()
         .add_event::<JobCancelEvent>()
+        .add_event::<SpawnCommodityEvent>()
+        .add_event::<SetSlotEvent>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
@@ -127,6 +131,8 @@ fn main() {
                 setup_blueprint_ladder,
                 setup_blueprint_torches,
                 setup_blueprint_workbench,
+                setup_commodity_wood_birch_log,
+                setup_commodity_stone_shale_boulder,
                 setup_terrain,
                 setup_terrain_slice,
                 setup_chunk_meshes,
@@ -141,6 +147,7 @@ fn main() {
         .add_systems(Update, scroll_events)
         .add_systems(Update, on_slice_changed)
         .add_systems(Update, on_remove_structure)
+        .add_systems(Update, on_build_structure)
         .add_systems(Update, update_slice_mesh)
         .add_systems(Update, hide_sliced_objects)
         .add_systems(Update, light_system)
@@ -148,12 +155,11 @@ fn main() {
         .add_systems(Update, toolbar_select)
         .add_systems(Update, job_toolbar)
         .add_systems(Update, path_debug)
+        .add_systems(Update, on_spawn_commodity)
         .add_systems(Update, on_spawn_tree)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)
         .add_systems(Update, on_spawn_axe)
-        .add_systems(Update, on_spawn_log)
-        .add_systems(Update, on_spawn_stone)
         .add_systems(Update, on_spawn_structure)
         .add_systems(Update, on_cancel_job)
         .add_systems(Update, apply_falling)
@@ -203,7 +209,7 @@ fn main() {
         .add_systems(Update, tool_spawn_axe)
         .add_systems(Update, tool_place_stone)
         .add_systems(Update, task_job_assign)
-        .add_systems(Update, task_supply)
+        .add_systems(Update, (task_supply, on_set_slot).chain())
         .add_systems(Update, task_find_bed)
         .add_systems(Update, task_sleep)
         .add_systems(Update, task_idle)

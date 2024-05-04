@@ -48,7 +48,7 @@ pub struct StructureTile {
 }
 
 pub struct PartSlot {
-    pub tags: Vec<ItemTag>,
+    pub flags: Vec<ItemTag>,
     pub content: Option<Entity>,
 }
 
@@ -89,6 +89,11 @@ pub struct SpawnStructureEvent {
     pub blueprint_type: BlueprintType,
 }
 
+#[derive(Event)]
+pub struct BuildStructureEvent {
+    pub entity: Entity,
+}
+
 pub fn on_spawn_structure(
     mut cmd: Commands,
     mut ev_spawn_structure: EventReader<SpawnStructureEvent>,
@@ -106,7 +111,7 @@ pub fn on_spawn_structure(
             texture: Some(blueprint.texture.clone()),
             sunlight: 8,
             torchlight: 8,
-            color: Color::RED,
+            color: Color::LIME_GREEN,
         });
 
         let hotspot_mesh_req = asset_server.load("interface.gltf#Mesh0/Primitive0");
@@ -201,7 +206,7 @@ pub fn on_spawn_structure(
                     .slots
                     .iter()
                     .map(|s| PartSlot {
-                        tags: s.tags.clone(),
+                        flags: s.flags.clone(),
                         content: None,
                     })
                     .collect_vec(),
@@ -219,6 +224,52 @@ pub fn on_spawn_structure(
                 ..default()
             },
         ));
+    }
+}
+
+pub fn on_build_structure(
+    mut ev_build_structure: EventReader<BuildStructureEvent>,
+    mut q_structures: Query<&mut Structure>,
+    mut terrain: ResMut<Terrain>,
+) {
+    for ev in ev_build_structure.read() {
+        let Ok(mut structure) = q_structures.get_mut(ev.entity) else {
+            println!("Structure cannot be built - does not exist");
+            continue;
+        };
+
+        if !structure.is_valid {
+            println!("structure no longer valid! Cannot build.");
+            continue;
+        }
+
+        structure.mode = StructureMode::Built;
+        structure.is_dirty = true;
+
+        for tile in structure.tiles.iter() {
+            let [x, y, z] = tile.position;
+            let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
+
+            let flags = if tile.nav_flags == NavigationFlags::NONE {
+                None
+            } else {
+                Some(tile.nav_flags)
+            };
+
+            terrain.add_structure(
+                chunk_idx,
+                block_idx,
+                ev.entity,
+                StructureTileDetail {
+                    is_built: true,
+                    flags,
+                    is_blocker: tile.is_blocker,
+                    is_occupied: tile.is_occupied,
+                },
+            );
+
+            terrain.set_chunk_nav_dirty(chunk_idx, true);
+        }
     }
 }
 

@@ -1,18 +1,15 @@
-use bevy::{
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::With,
-        system::{Commands, Query},
-    },
-    render::view::Visibility,
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    event::EventWriter,
+    query::With,
+    system::{Commands, Query},
 };
 use task_derive::TaskBuilder;
 
 use crate::{
-    colonists::{
-        Actor, ActorRef, Blackboard, InInventory, InSlot, Inventory, TaskBuilder, TaskState,
-    },
+    colonists::{Actor, ActorRef, Blackboard, InInventory, Inventory, TaskBuilder, TaskState},
+    items::SetSlotEvent,
     structures::PartSlots,
 };
 
@@ -27,10 +24,9 @@ pub fn task_supply(
     mut q_structures: Query<&mut PartSlots>,
     mut q_actors: Query<&mut Inventory, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &TaskSupply, &Blackboard)>,
+    mut ev_set_slot: EventWriter<SetSlotEvent>,
 ) {
     for (ActorRef(actor), mut state, task_supply, blackboard) in q_behavior.iter_mut() {
-        println!("supplying item!");
-
         let Some(item) = blackboard.item else {
             println!("No item assign in blackboard, cannot supply!");
             *state = TaskState::Failed;
@@ -60,16 +56,16 @@ pub fn task_supply(
             *state = TaskState::Failed;
             continue;
         }
-        slot.content = Some(item);
 
         inventory.items.remove(&item);
 
         let mut ecmd = cmd.entity(item);
         ecmd.remove::<InInventory>();
-        ecmd.insert(Visibility::Hidden);
-        ecmd.insert(InSlot {
-            holder: task_supply.target,
-            slot_idx: task_supply.target_slot_idx,
+
+        ev_set_slot.send(SetSlotEvent {
+            target_slot_idx: task_supply.target_slot_idx,
+            target: task_supply.target,
+            content: item,
         });
 
         *state = TaskState::Success;

@@ -52,19 +52,19 @@ pub fn structure_material_update(
             continue;
         };
 
-        if (matches!(structure.mode, StructureMode::Placing) && structure.is_valid)
-            || matches!(structure.mode, StructureMode::Built)
-        {
-            material.color = Color::WHITE;
-            continue;
-        }
+        // if (matches!(structure.mode, StructureMode::Placing) && structure.is_valid)
+        //     || matches!(structure.mode, StructureMode::Built)
+        // {
+        //     material.color = Color::WHITE;
+        //     continue;
+        // }
 
-        material.color = match structure.is_valid {
-            true => match structure.is_hotspots_valid {
-                true => Color::rgb_from_array([0.435, 0.656, 0.851]),
-                false => Color::YELLOW,
-            },
-            false => Color::RED,
-        };
+        // material.color = match structure.is_valid {
+        //     true => match structure.is_hotspots_valid {
+        //         true => Color::rgb_from_array([0.435, 0.656, 0.851]),
+        //         false => Color::YELLOW,
+        //     },
+        //     false => Color::RED,
+        // };
     }
 }

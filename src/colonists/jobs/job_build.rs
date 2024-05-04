@@ -45,7 +45,7 @@ pub fn on_spawn_job_build(
 
         for (idx, slot) in part_slots.slots.iter().enumerate() {
             ev_spawn_job_supply.send(SpawnJobSupplyEvent {
-                tags: slot.tags.clone(),
+                flags: slot.flags.clone(),
                 slot_taget_idx: idx,
                 target: ev.structure,
                 targets: targets.clone(),

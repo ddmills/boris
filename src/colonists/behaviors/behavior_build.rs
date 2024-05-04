@@ -12,17 +12,17 @@ use crate::{
         is_reachable, job_access_points_many, Actor, ActorRef, Behavior, BehaviorNode, HasBehavior,
         IsJobAccessible, IsJobCancelled, Job, JobBuild, JobLocation, NavigationFlags,
         NavigationGraph, PartitionPathRequest, Score, ScorerBuilder, TaskBuild, TaskGetJobLocation,
-        TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMoveTo,
+        TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskLookAt, TaskMoveTo,
     },
     common::Distance,
-    furniture::BlueprintSlots,
+    structures::PartSlots,
     Position, Terrain,
 };
 
 #[derive(Component, Clone, Default)]
 pub struct ScorerBuild {
     job: Option<Entity>,
-    blueprint: Option<Entity>,
+    structure: Option<Entity>,
 }
 
 impl ScorerBuilder for ScorerBuild {
@@ -45,9 +45,10 @@ impl ScorerBuilder for ScorerBuild {
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
+                        BehaviorNode::Task(Arc::new(TaskLookAt)),
                         BehaviorNode::Task(Arc::new(TaskBuild {
                             progress: 0.,
-                            blueprint: self.blueprint.unwrap(),
+                            structure: self.structure.unwrap(),
                         })),
                         BehaviorNode::Task(Arc::new(TaskJobComplete)),
                     ]),
@@ -69,7 +70,7 @@ pub fn score_build(
             Without<TaskJobComplete>,
         ),
     >,
-    q_slots: Query<&BlueprintSlots>,
+    q_slots: Query<&PartSlots>,
     q_actors: Query<(&Position, &NavigationFlags), (With<Actor>, Without<HasBehavior>)>,
     mut q_behaviors: Query<(&ActorRef, &mut Score, &mut ScorerBuild)>,
 ) {
@@ -82,7 +83,7 @@ pub fn score_build(
         let pos = [position.x, position.y, position.z];
 
         let mut best = None;
-        let mut best_blueprint = None;
+        let mut best_structure = None;
         let mut best_dist = 100000.;
 
         for (e, job, job_build, job_location) in q_jobs.iter() {
@@ -90,7 +91,7 @@ pub fn score_build(
                 continue;
             }
 
-            if let Ok(slots) = q_slots.get(job_build.blueprint) {
+            if let Ok(slots) = q_slots.get(job_build.structure) {
                 if slots.slots.iter().any(|s| s.is_empty()) {
                     continue;
                 }
@@ -119,20 +120,20 @@ pub fn score_build(
             if job_distance < best_dist {
                 best = Some(e);
                 best_dist = job_distance;
-                best_blueprint = Some(job_build.blueprint);
+                best_structure = Some(job_build.structure);
                 if job_distance < 2. {
                     break;
                 }
             }
         }
 
-        if best.is_none() || best_blueprint.is_none() {
+        if best.is_none() || best_structure.is_none() {
             *score = Score(0.);
             continue;
         };
 
         scorer.job = best;
-        scorer.blueprint = best_blueprint;
+        scorer.structure = best_structure;
 
         *score = Score(7.);
     }

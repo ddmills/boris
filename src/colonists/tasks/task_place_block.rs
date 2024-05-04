@@ -41,12 +41,6 @@ pub fn task_place_block(
             continue;
         }
 
-        if !current_block.flag_blueprint {
-            println!("Block is not a blueprint and cannot be built!");
-            *state = TaskState::Failed;
-            continue;
-        }
-
         if blackboard.item.is_none() {
             println!("Blackboard is missing item, cannot place!");
             *state = TaskState::Failed;
@@ -54,7 +48,6 @@ pub fn task_place_block(
         }
 
         if task.progress >= 1. {
-            terrain.set_flag_blueprint(x, y, z, false);
             terrain.set_block_type(x, y, z, task.block_type);
 
             let item = blackboard.item.unwrap();

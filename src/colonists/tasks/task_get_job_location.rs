@@ -34,6 +34,7 @@ pub fn task_get_job_location(
         }
 
         blackboard.move_goals = access_points;
+        blackboard.primary_goal = Some(job_location.primary_target);
 
         *state = TaskState::Success;
     }

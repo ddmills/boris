@@ -1,6 +1,6 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
-use crate::BlockType;
+use crate::{structures::BlueprintType, BlockType};
 
 use super::Tool;
 
@@ -327,7 +327,7 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::Workbench),
+                    tool: Tool::SpawnStructure(BlueprintType::Workbench),
                 },
             ))
             .with_children(|parent| {
@@ -355,12 +355,12 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::TorchStanding),
+                    tool: Tool::SpawnStructure(BlueprintType::TorchStanding),
                 },
             ))
             .with_children(|parent| {
                 parent.spawn(TextBundle::from_section(
-                    "Torch 1",
+                    "Torch Pole",
                     TextStyle {
                         font_size: 18.0,
                         color: Color::rgb(0.9, 0.9, 0.9),
@@ -383,12 +383,12 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::TorchWall),
+                    tool: Tool::SpawnStructure(BlueprintType::TorchWall),
                 },
             ))
             .with_children(|parent| {
                 parent.spawn(TextBundle::from_section(
-                    "Torch 2",
+                    "Torch Wall",
                     TextStyle {
                         font_size: 18.0,
                         color: Color::rgb(0.9, 0.9, 0.9),
@@ -411,35 +411,7 @@ pub fn setup_block_toolbar_ui(mut cmd: Commands) {
                     ..default()
                 },
                 BtnTool {
-                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::Bigbench),
-                },
-            ))
-            .with_children(|parent| {
-                parent.spawn(TextBundle::from_section(
-                    "bigbench",
-                    TextStyle {
-                        font_size: 18.0,
-                        color: Color::rgb(0.9, 0.9, 0.9),
-                        ..default()
-                    },
-                ));
-            });
-
-        parent
-            .spawn((
-                ButtonBundle {
-                    style: Style {
-                        width: Val::Px(48.0),
-                        height: Val::Px(48.0),
-                        justify_content: JustifyContent::Center,
-                        align_content: AlignContent::Center,
-                        ..default()
-                    },
-                    background_color: BTN_NONE.into(),
-                    ..default()
-                },
-                BtnTool {
-                    tool: Tool::SpawnBlueprint(crate::furniture::TemplateType::Ladder),
+                    tool: Tool::SpawnStructure(BlueprintType::Ladder),
                 },
             ))
             .with_children(|parent| {

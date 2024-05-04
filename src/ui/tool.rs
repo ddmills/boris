@@ -11,14 +11,14 @@ use bevy::{
 
 use crate::{
     colonists::{
-        Job, NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobChopEvent,
-        SpawnJobMineEvent, SpawnJobPlaceBlockEvent,
+        NavigationGraph, PartitionDebug, SpawnColonistEvent, SpawnJobChopEvent, SpawnJobMineEvent,
+        SpawnJobPlaceBlockEvent,
     },
     common::min_max,
     controls::Raycast,
     debug::debug_settings::DebugSettings,
-    furniture::TemplateType,
     items::{SpawnAxeEvent, SpawnPickaxeEvent},
+    structures::BlueprintType,
     BlockType, Cursor, Terrain,
 };
 
@@ -31,7 +31,7 @@ pub enum Tool {
     ClearBlocks,
     SpawnColonist,
     SpawnPickaxe,
-    SpawnBlueprint(TemplateType),
+    SpawnStructure(BlueprintType),
     SpawnAxe,
     PlaceStone,
     BlockInfo,
@@ -201,7 +201,6 @@ pub fn tool_block_info(
     terrain: Res<Terrain>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut partition_debug: ResMut<PartitionDebug>,
-    q_jobs: Query<&Job>,
 ) {
     let Tool::BlockInfo = toolbar.tool else {
         return;
@@ -211,12 +210,6 @@ pub fn tool_block_info(
         if !raycast.is_adj_hit {
             return;
         }
-
-        let count = q_jobs.iter().len();
-        println!("JOB COUNT {}", count);
-
-        let hit = raycast.hit_block;
-        println!("block {}. blueprint={}", hit.name(), hit.flag_blueprint);
 
         let [chunk_idx, block_idx] =
             terrain.get_block_indexes(raycast.adj_pos[0], raycast.adj_pos[1], raycast.adj_pos[2]);

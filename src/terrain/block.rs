@@ -6,7 +6,6 @@ pub struct Block {
     pub partition_id: Option<u32>,
     pub flag_mine: bool,
     pub flag_chop: bool,
-    pub flag_blueprint: bool,
 }
 
 impl Default for Block {
@@ -18,7 +17,6 @@ impl Default for Block {
             partition_id: None,
             flag_mine: false,
             flag_chop: false,
-            flag_blueprint: false,
         }
     }
 }
@@ -31,7 +29,6 @@ impl Block {
         partition_id: None,
         flag_mine: false,
         flag_chop: false,
-        flag_blueprint: false,
     };
 
     pub fn is_oob(&self) -> bool {
@@ -39,18 +36,10 @@ impl Block {
     }
 
     pub fn is_rendered(&self) -> bool {
-        if self.flag_blueprint {
-            return true;
-        }
-
         !matches!(self.block, BlockType::OOB | BlockType::EMPTY)
     }
 
     pub fn is_walkable(&self) -> bool {
-        if self.flag_blueprint {
-            return false;
-        }
-
         !matches!(
             self.block,
             BlockType::OOB
@@ -62,10 +51,6 @@ impl Block {
     }
 
     pub fn is_attachable(&self) -> bool {
-        if self.flag_blueprint {
-            return false;
-        }
-
         !matches!(
             self.block,
             BlockType::OOB
@@ -77,7 +62,7 @@ impl Block {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.flag_blueprint || matches!(self.block, BlockType::EMPTY)
+        matches!(self.block, BlockType::EMPTY)
     }
 
     pub fn is_opaque(&self) -> bool {
@@ -101,10 +86,6 @@ impl Block {
     }
 
     pub fn is_mineable(&self) -> bool {
-        if self.flag_blueprint {
-            return false;
-        }
-
         matches!(
             self.block,
             BlockType::DIRT
@@ -131,6 +112,7 @@ impl Block {
         }
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> String {
         match self.block {
             BlockType::OOB => String::from("out of bounds"),

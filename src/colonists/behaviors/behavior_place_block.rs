@@ -17,7 +17,7 @@ use crate::{
         IsJobCancelled, IsJobCompleted, Item, ItemTag, Job, JobLocation, JobPlaceBlock, JobType,
         NavigationFlags, NavigationGraph, PartitionPathRequest, Score, ScorerBuilder,
         TaskGetJobLocation, TaskIsTargetEmpty, TaskJobAssign, TaskJobCancel, TaskJobComplete,
-        TaskJobUnassign, TaskMoveTo, TaskPlaceBlock,
+        TaskJobUnassign, TaskLookAt, TaskMoveTo, TaskPlaceBlock,
     },
     common::Distance,
     BlockType, Terrain,
@@ -51,6 +51,7 @@ impl ScorerBuilder for ScorerPlaceBlock {
                             BehaviorNode::Sequence(vec![
                                 BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                                 BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
+                                BehaviorNode::Task(Arc::new(TaskLookAt)),
                                 BehaviorNode::Task(Arc::new(TaskPlaceBlock {
                                     progress: 0.,
                                     block_type: self.block_type.unwrap(),

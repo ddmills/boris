@@ -25,6 +25,7 @@ pub struct Blackboard {
     pub job: Option<Entity>,
     pub bed: u8,
     pub move_goals: Vec<[u32; 3]>,
+    pub primary_goal: Option<[u32; 3]>,
     pub item: Option<Entity>,
     pub path: Option<Path>,
     pub target_block: Option<[u32; 3]>,

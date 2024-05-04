@@ -83,7 +83,7 @@ pub fn task_chop_tree(
         }
 
         if let Ok(mut animator) = q_animators.get_mut(*actor) {
-            animator.clip = AnimClip::SwingPick;
+            animator.clip = AnimClip::SwingAxe;
         };
 
         task.progress += time.delta_seconds() * game_speed.speed();

@@ -4,9 +4,7 @@ use bevy::{
 };
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{
-    common::sig_num, Block, BlockFace, BlockType, Chunk, EmplacementTileDetail, LightNode,
-};
+use crate::{common::sig_num, Block, BlockFace, BlockType, Chunk, LightNode, StructureTileDetail};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -285,74 +283,42 @@ impl Terrain {
         false
     }
 
-    pub fn get_blueprints(
+    pub fn get_structures(
         &self,
         chunk_idx: u32,
         block_idx: u32,
-    ) -> HashMap<Entity, EmplacementTileDetail> {
+    ) -> HashMap<Entity, StructureTileDetail> {
         if let Some(chunk) = self.get_chunk(chunk_idx) {
-            return chunk.get_blueprints(block_idx);
+            return chunk.get_structures(block_idx);
         }
 
         HashMap::new()
     }
 
-    pub fn add_blueprint(
+    pub fn add_structure(
         &mut self,
         chunk_idx: u32,
         block_idx: u32,
-        blueprint: Entity,
-        detail: EmplacementTileDetail,
+        structure: Entity,
+        detail: StructureTileDetail,
     ) {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-            chunk.add_blueprint(block_idx, blueprint, detail);
+            chunk.add_structure(block_idx, structure, detail);
         }
     }
 
-    pub fn remove_blueprint(
+    pub fn remove_structure(
         &mut self,
         chunk_idx: u32,
         block_idx: u32,
-        blueprint: &Entity,
-    ) -> Option<EmplacementTileDetail> {
+        structure: &Entity,
+    ) -> Option<StructureTileDetail> {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-            return chunk.remove_blueprint(block_idx, blueprint);
+            return chunk.remove_structure(block_idx, structure);
         }
 
         None
     }
-
-    // pub fn get_furniture(
-    //     &self,
-    //     chunk_idx: u32,
-    //     block_idx: u32,
-    // ) -> HashMap<Entity, TemplateTileType> {
-    //     if let Some(chunk) = self.get_chunk(chunk_idx) {
-    //         return chunk.get_furniture(block_idx);
-    //     }
-
-    //     HashMap::new()
-    // }
-
-    // pub fn add_furniture(
-    //     &mut self,
-    //     chunk_idx: u32,
-    //     block_idx: u32,
-    //     furniture: Entity,
-    //     tile_type: TemplateTileType,
-    // ) {
-    //     if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-    //         chunk.add_furniture(block_idx, furniture, tile_type);
-    //     }
-    // }
-
-    // pub fn remove_furniture(&mut self, chunk_idx: u32, block_idx: u32, furniture: &Entity) -> bool {
-    //     if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-    //         return chunk.remove_furniture(block_idx, furniture);
-    //     }
-
-    //     false
-    // }
 
     pub fn add_light(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.set_torchlight(x, y, z, value);
@@ -375,16 +341,6 @@ impl Terrain {
         self.set_sunlight(x, y, z, 0);
         self.sunlight_queue_remove
             .push(LightNode { x, y, z, value });
-    }
-
-    pub fn set_flag_blueprint(&mut self, x: u32, y: u32, z: u32, value: bool) -> bool {
-        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
-
-        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
-            return chunk.set_flag_blueprint(block_idx, value);
-        }
-
-        false
     }
 
     pub fn set_flag_chop(&mut self, x: u32, y: u32, z: u32, value: bool) -> bool {

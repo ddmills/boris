@@ -2,17 +2,20 @@ use bevy::ecs::{
     component::Component,
     entity::Entity,
     event::{Event, EventReader},
-    system::{Commands, Query},
+    system::Commands,
 };
 
-use crate::{colonists::ItemTag, Position};
+use crate::colonists::ItemTag;
 
-use super::{Job, JobLocation, JobType};
+use super::{Job, JobLocation};
 
 #[derive(Event)]
 pub struct SpawnJobSupplyEvent {
-    pub item: Entity,
+    pub tags: Vec<ItemTag>,
+    pub slot_taget_idx: usize,
     pub target: Entity,
+    pub targets: Vec<[u32; 3]>,
+    pub primary_target: [u32; 3],
 }
 
 #[derive(Component, Clone)]
@@ -25,34 +28,24 @@ pub struct JobSupply {
 pub fn on_spawn_job_supply(
     mut cmd: Commands,
     mut ev_spawn_job_supply: EventReader<SpawnJobSupplyEvent>,
-    q_positions: Query<&Position>,
 ) {
-    // for ev in ev_spawn_job_supply.read() {
-    //     let Ok(item_pos) = q_positions.get(ev.item) else {
-    //         println!("Cannot supply because item does not have a position");
-    //         continue;
-    //     };
-
-    //     let Ok(target_pos) = q_positions.get(ev.target) else {
-    //         println!("Cannot supply because target does not have a position");
-    //         continue;
-    //     };
-
-    //     cmd.spawn((
-    //         Job {
-    //             job_type: JobType::Chop,
-    //             assignee: None,
-    //         },
-    //         JobSupply {
-    //             item: ev.item,
-    //             target: ev.target,
-    //         },
-    //         JobLocation {
-    //             targets: vec![target_pos.as_vec()],
-    //             primary_target: target_pos.as_vec(),
-    //             source: Some(item_pos.as_vec()),
-    //             last_accessibility_check: 0.,
-    //         },
-    //     ));
-    // }
+    for ev in ev_spawn_job_supply.read() {
+        cmd.spawn((
+            Job {
+                job_type: super::JobType::Supply,
+                assignee: None,
+            },
+            JobSupply {
+                tags: ev.tags.clone(),
+                slot_target_idx: ev.slot_taget_idx,
+                target: ev.target,
+            },
+            JobLocation {
+                targets: ev.targets.clone(),
+                primary_target: ev.primary_target,
+                last_accessibility_check: 0.,
+                source: None,
+            },
+        ));
+    }
 }

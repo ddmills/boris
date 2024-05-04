@@ -14,7 +14,7 @@ use crate::{
         Behavior, BehaviorNode, HasBehavior, InInventory, InSlot, Inventory, IsJobAccessible,
         IsJobCancelled, Item, ItemTag, Job, JobChop, JobLocation, NavigationFlags, NavigationGraph,
         PartitionPathRequest, Score, ScorerBuilder, TaskChopTree, TaskGetJobLocation,
-        TaskItemEquip, TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMoveTo,
+        TaskItemEquip, TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskLookAt, TaskMoveTo,
     },
     common::Distance,
     Position, Terrain,
@@ -46,6 +46,7 @@ impl ScorerBuilder for ScorerChop {
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
+                        BehaviorNode::Task(Arc::new(TaskLookAt)),
                         BehaviorNode::Task(Arc::new(TaskChopTree {
                             progress: 0.,
                             tree: self.tree.unwrap(),

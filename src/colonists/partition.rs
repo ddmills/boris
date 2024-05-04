@@ -17,9 +17,9 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationF
 
     if !block.is_oob() {
         let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
-        let blueprints = terrain.get_blueprints(chunk_idx, block_idx);
+        let structures = terrain.get_structures(chunk_idx, block_idx);
 
-        for tile in blueprints.values() {
+        for tile in structures.values() {
             if !tile.is_built {
                 continue;
             }

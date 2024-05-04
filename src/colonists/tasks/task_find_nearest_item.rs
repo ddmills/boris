@@ -66,7 +66,10 @@ pub fn task_find_nearest_item(
 
         item.reserved = Some(*actor);
         blackboard.item = Some(*item_entity);
-        blackboard.move_goals = vec![[item_position.x, item_position.y, item_position.z]];
+
+        let target_pos = item_position.as_array();
+        blackboard.move_goals = vec![target_pos];
+        blackboard.primary_goal = Some(target_pos);
         *state = TaskState::Success;
     }
 }
@@ -82,7 +85,7 @@ fn find_nearest(
 
     queue.push_back(start_id);
 
-    let max_depth = 1000;
+    let max_depth = 10000;
 
     while let Some(partition_id) = queue.pop_front() {
         if visited.len() >= max_depth {

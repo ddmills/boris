@@ -14,7 +14,7 @@ use crate::{
         Behavior, BehaviorNode, HasBehavior, InInventory, InSlot, Inventory, IsJobAccessible,
         IsJobCancelled, Item, ItemTag, Job, JobLocation, JobSupply, NavigationFlags,
         NavigationGraph, PartitionPathRequest, Score, ScorerBuilder, TaskGetJobLocation,
-        TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskMoveTo, TaskSupply,
+        TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskLookAt, TaskMoveTo, TaskSupply,
     },
     common::Distance,
     Position, Terrain,
@@ -48,6 +48,7 @@ impl ScorerBuilder for ScorerSupply {
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
+                        BehaviorNode::Task(Arc::new(TaskLookAt)),
                         BehaviorNode::Task(Arc::new(TaskSupply {
                             target: self.target.unwrap(),
                             target_slot_idx: self.target_idx,

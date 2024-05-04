@@ -6,7 +6,6 @@ use bevy::{
         system::{Commands, Query},
     },
     render::view::Visibility,
-    transform::components::Transform,
 };
 use task_derive::TaskBuilder;
 
@@ -14,7 +13,7 @@ use crate::{
     colonists::{
         Actor, ActorRef, Blackboard, InInventory, InSlot, Inventory, TaskBuilder, TaskState,
     },
-    furniture::BlueprintSlots,
+    structures::PartSlots,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
@@ -25,7 +24,7 @@ pub struct TaskSupply {
 
 pub fn task_supply(
     mut cmd: Commands,
-    mut q_blueprints: Query<&mut BlueprintSlots>,
+    mut q_structures: Query<&mut PartSlots>,
     mut q_actors: Query<&mut Inventory, With<Actor>>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &TaskSupply, &Blackboard)>,
 ) {
@@ -44,13 +43,13 @@ pub fn task_supply(
             continue;
         };
 
-        let Ok(mut blueprint_slots) = q_blueprints.get_mut(task_supply.target) else {
-            println!("Blueprint slot does not exist, cannot supply!");
+        let Ok(mut part_slots) = q_structures.get_mut(task_supply.target) else {
+            println!("Structure slot does not exist, cannot supply!");
             *state = TaskState::Failed;
             continue;
         };
 
-        let Some(slot) = blueprint_slots.slots.get_mut(task_supply.target_slot_idx) else {
+        let Some(slot) = part_slots.slots.get_mut(task_supply.target_slot_idx) else {
             println!("Target slot does not exist! cannot supply!");
             *state = TaskState::Failed;
             continue;

@@ -23,7 +23,7 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn as_vec(&self) -> [u32; 3] {
+    pub fn as_array(&self) -> [u32; 3] {
         [self.x, self.y, self.z]
     }
 }

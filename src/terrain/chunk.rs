@@ -23,8 +23,7 @@ pub struct Chunk {
     pub blocks: Box<[Block]>,
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
-    // pub furniture: Box<[HashMap<Entity, TemplateTileType>]>,
-    pub blueprints: Box<[HashMap<Entity, EmplacementTileDetail>]>,
+    pub structures: Box<[HashMap<Entity, StructureTileDetail>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -36,7 +35,7 @@ pub struct Chunk {
 }
 
 #[derive(Clone, Copy)]
-pub struct EmplacementTileDetail {
+pub struct StructureTileDetail {
     pub flags: Option<NavigationFlags>,
     pub is_built: bool,
     pub is_blocker: bool,
@@ -49,8 +48,7 @@ impl Chunk {
             blocks: vec![Block::default(); shape.size() as usize].into_boxed_slice(),
             items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
-            blueprints: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
-            // furniture: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
+            structures: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -113,65 +111,36 @@ impl Chunk {
         false
     }
 
-    pub fn get_blueprints(&self, block_idx: u32) -> HashMap<Entity, EmplacementTileDetail> {
-        if let Some(blueprints) = self.blueprints.get(block_idx as usize) {
-            return blueprints.clone();
+    pub fn get_structures(&self, block_idx: u32) -> HashMap<Entity, StructureTileDetail> {
+        if let Some(structures) = self.structures.get(block_idx as usize) {
+            return structures.clone();
         }
 
         HashMap::new()
     }
 
-    pub fn add_blueprint(
+    pub fn add_structure(
         &mut self,
         block_idx: u32,
-        blueprint: Entity,
-        detail: EmplacementTileDetail,
+        structure: Entity,
+        detail: StructureTileDetail,
     ) {
-        if let Some(blueprints) = self.blueprints.get_mut(block_idx as usize) {
-            blueprints.insert(blueprint, detail);
+        if let Some(structures) = self.structures.get_mut(block_idx as usize) {
+            structures.insert(structure, detail);
         }
     }
 
-    pub fn remove_blueprint(
+    pub fn remove_structure(
         &mut self,
         block_idx: u32,
-        blueprint: &Entity,
-    ) -> Option<EmplacementTileDetail> {
-        if let Some(blueprints) = self.blueprints.get_mut(block_idx as usize) {
-            return blueprints.remove(blueprint);
+        structure: &Entity,
+    ) -> Option<StructureTileDetail> {
+        if let Some(structures) = self.structures.get_mut(block_idx as usize) {
+            return structures.remove(structure);
         }
 
         None
     }
-
-    // pub fn get_furniture(&self, block_idx: u32) -> HashMap<Entity, TemplateTileType> {
-    //     if let Some(furniture) = self.furniture.get(block_idx as usize) {
-    //         return furniture.clone();
-    //     }
-
-    //     HashMap::new()
-    // }
-
-    // pub fn add_furniture(
-    //     &mut self,
-    //     block_idx: u32,
-    //     furniture: Entity,
-    //     tile_type: TemplateTileType,
-    // ) {
-    //     if let Some(furnitures) = self.furniture.get_mut(block_idx as usize) {
-    //         self.is_nav_dirty = true;
-    //         furnitures.insert(furniture, tile_type);
-    //     }
-    // }
-
-    // pub fn remove_furniture(&mut self, block_idx: u32, furniture: &Entity) -> bool {
-    //     if let Some(furnitures) = self.furniture.get_mut(block_idx as usize) {
-    //         self.is_nav_dirty = true;
-    //         return furnitures.remove(furniture).is_some();
-    //     }
-
-    //     false
-    // }
 
     pub fn set_partition_id(&mut self, block_idx: u32, value: u32) {
         self.blocks[block_idx as usize].partition_id = Some(value);
@@ -193,16 +162,6 @@ impl Chunk {
 
     pub fn get_torchlight(&self, block_idx: u32) -> u8 {
         self.get_block(block_idx).light
-    }
-
-    pub fn set_flag_blueprint(&mut self, block_idx: u32, value: bool) -> bool {
-        let block = self.blocks[block_idx as usize];
-        let is_changed = block.flag_blueprint != value;
-        self.blocks[block_idx as usize].flag_blueprint = value;
-        if is_changed {
-            self.is_mesh_dirty = true;
-        }
-        is_changed
     }
 
     pub fn set_flag_mine(&mut self, block_idx: u32, value: bool) -> bool {

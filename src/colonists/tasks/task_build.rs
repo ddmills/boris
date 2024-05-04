@@ -11,14 +11,14 @@ use task_derive::TaskBuilder;
 
 use crate::{
     colonists::{Actor, ActorRef, AnimClip, Animator, NavigationFlags, TaskBuilder, TaskState},
-    furniture::{blueprint::BlueprintMode, Blueprint},
+    structures::{structure::StructureMode, Structure},
     ui::GameSpeed,
-    EmplacementTileDetail, Terrain,
+    StructureTileDetail, Terrain,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskBuild {
-    pub blueprint: Entity,
+    pub structure: Entity,
     pub progress: f32,
 }
 
@@ -27,27 +27,27 @@ pub fn task_build(
     mut q_animators: Query<&mut Animator, With<Actor>>,
     time: Res<Time>,
     game_speed: Res<GameSpeed>,
-    mut q_blueprints: Query<&mut Blueprint>,
+    mut q_structures: Query<&mut Structure>,
     mut q_behavior: Query<(&ActorRef, &mut TaskState, &mut TaskBuild)>,
 ) {
     for (ActorRef(actor), mut state, mut task) in q_behavior.iter_mut() {
-        let Ok(mut blueprint) = q_blueprints.get_mut(task.blueprint) else {
-            println!("entity does not have a blueprint! Cannot build.");
+        let Ok(mut structure) = q_structures.get_mut(task.structure) else {
+            println!("entity does not have a structure! Cannot build.");
             *state = TaskState::Failed;
             continue;
         };
 
-        if !blueprint.is_valid {
-            println!("blueprint no longer valid! Cannot build.");
+        if !structure.is_valid {
+            println!("structure no longer valid! Cannot build.");
             *state = TaskState::Failed;
             continue;
         }
 
         if task.progress >= 6. {
-            blueprint.mode = BlueprintMode::Built;
-            blueprint.is_dirty = true;
+            structure.mode = StructureMode::Built;
+            structure.is_dirty = true;
 
-            for tile in blueprint.tiles.iter() {
+            for tile in structure.tiles.iter() {
                 let [x, y, z] = tile.position;
                 let [chunk_idx, block_idx] =
                     terrain.get_block_indexes(x as u32, y as u32, z as u32);
@@ -58,11 +58,11 @@ pub fn task_build(
                     Some(tile.nav_flags)
                 };
 
-                terrain.add_blueprint(
+                terrain.add_structure(
                     chunk_idx,
                     block_idx,
-                    task.blueprint,
-                    EmplacementTileDetail {
+                    task.structure,
+                    StructureTileDetail {
                         is_built: true,
                         flags,
                         is_blocker: tile.is_blocker,

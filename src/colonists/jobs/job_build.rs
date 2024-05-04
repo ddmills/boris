@@ -1,36 +1,37 @@
 use bevy::ecs::{
     component::Component,
     entity::Entity,
-    event::{Event, EventReader},
+    event::{Event, EventReader, EventWriter},
     system::{Commands, Query},
 };
 
-use crate::furniture::{Blueprint, BlueprintSlot, BlueprintSlots};
+use crate::structures::{PartSlots, Structure};
 
-use super::{Job, JobLocation, JobSupply};
+use super::{Job, JobLocation, SpawnJobSupplyEvent};
 
 #[derive(Event)]
 pub struct SpawnJobBuildEvent {
-    pub blueprint: Entity,
+    pub structure: Entity,
 }
 
 #[derive(Component, Clone, Copy)]
 pub struct JobBuild {
-    pub blueprint: Entity,
+    pub structure: Entity,
 }
 
 pub fn on_spawn_job_build(
     mut cmd: Commands,
     mut ev_spawn_job_build: EventReader<SpawnJobBuildEvent>,
-    q_blueprints: Query<(&Blueprint, &BlueprintSlots)>,
+    mut ev_spawn_job_supply: EventWriter<SpawnJobSupplyEvent>,
+    q_structures: Query<(&Structure, &PartSlots)>,
 ) {
     for ev in ev_spawn_job_build.read() {
-        let Ok((blueprint, blueprint_slots)) = q_blueprints.get(ev.blueprint) else {
-            println!("blueprint doesn't exist? Cannot build");
+        let Ok((structure, part_slots)) = q_structures.get(ev.structure) else {
+            println!("structure doesn't exist? Cannot build");
             continue;
         };
 
-        let targets = blueprint
+        let targets = structure
             .tiles
             .iter()
             .map(|t| {
@@ -42,29 +43,14 @@ pub fn on_spawn_job_build(
             })
             .collect::<Vec<_>>();
 
-        for (idx, slot) in blueprint_slots.slots.iter().enumerate() {
-            println!(
-                "spawning job to set slot{} {}",
-                idx,
-                slot.tags.first().unwrap()
-            );
-            cmd.spawn((
-                Job {
-                    job_type: super::JobType::Supply,
-                    assignee: None,
-                },
-                JobSupply {
-                    tags: slot.tags.clone(),
-                    slot_target_idx: idx,
-                    target: ev.blueprint,
-                },
-                JobLocation {
-                    targets: targets.clone(),
-                    primary_target: blueprint.position,
-                    last_accessibility_check: 0.,
-                    source: None,
-                },
-            ));
+        for (idx, slot) in part_slots.slots.iter().enumerate() {
+            ev_spawn_job_supply.send(SpawnJobSupplyEvent {
+                tags: slot.tags.clone(),
+                slot_taget_idx: idx,
+                target: ev.structure,
+                targets: targets.clone(),
+                primary_target: structure.position,
+            });
         }
 
         cmd.spawn((
@@ -73,11 +59,11 @@ pub fn on_spawn_job_build(
                 assignee: None,
             },
             JobBuild {
-                blueprint: ev.blueprint,
+                structure: ev.structure,
             },
             JobLocation {
                 targets,
-                primary_target: blueprint.position,
+                primary_target: structure.position,
                 last_accessibility_check: 0.,
                 source: None,
             },

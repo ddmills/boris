@@ -8,7 +8,7 @@ use bevy::{
 use ndshape::AbstractShape;
 
 use crate::{
-    colonists::get_block_flags, common::flood_fill_i32, furniture::Blueprint, Position, Terrain,
+    colonists::get_block_flags, common::flood_fill_i32, structures::Structure, Position, Terrain,
 };
 
 use super::NavigationGraph;
@@ -17,7 +17,7 @@ pub fn partition(
     mut graph: ResMut<NavigationGraph>,
     mut terrain: ResMut<Terrain>,
     mut q_items: Query<&mut Position>,
-    mut q_blueprints: Query<&mut Blueprint>,
+    mut q_structures: Query<&mut Structure>,
 ) {
     for chunk_idx in 0..terrain.chunk_count {
         let is_nav_dirty = terrain.get_is_chunk_nav_dirty(chunk_idx);
@@ -27,7 +27,7 @@ pub fn partition(
         }
 
         let mut items: HashSet<Entity> = HashSet::new();
-        let mut blueprints: HashSet<Entity> = HashSet::new();
+        let mut structures: HashSet<Entity> = HashSet::new();
 
         let cleanups = graph.delete_partitions_for_chunk(chunk_idx);
 
@@ -42,10 +42,10 @@ pub fn partition(
             let [x, y, z] = terrain.get_block_world_pos(chunk_idx, block_idx);
             let block_flags = get_block_flags(&terrain, x as i32, y as i32, z as i32);
 
-            let block_blueprints = terrain.get_blueprints(chunk_idx, block_idx);
+            let block_structures = terrain.get_structures(chunk_idx, block_idx);
 
-            for entity in block_blueprints.keys() {
-                blueprints.insert(*entity);
+            for entity in block_structures.keys() {
+                structures.insert(*entity);
             }
 
             // ignore empty blocks
@@ -190,9 +190,9 @@ pub fn partition(
 
         terrain.set_chunk_nav_dirty(chunk_idx, false);
 
-        for entity in blueprints.iter() {
-            if let Ok(mut blueprint) = q_blueprints.get_mut(*entity) {
-                blueprint.is_dirty = true;
+        for entity in structures.iter() {
+            if let Ok(mut structure) = q_structures.get_mut(*entity) {
+                structure.is_dirty = true;
             };
         }
     }

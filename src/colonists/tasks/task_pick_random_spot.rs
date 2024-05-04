@@ -84,6 +84,7 @@ pub fn task_pick_random_spot(
         let target_pos = terrain.get_block_world_pos(target_chunk_idx, *target_block_idx);
 
         blackboard.move_goals = vec![target_pos];
+        blackboard.primary_goal = Some(target_pos);
 
         *state = TaskState::Success;
     }

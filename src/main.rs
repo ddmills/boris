@@ -11,20 +11,16 @@ use colonists::{
     task_animate, task_build, task_check_has_item, task_chop_tree, task_debug, task_find_bed,
     task_find_nearest_item, task_get_job_location, task_idle, task_is_target_empty,
     task_item_equip, task_item_pick_up, task_job_assign, task_job_cancel, task_job_complete,
-    task_job_unassign, task_mine_block, task_move_to, task_pick_random_spot, task_place_block,
-    task_sleep, task_supply, ActorRef, Blackboard, ColonistAnimations, DestroyItemEvent,
-    HasBehavior, InInventory, Inventory, Item, ItemTag, JobCancelEvent, NavigationGraph,
-    PartitionDebug, PartitionPathRequest, Path, Score, ScorerPlugin, Scorers, SpawnColonistEvent,
-    SpawnJobBuildEvent, SpawnJobChopEvent, SpawnJobMineEvent, SpawnJobPlaceBlockEvent,
-    SpawnJobSupplyEvent, TaskState,
+    task_job_unassign, task_look_at, task_mine_block, task_move_to, task_pick_random_spot,
+    task_place_block, task_sleep, task_supply, ActorRef, Blackboard, ColonistAnimations,
+    DestroyItemEvent, HasBehavior, InInventory, Inventory, Item, ItemTag, JobCancelEvent,
+    NavigationGraph, PartitionDebug, PartitionPathRequest, Path, Score, ScorerPlugin, Scorers,
+    SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobChopEvent, SpawnJobMineEvent,
+    SpawnJobPlaceBlockEvent, SpawnJobSupplyEvent, TaskState,
 };
 use common::Rand;
 use controls::{raycast, setup_camera, update_camera, Raycast};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
-use furniture::{
-    blueprint_material_update, check_blueprints, on_remove_blueprint, on_spawn_blueprint,
-    setup_templates, RemoveBlueprintEvent, SpawnBlueprintEvent,
-};
 use items::{
     on_spawn_axe, on_spawn_log, on_spawn_pickaxe, on_spawn_stone, SpawnAxeEvent, SpawnLogEvent,
     SpawnPickaxeEvent, SpawnStoneEvent,
@@ -32,11 +28,16 @@ use items::{
 use rendering::{
     update_basic_material_children_lighting, update_basic_material_lighting, BasicMaterial,
 };
+use structures::{
+    check_structures, on_remove_structure, on_spawn_structure, setup_blueprint_ladder,
+    setup_blueprint_torches, setup_blueprint_workbench, structure_material_update, Blueprints,
+    RemoveStructureEvent, SpawnStructureEvent,
+};
 use terrain::*;
 use ui::{
     job_toolbar, setup_block_toolbar_ui, tool_block_info, tool_chop, tool_clear_block, tool_mine,
     tool_place_blocks, tool_place_stone, tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe,
-    tool_spawn_template, tool_toggle_path, toolbar_select, ui_capture_pointer, GameSpeed, Tool,
+    tool_spawn_structure, tool_toggle_path, toolbar_select, ui_capture_pointer, GameSpeed, Tool,
     Toolbar, Ui,
 };
 
@@ -44,9 +45,9 @@ mod colonists;
 mod common;
 mod controls;
 mod debug;
-mod furniture;
 mod items;
 mod rendering;
+mod structures;
 mod terrain;
 mod ui;
 
@@ -55,6 +56,7 @@ fn main() {
         .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
+        .insert_resource(Blueprints::default())
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(BlockType::STONE),
         })
@@ -93,8 +95,8 @@ fn main() {
         .add_event::<SpawnJobChopEvent>()
         .add_event::<SpawnJobSupplyEvent>()
         .add_event::<SpawnJobBuildEvent>()
-        .add_event::<SpawnBlueprintEvent>()
-        .add_event::<RemoveBlueprintEvent>()
+        .add_event::<SpawnStructureEvent>()
+        .add_event::<RemoveStructureEvent>()
         .add_event::<TerrainSliceChangeEvent>()
         .add_event::<JobCancelEvent>()
         .init_resource::<NavigationGraph>()
@@ -122,7 +124,9 @@ fn main() {
             Startup,
             (
                 setup,
-                setup_templates,
+                setup_blueprint_ladder,
+                setup_blueprint_torches,
+                setup_blueprint_workbench,
                 setup_terrain,
                 setup_terrain_slice,
                 setup_chunk_meshes,
@@ -136,7 +140,7 @@ fn main() {
         .add_systems(Update, raycast)
         .add_systems(Update, scroll_events)
         .add_systems(Update, on_slice_changed)
-        .add_systems(Update, on_remove_blueprint)
+        .add_systems(Update, on_remove_structure)
         .add_systems(Update, update_slice_mesh)
         .add_systems(Update, hide_sliced_objects)
         .add_systems(Update, light_system)
@@ -150,7 +154,7 @@ fn main() {
         .add_systems(Update, on_spawn_axe)
         .add_systems(Update, on_spawn_log)
         .add_systems(Update, on_spawn_stone)
-        .add_systems(Update, on_spawn_blueprint)
+        .add_systems(Update, on_spawn_structure)
         .add_systems(Update, on_cancel_job)
         .add_systems(Update, apply_falling)
         .add_systems(Update, partition_debug)
@@ -190,9 +194,9 @@ fn main() {
         .add_systems(
             Update,
             (
-                tool_spawn_template,
-                check_blueprints,
-                blueprint_material_update,
+                tool_spawn_structure,
+                check_structures,
+                structure_material_update,
             )
                 .chain(),
         )
@@ -205,6 +209,7 @@ fn main() {
         .add_systems(Update, task_idle)
         .add_systems(Update, task_pick_random_spot)
         .add_systems(Update, task_move_to)
+        .add_systems(Update, task_look_at)
         .add_systems(Update, task_chop_tree)
         .add_systems(Update, task_build)
         .add_systems(Update, task_get_job_location)
@@ -246,12 +251,13 @@ fn setup(
     cmd.insert_resource(HumanGltf(gltf));
 
     cmd.insert_resource(ColonistAnimations {
-        base: asset_server.load("human.gltf#Animation0"),
-        swing_hammer: asset_server.load("human.gltf#Animation1"),
-        idle: asset_server.load("human.gltf#Animation2"),
-        swing_pick: asset_server.load("human.gltf#Animation3"),
-        pick_up: asset_server.load("human.gltf#Animation4"),
-        run: asset_server.load("human.gltf#Animation5"),
+        swing_axe: asset_server.load("human.gltf#Animation0"),
+        base: asset_server.load("human.gltf#Animation1"),
+        swing_hammer: asset_server.load("human.gltf#Animation2"),
+        idle: asset_server.load("human.gltf#Animation3"),
+        swing_pick: asset_server.load("human.gltf#Animation4"),
+        pick_up: asset_server.load("human.gltf#Animation5"),
+        run: asset_server.load("human.gltf#Animation6"),
     });
 
     let mesh = asset_server.load("cube_offset.gltf#Mesh0/Primitive0");

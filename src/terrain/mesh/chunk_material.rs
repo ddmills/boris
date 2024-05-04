@@ -67,14 +67,12 @@ pub fn pack_block(block: Block, dir: BlockFace, ao: VertexCornerCount) -> u32 {
     let ao_id = ao.bit(); // two bits, 0-3
     let mine_bit = if block.flag_mine { 1 } else { 0 }; // one bit;
     let chop_bit = if block.flag_chop { 1 } else { 0 }; // one bit;
-    let blueprint_bit = if block.flag_blueprint { 1 } else { 0 }; // one bit;
 
     (t_id & 255)
         | ((f_id & 7) << 8)
         | ((ao_id & 3) << 11)
         | ((mine_bit & 1) << 13)
         | ((chop_bit & 1) << 14)
-        | ((blueprint_bit & 1) << 15)
 }
 
 pub enum VertexCornerCount {

@@ -20,6 +20,7 @@ pub struct ColonistAnimations {
     pub pick_up: Handle<AnimationClip>,
     pub swing_pick: Handle<AnimationClip>,
     pub swing_hammer: Handle<AnimationClip>,
+    pub swing_axe: Handle<AnimationClip>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,6 +31,7 @@ pub enum AnimClip {
     PickUp,
     SwingPick,
     SwingHammer,
+    SwingAxe,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,6 +74,7 @@ pub fn colonist_animations(
                 AnimClip::PickUp => animations.pick_up.clone_weak(),
                 AnimClip::SwingPick => animations.swing_pick.clone_weak(),
                 AnimClip::SwingHammer => animations.swing_hammer.clone_weak(),
+                AnimClip::SwingAxe => animations.swing_axe.clone_weak(),
             };
 
             let one_shot = match animator.clip {
@@ -81,6 +84,7 @@ pub fn colonist_animations(
                 AnimClip::SwingPick => false,
                 AnimClip::PickUp => true,
                 AnimClip::SwingHammer => false,
+                AnimClip::SwingAxe => false,
             };
 
             animator.prev_clip = animator.clip;

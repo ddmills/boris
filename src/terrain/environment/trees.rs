@@ -87,7 +87,7 @@ pub fn on_spawn_tree(
                 continue;
             }
 
-            // TODO note: blueprints are also considered "empty"
+            // TODO note: structures are also considered "empty"
             if current.is_empty() || current.block == BlockType::LEAVES {
                 terrain.set_block_type(x, y, z, BlockType::TREE_TRUNK);
             }
@@ -114,7 +114,7 @@ pub fn on_spawn_tree(
                 continue;
             }
 
-            // TODO note: blueprints are also considered "empty"
+            // TODO note: structures are also considered "empty"
             if current.is_empty() {
                 terrain.set_block_type(x, y, z, BlockType::LEAVES);
             }

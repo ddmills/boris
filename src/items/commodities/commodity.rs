@@ -16,7 +16,10 @@ use bevy::{
 
 use crate::{
     colonists::{Faller, InSlot, Item, ItemTag},
-    rendering::BasicMaterial,
+    rendering::{
+        BasicMaterial,
+        SlotIndex::{self},
+    },
     structures::PartSlots,
     Position,
 };
@@ -44,6 +47,7 @@ pub enum Commodity {
 pub struct CommodityData {
     pub name: String,
     pub texture: Handle<Image>,
+    pub texture_idx: u8,
     pub mesh: Handle<Mesh>,
     pub color: Color,
     pub flags: CommodityFlag,
@@ -72,9 +76,8 @@ pub fn on_spawn_commodity(
 
         let material = materials.add(BasicMaterial {
             texture: Some(commodity.texture.clone()),
-            sunlight: 8,
-            torchlight: 8,
             color: commodity.color,
+            ..Default::default()
         });
 
         cmd.spawn((
@@ -103,7 +106,7 @@ pub fn on_spawn_commodity(
 
 #[derive(Event)]
 pub struct SetSlotEvent {
-    pub target_slot_idx: usize,
+    pub target_slot: SlotIndex,
     pub target: Entity,
     pub content: Entity,
 }
@@ -122,7 +125,7 @@ pub fn on_set_slot(
             continue;
         };
 
-        let Some(slot) = part_slots.slots.get_mut(ev.target_slot_idx) else {
+        let Some(slot) = part_slots.get_mut(ev.target_slot) else {
             println!("Target slot does not exist! cannot set slot!");
             continue;
         };
@@ -132,32 +135,37 @@ pub fn on_set_slot(
             continue;
         }
 
-        println!("Setting slot {} content!", ev.target_slot_idx);
-
         slot.content = Some(ev.content);
 
         let mut ecmd = cmd.entity(ev.content);
         ecmd.insert(Visibility::Hidden);
         ecmd.insert(InSlot {
             holder: ev.target,
-            slot_idx: ev.target_slot_idx,
+            slot_idx: ev.target_slot,
         });
 
-        if ev.target_slot_idx == 0 {
-            let Ok(commodity_type) = q_commodities.get(ev.content) else {
-                continue;
-            };
+        let Ok(commodity_type) = q_commodities.get(ev.content) else {
+            continue;
+        };
 
-            let Some(commodity_data) = commodities.0.get(commodity_type) else {
-                continue;
-            };
+        let Some(commodity_data) = commodities.0.get(commodity_type) else {
+            continue;
+        };
 
-            let Some(material) = basic_materials.get_mut(mat_handle) else {
-                continue;
-            };
+        let Some(material) = basic_materials.get_mut(mat_handle) else {
+            continue;
+        };
 
-            material.color = commodity_data.color;
-            material.texture = Some(commodity_data.texture.clone());
-        }
+        println!(
+            "Setting slot content! {}={}",
+            ev.target_slot.to_idx(),
+            commodity_data.name
+        );
+
+        material.with_slot(
+            ev.target_slot,
+            commodity_data.texture_idx,
+            commodity_data.color,
+        );
     }
 }

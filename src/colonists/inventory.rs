@@ -13,7 +13,7 @@ use bevy::{
 };
 use bevy_inspector_egui::{inspector_options::ReflectInspectorOptions, InspectorOptions};
 
-use crate::{Position, Terrain};
+use crate::{rendering::SlotIndex, Position, Terrain};
 
 use super::NavigationGraph;
 
@@ -36,11 +36,10 @@ pub struct InInventory {
     pub holder: Entity,
 }
 
-#[derive(Component, Reflect, InspectorOptions)]
-#[reflect(InspectorOptions)]
+#[derive(Component)]
 pub struct InSlot {
     pub holder: Entity,
-    pub slot_idx: usize,
+    pub slot_idx: SlotIndex,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Reflect, InspectorOptions)]

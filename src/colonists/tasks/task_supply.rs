@@ -8,15 +8,18 @@ use bevy::ecs::{
 use task_derive::TaskBuilder;
 
 use crate::{
-    colonists::{Actor, ActorRef, Blackboard, InInventory, Inventory, TaskBuilder, TaskState},
+    colonists::{
+        Actor, ActorRef, Blackboard, InInventory, Inventory, JobCancelEvent, TaskBuilder, TaskState,
+    },
     items::SetSlotEvent,
+    rendering::SlotIndex,
     structures::PartSlots,
 };
 
 #[derive(Component, Clone, TaskBuilder)]
 pub struct TaskSupply {
     pub target: Entity,
-    pub target_slot_idx: usize,
+    pub target_slot_idx: SlotIndex,
 }
 
 pub fn task_supply(
@@ -41,11 +44,12 @@ pub fn task_supply(
 
         let Ok(mut part_slots) = q_structures.get_mut(task_supply.target) else {
             println!("Structure slot does not exist, cannot supply!");
+            // todo: maybe add a prop to blackboard to cancel job
             *state = TaskState::Failed;
             continue;
         };
 
-        let Some(slot) = part_slots.slots.get_mut(task_supply.target_slot_idx) else {
+        let Some(slot) = part_slots.get_mut(task_supply.target_slot_idx) else {
             println!("Target slot does not exist! cannot supply!");
             *state = TaskState::Failed;
             continue;
@@ -63,7 +67,7 @@ pub fn task_supply(
         ecmd.remove::<InInventory>();
 
         ev_set_slot.send(SetSlotEvent {
-            target_slot_idx: task_supply.target_slot_idx,
+            target_slot: task_supply.target_slot_idx,
             target: task_supply.target,
             content: item,
         });

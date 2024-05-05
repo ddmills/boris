@@ -5,14 +5,14 @@ use bevy::ecs::{
     system::Commands,
 };
 
-use crate::colonists::ItemTag;
+use crate::{colonists::ItemTag, rendering::SlotIndex};
 
 use super::{Job, JobLocation};
 
 #[derive(Event)]
 pub struct SpawnJobSupplyEvent {
     pub flags: Vec<ItemTag>,
-    pub slot_taget_idx: usize,
+    pub slot_taget_idx: SlotIndex,
     pub target: Entity,
     pub targets: Vec<[u32; 3]>,
     pub primary_target: [u32; 3],
@@ -21,7 +21,7 @@ pub struct SpawnJobSupplyEvent {
 #[derive(Component, Clone)]
 pub struct JobSupply {
     pub flags: Vec<ItemTag>,
-    pub slot_target_idx: usize,
+    pub slot_target_idx: SlotIndex,
     pub target: Entity,
 }
 

@@ -5,7 +5,10 @@ use bevy::ecs::{
     system::{Commands, Query},
 };
 
-use crate::structures::{PartSlots, Structure};
+use crate::{
+    rendering::SlotIndex,
+    structures::{PartSlots, Structure},
+};
 
 use super::{Job, JobLocation, SpawnJobSupplyEvent};
 
@@ -43,10 +46,30 @@ pub fn on_spawn_job_build(
             })
             .collect::<Vec<_>>();
 
-        for (idx, slot) in part_slots.slots.iter().enumerate() {
+        if let Some(slot) = part_slots.slot_0.as_ref() {
             ev_spawn_job_supply.send(SpawnJobSupplyEvent {
                 flags: slot.flags.clone(),
-                slot_taget_idx: idx,
+                slot_taget_idx: SlotIndex::Slot0,
+                target: ev.structure,
+                targets: targets.clone(),
+                primary_target: structure.position,
+            });
+        }
+
+        if let Some(slot) = part_slots.slot_1.as_ref() {
+            ev_spawn_job_supply.send(SpawnJobSupplyEvent {
+                flags: slot.flags.clone(),
+                slot_taget_idx: SlotIndex::Slot1,
+                target: ev.structure,
+                targets: targets.clone(),
+                primary_target: structure.position,
+            });
+        }
+
+        if let Some(slot) = part_slots.slot_2.as_ref() {
+            ev_spawn_job_supply.send(SpawnJobSupplyEvent {
+                flags: slot.flags.clone(),
+                slot_taget_idx: SlotIndex::Slot2,
                 target: ev.structure,
                 targets: targets.clone(),
                 primary_target: structure.position,

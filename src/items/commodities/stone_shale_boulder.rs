@@ -20,8 +20,9 @@ pub fn setup_commodity_stone_shale_boulder(
         CommodityData {
             name: "Shale boulder".to_string(),
             texture,
+            texture_idx: 3,
             mesh,
-            color: Color::GRAY,
+            color: Color::WHITE,
             flags: CommodityFlag::STONE | CommodityFlag::BOULDER,
             tags: vec![ItemTag::Stone, ItemTag::BasicBuildMaterial],
         },

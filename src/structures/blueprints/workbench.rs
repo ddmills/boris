@@ -1,15 +1,16 @@
 use bevy::{
-    asset::{AssetServer, Handle},
+    asset::{AssetLoader, AssetServer, Handle},
     ecs::system::Res,
-    render::texture::Image,
+    gltf::{GltfLoader, GltfLoaderSettings},
+    render::{mesh::Mesh, texture::Image},
 };
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
-    items::{image_loader_settings, CommodityFlag},
+    items::image_loader_settings,
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
-        DirectionSimple, TileRequirement,
+        BuildSlots, DirectionSimple, TileRequirement,
     },
 };
 
@@ -21,19 +22,23 @@ pub fn setup_blueprint_workbench(
 ) {
     let stone_texture: Handle<Image> =
         asset_server.load_with_settings("textures/stone.png", image_loader_settings);
+    let mesh: Handle<Mesh> = asset_server.load("workbench.gltf#Mesh0/Primitive0");
 
     blueprints.0.insert(
         BlueprintType::Workbench,
         Blueprint {
             name: "Workbench".to_string(),
-            slots: vec![
-                BuildSlot {
+            slots: BuildSlots {
+                slot_0: Some(BuildSlot {
                     flags: vec![ItemTag::BasicBuildMaterial],
-                },
-                BuildSlot {
+                }),
+                slot_1: Some(BuildSlot {
                     flags: vec![ItemTag::BasicBuildMaterial],
-                },
-            ],
+                }),
+                slot_2: Some(BuildSlot {
+                    flags: vec![ItemTag::BasicBuildMaterial],
+                }),
+            },
             center: [0, 0, 0],
             tiles: vec![
                 BlueprintTile {
@@ -94,7 +99,7 @@ pub fn setup_blueprint_workbench(
                 },
             ],
             texture: stone_texture.clone(),
-            mesh: asset_server.load("workbench.gltf#Mesh0/Primitive0"),
+            mesh,
         },
     );
 }

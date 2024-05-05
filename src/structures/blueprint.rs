@@ -9,10 +9,7 @@ use bevy::{
     utils::HashMap,
 };
 
-use crate::{
-    colonists::{ItemTag, NavigationFlags},
-    items::CommodityFlag,
-};
+use crate::colonists::{ItemTag, NavigationFlags};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -78,13 +75,20 @@ pub struct BuildSlot {
     pub flags: Vec<ItemTag>,
 }
 
+#[derive(Clone)]
+pub struct BuildSlots {
+    pub slot_0: Option<BuildSlot>,
+    pub slot_1: Option<BuildSlot>,
+    pub slot_2: Option<BuildSlot>,
+}
+
 pub struct Blueprint {
     pub name: String,
     pub center: [u32; 3],
     pub tiles: Vec<BlueprintTile>,
     pub texture: Handle<Image>,
     pub mesh: Handle<Mesh>,
-    pub slots: Vec<BuildSlot>,
+    pub slots: BuildSlots,
 }
 
 #[derive(Resource, Default)]

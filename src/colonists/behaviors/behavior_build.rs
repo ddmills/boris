@@ -92,7 +92,7 @@ pub fn score_build(
             }
 
             if let Ok(slots) = q_slots.get(job_build.structure) {
-                if slots.slots.iter().any(|s| s.is_empty()) {
+                if slots.as_vec().iter().any(|s| s.is_empty()) {
                     continue;
                 }
             };

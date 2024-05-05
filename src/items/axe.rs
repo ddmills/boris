@@ -7,7 +7,7 @@ use bevy::{
     },
     pbr::MaterialMeshBundle,
     prelude::default,
-    render::{color::Color, texture::Image, view::Visibility},
+    render::{texture::Image, view::Visibility},
     transform::components::Transform,
 };
 
@@ -36,9 +36,7 @@ pub fn on_spawn_axe(
         let mesh = asset_server.load("axe.gltf#Mesh0/Primitive0");
         let material = materials.add(BasicMaterial {
             texture: Some(stone_texture.clone()),
-            sunlight: 8,
-            torchlight: 8,
-            color: Color::WHITE,
+            ..Default::default()
         });
 
         cmd.spawn((

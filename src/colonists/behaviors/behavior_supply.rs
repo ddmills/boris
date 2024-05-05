@@ -17,6 +17,7 @@ use crate::{
         TaskJobAssign, TaskJobComplete, TaskJobUnassign, TaskLookAt, TaskMoveTo, TaskSupply,
     },
     common::Distance,
+    rendering::SlotIndex,
     Position, Terrain,
 };
 
@@ -24,7 +25,7 @@ use crate::{
 pub struct ScorerSupply {
     job: Option<Entity>,
     target: Option<Entity>,
-    target_idx: usize,
+    target_idx: Option<SlotIndex>,
     tags: Option<Vec<ItemTag>>,
 }
 
@@ -51,7 +52,7 @@ impl ScorerBuilder for ScorerSupply {
                         BehaviorNode::Task(Arc::new(TaskLookAt)),
                         BehaviorNode::Task(Arc::new(TaskSupply {
                             target: self.target.unwrap(),
-                            target_slot_idx: self.target_idx,
+                            target_slot_idx: self.target_idx.unwrap(),
                         })),
                         BehaviorNode::Task(Arc::new(TaskJobComplete)),
                     ]),
@@ -88,7 +89,7 @@ pub fn score_supply(
 
         let mut best = None;
         let mut best_tags = None;
-        let mut best_idx = 0;
+        let mut best_idx = None;
         let mut best_target = None;
         let mut best_dist = 100000.;
 
@@ -121,7 +122,7 @@ pub fn score_supply(
                 best = Some(e);
                 best_dist = job_distance;
                 best_target = Some(job_supply.target);
-                best_idx = job_supply.slot_target_idx;
+                best_idx = Some(job_supply.slot_target_idx);
                 best_tags = Some(job_supply.flags.clone());
                 if job_distance < 2. {
                     break;

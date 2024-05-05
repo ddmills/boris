@@ -20,10 +20,11 @@ pub fn setup_commodity_wood_birch_log(
         CommodityData {
             name: "Birch log".to_string(),
             texture,
+            texture_idx: 34,
             mesh,
-            color: Color::RED,
+            color: Color::WHITE,
             flags: CommodityFlag::WOOD | CommodityFlag::LOG,
-            tags: vec![ItemTag::Log],
+            tags: vec![ItemTag::Log, ItemTag::BasicBuildMaterial],
         },
     );
 }

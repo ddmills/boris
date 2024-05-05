@@ -13,7 +13,7 @@ use bevy::{
     hierarchy::Children,
     pbr::StandardMaterial,
     prelude::default,
-    render::{color::Color, texture::Image, view::Visibility},
+    render::{texture::Image, view::Visibility},
     scene::SceneBundle,
     transform::components::Transform,
 };
@@ -112,10 +112,9 @@ pub fn setup_colonists(
                 asset_server.load_with_settings("textures/colonist.png", image_loader_settings);
 
             let basic_material = basic_materials.add(BasicMaterial {
-                color: Color::WHITE,
                 texture: Some(texture.clone()),
-                sunlight: 15,
-                torchlight: 15,
+                is_lit: true,
+                ..Default::default()
             });
 
             mesh_cmd.insert(basic_material.clone());

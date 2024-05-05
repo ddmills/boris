@@ -8,7 +8,6 @@ use bevy::{
     pbr::MaterialMeshBundle,
     prelude::default,
     render::{
-        color::Color,
         texture::{
             Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
             ImageSamplerDescriptor,
@@ -53,9 +52,7 @@ pub fn on_spawn_pickaxe(
         let mesh = asset_server.load("pickaxe.gltf#Mesh0/Primitive0");
         let material = materials.add(BasicMaterial {
             texture: Some(stone_texture.clone()),
-            sunlight: 8,
-            torchlight: 8,
-            color: Color::WHITE,
+            ..Default::default()
         });
 
         cmd.spawn((

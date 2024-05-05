@@ -41,7 +41,7 @@ pub fn structure_material_update(
 
             guide_material.color = match structure.is_valid {
                 true => match structure.is_hotspots_valid {
-                    true => Color::rgb_from_array([0.435, 0.656, 0.851]),
+                    true => Color::rgb(0.192, 0.51, 0.90),
                     false => Color::YELLOW,
                 },
                 false => Color::RED,
@@ -52,19 +52,27 @@ pub fn structure_material_update(
             continue;
         };
 
+        if matches!(structure.mode, StructureMode::Built) {
+            material.color = Color::WHITE;
+            material.enable_slots = true;
+            material.is_lit = true;
+            continue;
+        }
+
         // if (matches!(structure.mode, StructureMode::Placing) && structure.is_valid)
         //     || matches!(structure.mode, StructureMode::Built)
         // {
-        //     material.color = Color::WHITE;
+        //     material.color = Color::rgb(0.192, 0.51, 0.90);
         //     continue;
         // }
 
-        // material.color = match structure.is_valid {
-        //     true => match structure.is_hotspots_valid {
-        //         true => Color::rgb_from_array([0.435, 0.656, 0.851]),
-        //         false => Color::YELLOW,
-        //     },
-        //     false => Color::RED,
-        // };
+        material.color = match structure.is_valid {
+            true => match structure.is_hotspots_valid {
+                // true => Color::rgb_from_array([0.435, 0.656, 0.851]),
+                true => Color::rgb(0.192, 0.51, 0.90),
+                false => Color::YELLOW,
+            },
+            false => Color::RED,
+        };
     }
 }

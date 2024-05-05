@@ -9,7 +9,7 @@ use crate::{
     items::image_loader_settings,
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
-        DirectionSimple, TileRequirement,
+        BuildSlots, DirectionSimple, TileRequirement,
     },
 };
 
@@ -23,14 +23,15 @@ pub fn setup_blueprint_ladder(mut blueprints: ResMut<Blueprints>, asset_server: 
         BlueprintType::Ladder,
         Blueprint {
             name: "Ladder".to_string(),
-            slots: vec![
-                BuildSlot {
-                    flags: vec![ItemTag::Log],
-                },
-                BuildSlot {
-                    flags: vec![ItemTag::Log],
-                },
-            ],
+            slots: BuildSlots {
+                slot_0: Some(BuildSlot {
+                    flags: vec![ItemTag::BasicBuildMaterial],
+                }),
+                slot_1: Some(BuildSlot {
+                    flags: vec![ItemTag::BasicBuildMaterial],
+                }),
+                slot_2: None,
+            },
             center: [0, 0, 0],
             tiles: vec![
                 BlueprintTile {

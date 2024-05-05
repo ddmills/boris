@@ -1,5 +1,7 @@
+use std::process::id;
+
 use bevy::{
-    asset::{AssetServer, Assets},
+    asset::{AssetServer, Assets, Handle},
     core::Name,
     ecs::{
         component::Component,
@@ -11,18 +13,20 @@ use bevy::{
     math::{Quat, Vec3},
     pbr::MaterialMeshBundle,
     prelude::default,
-    render::{color::Color, view::Visibility},
+    render::{color::Color, texture::Image, view::Visibility},
     transform::components::Transform,
 };
-use itertools::Itertools;
 
 use crate::{
     colonists::{get_block_flags, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
-    rendering::BasicMaterial,
+    items::image_loader_settings,
+    rendering::{BasicMaterial, SlotIndex},
     Position, StructureTileDetail, Terrain,
 };
 
-use super::{BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, TileRequirement};
+use super::{
+    BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlots, TileRequirement,
+};
 
 #[derive(Debug, Clone, Component)]
 pub struct StructureGuide {
@@ -47,6 +51,7 @@ pub struct StructureTile {
     pub position: [i32; 3],
 }
 
+#[derive(Clone)]
 pub struct PartSlot {
     pub flags: Vec<ItemTag>,
     pub content: Option<Entity>,
@@ -60,7 +65,52 @@ impl PartSlot {
 
 #[derive(Component)]
 pub struct PartSlots {
-    pub slots: Vec<PartSlot>,
+    pub slot_0: Option<PartSlot>,
+    pub slot_1: Option<PartSlot>,
+    pub slot_2: Option<PartSlot>,
+}
+
+impl PartSlots {
+    pub fn from_build_slots(build: &BuildSlots) -> Self {
+        Self {
+            slot_0: build.slot_0.as_ref().map(|x| PartSlot {
+                flags: x.flags.clone(),
+                content: None,
+            }),
+            slot_1: build.slot_1.as_ref().map(|x| PartSlot {
+                flags: x.flags.clone(),
+                content: None,
+            }),
+            slot_2: build.slot_2.as_ref().map(|x| PartSlot {
+                flags: x.flags.clone(),
+                content: None,
+            }),
+        }
+    }
+
+    pub fn as_vec(&self) -> Vec<&PartSlot> {
+        let mut res = vec![];
+
+        if let Some(slot) = self.slot_0.as_ref() {
+            res.push(slot);
+        }
+        if let Some(slot) = self.slot_1.as_ref() {
+            res.push(slot);
+        }
+        if let Some(slot) = self.slot_2.as_ref() {
+            res.push(slot);
+        }
+
+        res
+    }
+
+    pub fn get_mut(&mut self, idx: SlotIndex) -> Option<&mut PartSlot> {
+        match idx {
+            SlotIndex::Slot0 => self.slot_0.as_mut(),
+            SlotIndex::Slot1 => self.slot_1.as_mut(),
+            SlotIndex::Slot2 => self.slot_2.as_mut(),
+        }
+    }
 }
 
 #[derive(Component)]
@@ -106,13 +156,21 @@ pub fn on_spawn_structure(
             println!("Missing blueprint type");
             continue;
         };
+        let terrain_texture: Handle<Image> =
+            asset_server.load_with_settings("textures/comfy.png", image_loader_settings);
 
-        let material = materials.add(BasicMaterial {
-            texture: Some(blueprint.texture.clone()),
-            sunlight: 8,
-            torchlight: 8,
-            color: Color::LIME_GREEN,
-        });
+        let basic_material = BasicMaterial {
+            texture: None,
+            // color: Color::rgb(0.192, 0.51, 0.90),
+            color: Color::WHITE,
+            is_lit: false,
+            enable_vertex_colors: true,
+            enable_slots: false,
+            slots_texture: Some(terrain_texture),
+            ..Default::default()
+        };
+
+        let material = materials.add(basic_material);
 
         let hotspot_mesh_req = asset_server.load("interface.gltf#Mesh0/Primitive0");
         let hotspot_mesh_opt = asset_server.load("interface_opt.gltf#Mesh0/Primitive0");
@@ -201,16 +259,7 @@ pub fn on_spawn_structure(
                 tiles: vec![],
                 mode: StructureMode::Placing,
             },
-            PartSlots {
-                slots: blueprint
-                    .slots
-                    .iter()
-                    .map(|s| PartSlot {
-                        flags: s.flags.clone(),
-                        content: None,
-                    })
-                    .collect_vec(),
-            },
+            PartSlots::from_build_slots(&blueprint.slots),
             Position::default(),
             MaterialMeshBundle {
                 mesh: blueprint.mesh.clone(),

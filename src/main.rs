@@ -1,5 +1,8 @@
-use bevy::pbr::wireframe::WireframePlugin;
+use bevy::gltf::GltfPlugin;
 use bevy::prelude::*;
+use bevy::render::mesh::MeshVertexAttribute;
+use bevy::utils::hashbrown::HashMap;
+use bevy::{gltf::GltfLoader, pbr::wireframe::WireframePlugin};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_obj::ObjPlugin;
 use colonists::{
@@ -28,6 +31,7 @@ use items::{
 };
 use rendering::{
     update_basic_material_children_lighting, update_basic_material_lighting, BasicMaterial,
+    ATTRIBUTE_SLOTS,
 };
 use structures::{
     check_structures, on_build_structure, on_remove_structure, on_spawn_structure,
@@ -55,7 +59,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Terrain::new(2, 3, 2, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Blueprints::default())
@@ -106,7 +110,11 @@ fn main() {
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
-        .add_plugins((DefaultPlugins, ObjPlugin))
+        .add_plugins((
+            DefaultPlugins
+                .set(GltfPlugin::default().add_custom_vertex_attribute("SLOT", ATTRIBUTE_SLOTS)),
+            ObjPlugin,
+        ))
         .add_plugins(EguiPlugin)
         // .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
@@ -269,9 +277,8 @@ fn setup(
     let mesh = asset_server.load("cube_offset.gltf#Mesh0/Primitive0");
     let material = materials.add(BasicMaterial {
         color: Color::YELLOW,
-        texture: None,
-        sunlight: 15,
-        torchlight: 15,
+        is_lit: false,
+        ..Default::default()
     });
 
     cmd.spawn((

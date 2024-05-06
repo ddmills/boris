@@ -4,7 +4,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        event::{Event, EventReader},
+        event::{Event, EventReader, EventWriter},
         system::{Commands, Query, Res, ResMut, Resource},
     },
     pbr::MaterialMeshBundle,
@@ -61,12 +61,15 @@ pub struct Commodities(pub HashMap<Commodity, CommodityData>);
 pub struct SpawnCommodityEvent {
     pub commodity: Commodity,
     pub position: [u32; 3],
+    pub slot_entity: Option<Entity>,
+    pub slot_idx: Option<SlotIndex>,
 }
 
 pub fn on_spawn_commodity(
     mut cmd: Commands,
     mut ev_spawn_commodity: EventReader<SpawnCommodityEvent>,
     mut materials: ResMut<Assets<BasicMaterial>>,
+    mut ev_set_slot: EventWriter<SetSlotEvent>,
     commodities: Res<Commodities>,
 ) {
     for ev in ev_spawn_commodity.read() {
@@ -80,7 +83,12 @@ pub fn on_spawn_commodity(
             ..Default::default()
         });
 
-        cmd.spawn((
+        // let entity = ev.entity_id.unwrap_or_else(|| cmd.spawn_empty().id());
+        let entity = cmd.spawn_empty().id();
+
+        let mut ecmd = cmd.entity(entity);
+
+        ecmd.insert((
             Name::new(commodity.name.clone()),
             MaterialMeshBundle {
                 mesh: commodity.mesh.clone(),
@@ -101,6 +109,18 @@ pub fn on_spawn_commodity(
             Faller,
             Position::default(),
         ));
+
+        if let Some(slot_entity) = ev.slot_entity {
+            if let Some(slot_idx) = ev.slot_idx {
+                ev_set_slot.send(SetSlotEvent {
+                    target: slot_entity,
+                    target_slot: slot_idx,
+                    content: entity,
+                });
+            } else {
+                println!("Err: Slot entity provided, but no index provided");
+            }
+        }
     }
 }
 
@@ -163,12 +183,6 @@ pub fn on_set_slot(
             println!("Trying to set slot, no material");
             continue;
         };
-
-        println!(
-            "Setting slot content! {}={}",
-            ev.target_slot.to_idx(),
-            commodity_data.name
-        );
 
         material.with_slot(
             ev.target_slot,

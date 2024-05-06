@@ -51,6 +51,8 @@ pub fn task_mine_block(
                 ev_spawn_commodity.send(SpawnCommodityEvent {
                     commodity: StoneShaleBoulder,
                     position: [x, y, z],
+                    slot_entity: None,
+                    slot_idx: None,
                 });
             }
 

@@ -186,6 +186,8 @@ impl Material for BasicMaterial {
         layout: &MeshVertexBufferLayout,
         key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
+        let fragment = descriptor.fragment.as_mut().unwrap();
+
         let mut vertex_attributes = vec![];
         let mut defs: Vec<ShaderDefVal> = vec![];
 
@@ -213,8 +215,12 @@ impl Material for BasicMaterial {
             vertex_attributes.push(Mesh::ATTRIBUTE_TANGENT.at_shader_location(4));
         }
 
-        if layout.contains(Mesh::ATTRIBUTE_COLOR) {
+        if key.bind_group_data.enable_vertex_colors && layout.contains(Mesh::ATTRIBUTE_COLOR) {
             vertex_attributes.push(Mesh::ATTRIBUTE_COLOR.at_shader_location(5));
+        } else {
+            let def: ShaderDefVal = "VERTEX_COLORS".into();
+            descriptor.vertex.shader_defs.retain(|x| *x != def);
+            fragment.shader_defs.retain(|x| *x != def);
         }
 
         if layout.contains(Mesh::ATTRIBUTE_JOINT_INDEX)
@@ -231,8 +237,6 @@ impl Material for BasicMaterial {
 
         let vertex_buffer_layout = layout.get_layout(&vertex_attributes)?;
         descriptor.vertex.buffers = vec![vertex_buffer_layout];
-
-        let fragment = descriptor.fragment.as_mut().unwrap();
 
         for def in defs {
             descriptor.vertex.shader_defs.push(def.clone());

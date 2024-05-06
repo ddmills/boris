@@ -76,6 +76,8 @@ pub fn task_chop_tree(
                     ev_spawn_commodity.send(SpawnCommodityEvent {
                         commodity: WoodBirchLog,
                         position: *part,
+                        slot_entity: None,
+                        slot_idx: None,
                     });
                 }
             }

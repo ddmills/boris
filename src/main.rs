@@ -61,7 +61,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(2, 3, 2, 16))
+        .insert_resource(Terrain::new(4, 3, 4, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Blueprints::default())

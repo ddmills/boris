@@ -116,6 +116,7 @@ pub fn on_set_slot(
     mut basic_materials: ResMut<Assets<BasicMaterial>>,
     mut ev_set_slot: EventReader<SetSlotEvent>,
     mut q_structures: Query<(&mut PartSlots, &Handle<BasicMaterial>)>,
+    mut q_items: Query<&mut Item>,
     q_commodities: Query<&Commodity>,
     commodities: Res<Commodities>,
 ) {
@@ -144,15 +145,22 @@ pub fn on_set_slot(
             slot_idx: ev.target_slot,
         });
 
+        if let Ok(mut item) = q_items.get_mut(ev.content) {
+            item.reserved = None;
+        };
+
         let Ok(commodity_type) = q_commodities.get(ev.content) else {
+            println!("Trying to set slot, no commodity_type");
             continue;
         };
 
         let Some(commodity_data) = commodities.0.get(commodity_type) else {
+            println!("Trying to set slot, no commodity_data");
             continue;
         };
 
         let Some(material) = basic_materials.get_mut(mat_handle) else {
+            println!("Trying to set slot, no material");
             continue;
         };
 

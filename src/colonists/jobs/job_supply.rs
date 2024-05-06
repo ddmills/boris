@@ -1,13 +1,14 @@
 use bevy::ecs::{
     component::Component,
     entity::Entity,
-    event::{Event, EventReader},
-    system::Commands,
+    event::{Event, EventReader, EventWriter},
+    query::Without,
+    system::{Commands, Query},
 };
 
-use crate::{colonists::ItemTag, rendering::SlotIndex};
+use crate::{colonists::ItemTag, rendering::SlotIndex, structures::PartSlots};
 
-use super::{Job, JobLocation};
+use super::{IsJobCancelled, Job, JobCancelEvent, JobLocation};
 
 #[derive(Event)]
 pub struct SpawnJobSupplyEvent {
@@ -47,5 +48,18 @@ pub fn on_spawn_job_supply(
                 source: None,
             },
         ));
+    }
+}
+
+pub fn check_job_supply_valid(
+    q_jobs: Query<(Entity, &JobSupply), Without<IsJobCancelled>>,
+    q_targets: Query<&PartSlots>,
+    mut ev_job_cancel: EventWriter<JobCancelEvent>,
+) {
+    for (entity, job_supply) in q_jobs.iter() {
+        let Ok(_) = q_targets.get(job_supply.target) else {
+            ev_job_cancel.send(JobCancelEvent(entity));
+            continue;
+        };
     }
 }

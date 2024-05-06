@@ -105,8 +105,10 @@ pub fn on_cancel_job(
     mut q_jobs: Query<&mut Job>,
 ) {
     for JobCancelEvent(entity) in ev_job_cancel.read() {
+        println!("cancel job {}", entity.index());
+
         let Ok(mut job) = q_jobs.get_mut(*entity) else {
-            println!("ERR: job does not exist!?");
+            println!("ERR: job does not exist!? {}", entity.index());
             continue;
         };
 
@@ -124,17 +126,28 @@ pub fn on_cancel_job(
 }
 
 pub fn job_access_points_many(targets: &[[u32; 3]], job: JobType) -> Vec<[u32; 3]> {
-    targets
-        .iter()
-        .flat_map(|t| job_access_points(*t, job))
-        .collect::<Vec<_>>()
+    let points = targets.iter().flat_map(|t| job_access_points(*t, job));
+
+    if matches!(
+        job,
+        JobType::Build | JobType::PlaceBlock(_) | JobType::Supply
+    ) {
+        return points
+            .filter(|p| {
+                !targets
+                    .iter()
+                    .any(|t| t[0] == p[0] && t[1] == p[1] && t[2] == p[2])
+            })
+            .collect::<Vec<_>>();
+    }
+
+    points.collect::<Vec<_>>()
 }
 
 pub fn job_access_points(pos: [u32; 3], job: JobType) -> Vec<[u32; 3]> {
     let [x, y, z] = pos;
 
     match job {
-        JobType::Supply => vec![pos],
         JobType::Chop => {
             let mut goals = vec![[x + 1, y, z], [x, y, z + 1], [x + 1, y, z + 1]];
 
@@ -199,7 +212,7 @@ pub fn job_access_points(pos: [u32; 3], job: JobType) -> Vec<[u32; 3]> {
 
             goals
         }
-        JobType::PlaceBlock(_) | JobType::Build => {
+        JobType::PlaceBlock(_) | JobType::Build | JobType::Supply => {
             let mut goals = vec![
                 [x + 1, y, z],
                 [x + 1, y + 1, z],

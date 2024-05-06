@@ -29,6 +29,7 @@ pub struct Blackboard {
     pub item: Option<Entity>,
     pub path: Option<Path>,
     pub target_block: Option<[u32; 3]>,
+    pub job_invalid: bool,
 }
 
 pub fn behavior_pick_system(

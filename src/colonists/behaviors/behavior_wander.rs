@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use bevy::ecs::{
     component::Component,
-    query::With,
+    query::{With, Without},
     system::{EntityCommands, Query},
 };
 
 use crate::colonists::{
-    Behavior, BehaviorNode, Score, ScorerBuilder, TaskIdle, TaskMoveTo, TaskPickRandomSpot,
+    Actor, ActorRef, Behavior, BehaviorNode, HasBehavior, Score, ScorerBuilder, TaskIdle,
+    TaskMoveTo, TaskPickRandomSpot,
 };
 
 #[derive(Component, Clone)]
@@ -29,7 +30,7 @@ impl ScorerBuilder for ScorerWander {
                 BehaviorNode::Task(Arc::new(TaskPickRandomSpot)),
                 BehaviorNode::Task(Arc::new(TaskMoveTo::default())),
                 BehaviorNode::Task(Arc::new(TaskIdle {
-                    duration_s: 1.,
+                    duration_s: 0.5,
                     progress: 0.,
                 })),
             ]),
@@ -37,8 +38,15 @@ impl ScorerBuilder for ScorerWander {
     }
 }
 
-pub fn score_wander(mut q_behaviors: Query<&mut Score, With<ScorerWander>>) {
-    for mut score in q_behaviors.iter_mut() {
-        *score = Score(0.1);
+pub fn score_wander(
+    q_actors: Query<&Actor, Without<HasBehavior>>,
+    mut q_behaviors: Query<(&ActorRef, &mut Score), With<ScorerWander>>,
+) {
+    for (ActorRef(actor), mut score) in q_behaviors.iter_mut() {
+        if q_actors.contains(*actor) {
+            *score = Score(0.1);
+            continue;
+        }
+        *score = Score(0.);
     }
 }

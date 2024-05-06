@@ -1,6 +1,6 @@
 {
 	"asset":{
-		"generator":"Khronos glTF Blender I/O v3.6.28",
+		"generator":"Khronos glTF Blender I/O v4.1.63",
 		"version":"2.0"
 	},
 	"scene":0,
@@ -23,35 +23,19 @@
 			]
 		}
 	],
-	"materials":[
-		{
-			"doubleSided":true,
-			"name":"Material",
-			"pbrMetallicRoughness":{
-				"baseColorFactor":[
-					0.800000011920929,
-					0.800000011920929,
-					0.800000011920929,
-					1
-				],
-				"metallicFactor":0,
-				"roughnessFactor":0.5
-			}
-		}
-	],
 	"meshes":[
 		{
 			"name":"Workbench.010",
 			"primitives":[
 				{
 					"attributes":{
-						"COLOR_0":0,
+						"_SLOT":0,
 						"POSITION":1,
 						"NORMAL":2,
-						"TEXCOORD_0":3
+						"TEXCOORD_0":3,
+						"COLOR_0":4
 					},
-					"indices":4,
-					"material":0
+					"indices":5
 				}
 			]
 		}
@@ -59,9 +43,8 @@
 	"accessors":[
 		{
 			"bufferView":0,
-			"componentType":5123,
+			"componentType":5126,
 			"count":24,
-			"normalized":true,
 			"type":"VEC4"
 		},
 		{
@@ -94,6 +77,12 @@
 		},
 		{
 			"bufferView":4,
+			"componentType":5126,
+			"count":24,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":5,
 			"componentType":5123,
 			"count":36,
 			"type":"SCALAR"
@@ -102,39 +91,45 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":192,
+			"byteLength":384,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":288,
-			"byteOffset":192,
+			"byteOffset":384,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":288,
-			"byteOffset":480,
+			"byteOffset":672,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":192,
-			"byteOffset":768,
+			"byteOffset":960,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":288,
+			"byteOffset":1152,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":72,
-			"byteOffset":960,
+			"byteOffset":1440,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":1032,
-			"uri":"data:application/octet-stream;base64,FCsUKxQr//8UKxQrFCv//xQrFCsUK///////////////////////////////////FCsUKxQr//8UKxQrFCv//xQrFCsUK///////////////////////////////////FCsUKxQr//8UKxQrFCv//xQrFCsUK///////////////////////////////////FCsUKxQr//8UKxQrFCv//xQrFCsUK///////////////////////////////////tod0PZiZmT4EAAC/tod0PZiZmT4EAAC/tod0PZiZmT4EAAC/tod0PbFHIT/sepS+tod0PbFHIT/sepS+tod0PbFHIT/sepS+tod0vZiZmT4EAAC/tod0vZiZmT4EAAC/tod0vZiZmT4EAAC/tod0vbFHIT/sepS+tod0vbFHIT/sepS+tod0vbFHIT/sepS+tod0PUjh+j4CAAC/tod0PUjh+j4CAAC/tod0PUjh+j4CAAC/tod0PbFHIT+J69G+tod0PbFHIT+J69G+tod0PbFHIT+J69G+tod0vUjh+j4CAAC/tod0vUjh+j4CAAC/tod0vUjh+j4CAAC/tod0vbFHIT+J69G+tod0vbFHIT+J69G+tod0vbFHIT+J69G+AAAAAKxwCb8z+lc/AAAAAAAAAAAAAIC/AACAPwAAAAAAAACAAAAAAKxwCb8z+lc/AAAAAAAAgD8AAACAAACAPwAAAAAAAACAAACAvwAAAAAAAACAAAAAAKxwCb8z+lc/AAAAAAAAAAAAAIC/AACAvwAAAAAAAACAAAAAAKxwCb8z+lc/AAAAAAAAgD8AAACAAAAAAAAAAAAAAIC/AAAAAGpwCj+fVle/AACAPwAAAAAAAACAAAAAAGpwCj+fVle/AAAAAAAAgD8AAACAAACAPwAAAAAAAACAAACAvwAAAAAAAACAAAAAAAAAAAAAAIC/AAAAAGpwCj+fVle/AACAvwAAAAAAAACAAAAAAGpwCj+fVle/AAAAAAAAgD8AAACABwCAP0pVvT5dVeU/KFX1PQEAAEBKVb0+BwCAPwIAHUABAABAAgAdQAEAAEACAB1ABQDgP0pVvT4HAJA/SlW9Pl1V5T8Arqq7BQDgPwIAHUAHAJA/AgAdQAUA4D8CAB1AX1XVPyhV9T0HAKA/SlW9PgIA8D9KVb0+BwCgPwIAHUACAPA/AgAdQAIA8D8CAB1AAgDwP0pVvT5fVdU/AK6quwcAkD9KVb0+AgDwPwIAHUAHAJA/AgAdQAcAkD8CAB1AAAADAAoAAAAKAAcABgAJABUABgAVABIAFAAWAA8AFAAPAA0ADgARAAUADgAFAAIACAATAAwACAAMAAEABAAQABcABAAXAAsA"
+			"byteLength":1512,
+			"uri":"torch_wall.bin"
 		}
 	]
 }

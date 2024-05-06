@@ -4,7 +4,7 @@ use bevy::{
         query::Changed,
         system::{Query, Res, ResMut},
     },
-    pbr::{Material, MaterialPipeline, MaterialPipelineKey},
+    pbr::{AlphaMode, Material, MaterialPipeline, MaterialPipelineKey},
     reflect::TypePath,
     render::{
         color::Color,
@@ -141,8 +141,26 @@ impl BasicMaterial {
                 self.slot_2_color = slot_color;
             }
         };
+    }
 
-        println!("slot_indexes={}", self.slot_indexes);
+    pub fn remove_slot(&mut self, idx: SlotIndex) {
+        match idx {
+            SlotIndex::Slot0 => {
+                let texture_idx = self.slot_indexes & 255;
+                self.slot_indexes &= !(texture_idx & 255);
+                self.slot_0_color = Color::WHITE;
+            }
+            SlotIndex::Slot1 => {
+                let texture_idx = (self.slot_indexes >> 8) & 255;
+                self.slot_indexes &= !(texture_idx & 255);
+                self.slot_1_color = Color::WHITE;
+            }
+            SlotIndex::Slot2 => {
+                let texture_idx = (self.slot_indexes >> 16) & 255;
+                self.slot_indexes &= !(texture_idx & 255);
+                self.slot_2_color = Color::WHITE;
+            }
+        };
     }
 }
 
@@ -158,6 +176,10 @@ impl Material for BasicMaterial {
         "shaders/basic.wgsl".into()
     }
 
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Opaque
+    }
+
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
@@ -165,8 +187,6 @@ impl Material for BasicMaterial {
         key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         let mut vertex_attributes = vec![];
-        let fragment = descriptor.fragment.as_mut().unwrap();
-
         let mut defs: Vec<ShaderDefVal> = vec![];
 
         if key.bind_group_data.is_lit {
@@ -177,28 +197,48 @@ impl Material for BasicMaterial {
             vertex_attributes.push(Mesh::ATTRIBUTE_POSITION.at_shader_location(0));
         }
 
-        if key.bind_group_data.enable_vertex_colors && layout.contains(Mesh::ATTRIBUTE_COLOR) {
-            defs.push("VERTEX_COLORS".into());
-            vertex_attributes.push(Mesh::ATTRIBUTE_COLOR.at_shader_location(5));
+        if layout.contains(Mesh::ATTRIBUTE_NORMAL) {
+            vertex_attributes.push(Mesh::ATTRIBUTE_NORMAL.at_shader_location(1));
         }
 
         if layout.contains(Mesh::ATTRIBUTE_UV_0) {
-            defs.push("VERTEX_UVS".into());
             vertex_attributes.push(Mesh::ATTRIBUTE_UV_0.at_shader_location(2));
+        }
+
+        if layout.contains(Mesh::ATTRIBUTE_UV_1) {
+            vertex_attributes.push(Mesh::ATTRIBUTE_UV_1.at_shader_location(3));
+        }
+
+        if layout.contains(Mesh::ATTRIBUTE_TANGENT) {
+            vertex_attributes.push(Mesh::ATTRIBUTE_TANGENT.at_shader_location(4));
+        }
+
+        if layout.contains(Mesh::ATTRIBUTE_COLOR) {
+            vertex_attributes.push(Mesh::ATTRIBUTE_COLOR.at_shader_location(5));
+        }
+
+        if layout.contains(Mesh::ATTRIBUTE_JOINT_INDEX)
+            && layout.contains(Mesh::ATTRIBUTE_JOINT_WEIGHT)
+        {
+            vertex_attributes.push(Mesh::ATTRIBUTE_JOINT_INDEX.at_shader_location(6));
+            vertex_attributes.push(Mesh::ATTRIBUTE_JOINT_WEIGHT.at_shader_location(7));
         }
 
         if key.bind_group_data.enable_slots && layout.contains(ATTRIBUTE_SLOTS) {
             defs.push("VERTEX_SLOTS".into());
-            vertex_attributes.push(ATTRIBUTE_SLOTS.at_shader_location(3));
+            vertex_attributes.push(ATTRIBUTE_SLOTS.at_shader_location(8));
         }
 
         let vertex_buffer_layout = layout.get_layout(&vertex_attributes)?;
-
-        fragment.shader_defs = defs.clone();
-
         descriptor.vertex.buffers = vec![vertex_buffer_layout];
-        descriptor.vertex.shader_defs = defs;
-        // ENABLE SKINNING https://github.com/bevyengine/bevy/blob/main/crates/bevy_pbr/src/render/mesh.wgsl#L5
+
+        let fragment = descriptor.fragment.as_mut().unwrap();
+
+        for def in defs {
+            descriptor.vertex.shader_defs.push(def.clone());
+            fragment.shader_defs.push(def);
+        }
+
         Ok(())
     }
 }

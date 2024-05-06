@@ -26,10 +26,10 @@ pub fn task_supply(
     mut cmd: Commands,
     mut q_structures: Query<&mut PartSlots>,
     mut q_actors: Query<&mut Inventory, With<Actor>>,
-    mut q_behavior: Query<(&ActorRef, &mut TaskState, &TaskSupply, &Blackboard)>,
+    mut q_behavior: Query<(&ActorRef, &mut TaskState, &TaskSupply, &mut Blackboard)>,
     mut ev_set_slot: EventWriter<SetSlotEvent>,
 ) {
-    for (ActorRef(actor), mut state, task_supply, blackboard) in q_behavior.iter_mut() {
+    for (ActorRef(actor), mut state, task_supply, mut blackboard) in q_behavior.iter_mut() {
         let Some(item) = blackboard.item else {
             println!("No item assign in blackboard, cannot supply!");
             *state = TaskState::Failed;
@@ -45,6 +45,7 @@ pub fn task_supply(
         let Ok(mut part_slots) = q_structures.get_mut(task_supply.target) else {
             println!("Structure slot does not exist, cannot supply!");
             // todo: maybe add a prop to blackboard to cancel job
+            blackboard.job_invalid = true;
             *state = TaskState::Failed;
             continue;
         };

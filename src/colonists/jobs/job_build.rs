@@ -2,15 +2,16 @@ use bevy::ecs::{
     component::Component,
     entity::Entity,
     event::{Event, EventReader, EventWriter},
+    query::Without,
     system::{Commands, Query},
 };
 
 use crate::{
     rendering::SlotIndex,
-    structures::{PartSlots, Structure},
+    structures::{PartSlots, Structure, TileRequirement},
 };
 
-use super::{Job, JobLocation, SpawnJobSupplyEvent};
+use super::{IsJobCancelled, Job, JobCancelEvent, JobLocation, SpawnJobSupplyEvent};
 
 #[derive(Event)]
 pub struct SpawnJobBuildEvent {
@@ -37,12 +38,16 @@ pub fn on_spawn_job_build(
         let targets = structure
             .tiles
             .iter()
-            .map(|t| {
-                [
-                    t.position[0] as u32,
-                    t.position[1] as u32,
-                    t.position[2] as u32,
-                ]
+            .filter_map(|t| {
+                if t.is_blocker || t.requirements.contains(TileRequirement::IS_ATTACHABLE) {
+                    Some([
+                        t.position[0] as u32,
+                        t.position[1] as u32,
+                        t.position[2] as u32,
+                    ])
+                } else {
+                    None
+                }
             })
             .collect::<Vec<_>>();
 
@@ -91,5 +96,18 @@ pub fn on_spawn_job_build(
                 source: None,
             },
         ));
+    }
+}
+
+pub fn check_job_build_valid(
+    q_jobs: Query<(Entity, &JobBuild), Without<IsJobCancelled>>,
+    q_targets: Query<&Structure>,
+    mut ev_job_cancel: EventWriter<JobCancelEvent>,
+) {
+    for (entity, job_build) in q_jobs.iter() {
+        let Ok(_) = q_targets.get(job_build.structure) else {
+            ev_job_cancel.send(JobCancelEvent(entity));
+            continue;
+        };
     }
 }

@@ -18,7 +18,7 @@ use bevy::{
 };
 
 use crate::{
-    colonists::{get_block_flags, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
+    colonists::{get_block_flags, InSlot, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
     items::image_loader_settings,
     rendering::{BasicMaterial, SlotIndex},
     Position, StructureTileDetail, Terrain,
@@ -53,6 +53,7 @@ pub struct StructureTile {
 
 #[derive(Clone)]
 pub struct PartSlot {
+    pub idx: SlotIndex,
     pub flags: Vec<ItemTag>,
     pub content: Option<Entity>,
 }
@@ -74,14 +75,17 @@ impl PartSlots {
     pub fn from_build_slots(build: &BuildSlots) -> Self {
         Self {
             slot_0: build.slot_0.as_ref().map(|x| PartSlot {
+                idx: SlotIndex::Slot0,
                 flags: x.flags.clone(),
                 content: None,
             }),
             slot_1: build.slot_1.as_ref().map(|x| PartSlot {
+                idx: SlotIndex::Slot1,
                 flags: x.flags.clone(),
                 content: None,
             }),
             slot_2: build.slot_2.as_ref().map(|x| PartSlot {
+                idx: SlotIndex::Slot2,
                 flags: x.flags.clone(),
                 content: None,
             }),
@@ -125,6 +129,12 @@ pub struct Structure {
     pub position: [u32; 3],
     pub rotation: u8,
     pub is_flipped: bool,
+}
+
+impl Structure {
+    pub fn is_built(&self) -> bool {
+        matches!(self.mode, StructureMode::Built)
+    }
 }
 
 #[derive(Event)]
@@ -325,15 +335,18 @@ pub fn on_build_structure(
 pub fn on_remove_structure(
     mut cmd: Commands,
     mut terrain: ResMut<Terrain>,
-    q_structures: Query<&Structure>,
+    q_structures: Query<(&Structure, &PartSlots, &Handle<BasicMaterial>, &Position)>,
     mut ev_remove_structure: EventReader<RemoveStructureEvent>,
     q_jobs: Query<(Entity, &JobBuild)>,
+    mut basic_materials: ResMut<Assets<BasicMaterial>>,
     mut ev_job_cancel: EventWriter<JobCancelEvent>,
+    mut q_transforms: Query<&mut Transform>,
 ) {
     for ev in ev_remove_structure.read() {
         cmd.entity(ev.entity).despawn_recursive();
 
-        let Ok(structure) = q_structures.get(ev.entity) else {
+        let Ok((structure, slots, mat_handle, position)) = q_structures.get(ev.entity) else {
+            println!("Cannot remove structure, doesn't exist?");
             continue;
         };
 
@@ -341,6 +354,7 @@ pub fn on_remove_structure(
             let [x, y, z] = tile.position;
             let [chunk_idx, block_idx] = terrain.get_block_indexes(x as u32, y as u32, z as u32);
             terrain.remove_structure(chunk_idx, block_idx, &ev.entity);
+            terrain.set_chunk_nav_dirty(chunk_idx, true);
         }
 
         if matches!(structure.mode, StructureMode::Placed) {
@@ -351,6 +365,26 @@ pub fn on_remove_structure(
                     break;
                 }
             }
+        }
+
+        for slot in slots.as_vec() {
+            let Some(content) = slot.content else {
+                continue;
+            };
+
+            let mut ecmd = cmd.entity(content);
+            ecmd.insert(Visibility::Inherited);
+            ecmd.remove::<InSlot>();
+
+            if let Ok(mut transform) = q_transforms.get_mut(content) {
+                transform.translation.x = position.x as f32 + 0.5;
+                transform.translation.y = position.y as f32;
+                transform.translation.z = position.z as f32 + 0.5;
+            }
+
+            if let Some(material) = basic_materials.get_mut(mat_handle) {
+                material.remove_slot(slot.idx);
+            };
         }
     }
 }
@@ -456,7 +490,8 @@ pub fn check_structures(
                     }
                 }
 
-                let tile_is_valid = is_structure_tile_valid(tile, pos_i32, &terrain);
+                let tile_is_valid =
+                    is_structure_tile_valid(tile, pos_i32, &terrain, structure.is_built());
                 if !tile_is_valid {
                     structure.is_valid = false;
                     guide_is_valid = false;
@@ -488,7 +523,6 @@ pub fn check_structures(
         if matches!(structure.mode, StructureMode::Built | StructureMode::Placed)
             && !structure.is_valid
         {
-            println!("invalid!");
             ev_remove_structure.send(RemoveStructureEvent { entity });
         }
 
@@ -507,7 +541,7 @@ pub fn check_structures(
                 block_idx,
                 entity,
                 StructureTileDetail {
-                    is_built: matches!(structure.mode, StructureMode::Built),
+                    is_built: structure.is_built(),
                     flags,
                     is_blocker: tile.is_blocker,
                     is_occupied: tile.is_occupied,
@@ -535,7 +569,12 @@ fn apply_transforms(center: [i32; 3], point: [i32; 3], r: u8, f: bool) -> [i32; 
     }
 }
 
-fn is_structure_tile_valid(tile: &BlueprintTile, pos: [i32; 3], terrain: &Terrain) -> bool {
+fn is_structure_tile_valid(
+    tile: &BlueprintTile,
+    pos: [i32; 3],
+    terrain: &Terrain,
+    is_built: bool,
+) -> bool {
     let block = terrain.get_block_i32(pos[0], pos[1], pos[2]);
 
     if block.is_oob() {
@@ -554,7 +593,15 @@ fn is_structure_tile_valid(tile: &BlueprintTile, pos: [i32; 3], terrain: &Terrai
             let structures = terrain.get_structures(chunk_idx, block_idx);
 
             if tile.is_blocker || tile.is_occupied {
-                !structures.values().any(|v| v.is_blocker || v.is_occupied)
+                !structures.values().any(|v| {
+                    if is_built {
+                        v.is_built && (v.is_blocker || v.is_occupied)
+                    } else {
+                        v.is_blocker || v.is_occupied
+                    }
+                })
+            } else if is_built {
+                !structures.values().any(|v| v.is_blocker && v.is_built)
             } else {
                 !structures.values().any(|v| v.is_blocker)
             }

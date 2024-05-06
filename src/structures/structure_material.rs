@@ -10,6 +10,10 @@ use crate::rendering::BasicMaterial;
 
 use super::{Structure, StructureGuide, StructureMode};
 
+pub const BLUEPRINT_COLOR_VALID: Color = Color::rgb(0.192, 0.51, 0.90);
+pub const BLUEPRINT_COLOR_HOTSPOTS_INVALID: Color = Color::rgb(0.9, 0.9, 0.1);
+pub const BLUEPRINT_COLOR_INVALID: Color = Color::rgb(0.9, 0.1, 0.1);
+
 pub fn structure_material_update(
     mut cmd: Commands,
     q_structures: Query<(&Structure, &Handle<BasicMaterial>)>,
@@ -41,10 +45,10 @@ pub fn structure_material_update(
 
             guide_material.color = match structure.is_valid {
                 true => match structure.is_hotspots_valid {
-                    true => Color::rgb(0.192, 0.51, 0.90),
-                    false => Color::YELLOW,
+                    true => BLUEPRINT_COLOR_VALID,
+                    false => BLUEPRINT_COLOR_HOTSPOTS_INVALID,
                 },
-                false => Color::RED,
+                false => BLUEPRINT_COLOR_INVALID,
             };
         }
 
@@ -52,27 +56,20 @@ pub fn structure_material_update(
             continue;
         };
 
-        if matches!(structure.mode, StructureMode::Built) {
+        if structure.is_built() {
             material.color = Color::WHITE;
             material.enable_slots = true;
             material.is_lit = true;
             continue;
         }
 
-        // if (matches!(structure.mode, StructureMode::Placing) && structure.is_valid)
-        //     || matches!(structure.mode, StructureMode::Built)
-        // {
-        //     material.color = Color::rgb(0.192, 0.51, 0.90);
-        //     continue;
-        // }
-
         material.color = match structure.is_valid {
             true => match structure.is_hotspots_valid {
                 // true => Color::rgb_from_array([0.435, 0.656, 0.851]),
-                true => Color::rgb(0.192, 0.51, 0.90),
-                false => Color::YELLOW,
+                true => BLUEPRINT_COLOR_VALID,
+                false => BLUEPRINT_COLOR_HOTSPOTS_INVALID,
             },
-            false => Color::RED,
+            false => BLUEPRINT_COLOR_INVALID,
         };
     }
 }

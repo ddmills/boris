@@ -45,7 +45,6 @@ impl ScorerBuilder for ScorerSupply {
                 Box::new(BehaviorNode::Sequence(vec![
                     BehaviorNode::Task(Arc::new(TaskJobAssign(self.job.unwrap()))),
                     tree_aquire_item(self.tags.clone().unwrap()),
-                    // BehaviorNode::Task(Arc::new(TaskItemEquip)),
                     BehaviorNode::Sequence(vec![
                         BehaviorNode::Task(Arc::new(TaskGetJobLocation)),
                         BehaviorNode::Task(Arc::new(TaskMoveTo::default())),

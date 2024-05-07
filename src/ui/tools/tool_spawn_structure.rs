@@ -1,3 +1,5 @@
+use std::default;
+
 use bevy::{
     ecs::{
         entity::Entity,
@@ -14,9 +16,20 @@ use crate::{
     ui::{Tool, Toolbar},
 };
 
-#[derive(Default)]
 pub struct StructurePlacementState {
     structure: Option<Entity>,
+    rotation: u8,
+    is_flipped: bool,
+}
+
+impl Default for StructurePlacementState {
+    fn default() -> Self {
+        Self {
+            structure: None,
+            rotation: 0,
+            is_flipped: true,
+        }
+    }
 }
 
 pub fn tool_spawn_structure(
@@ -73,15 +86,18 @@ pub fn tool_spawn_structure(
     }
 
     if key_input.just_released(KeyCode::KeyR) {
-        structure.rotation += 1;
-        if structure.rotation > 3 {
-            structure.rotation = 0;
+        state.rotation += 1;
+        if state.rotation > 3 {
+            state.rotation = 0;
         };
     }
 
     if key_input.just_released(KeyCode::KeyF) {
-        structure.is_flipped = !structure.is_flipped;
+        state.is_flipped = !state.is_flipped;
     }
+
+    structure.is_flipped = state.is_flipped;
+    structure.rotation = state.rotation;
 
     if !raycast.is_adj_hit {
         structure.is_valid = false;

@@ -171,7 +171,6 @@ pub fn on_spawn_structure(
 
         let basic_material = BasicMaterial {
             texture: None,
-            // color: Color::rgb(0.192, 0.51, 0.90),
             color: Color::WHITE,
             is_lit: false,
             enable_vertex_colors: true,

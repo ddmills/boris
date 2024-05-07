@@ -4,7 +4,7 @@ use bevy::{
         query::Changed,
         system::{Query, Res, ResMut},
     },
-    pbr::{AlphaMode, Material, MaterialPipeline, MaterialPipelineKey},
+    pbr::{AlphaMode, Material, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey},
     reflect::TypePath,
     render::{
         color::Color,
@@ -15,6 +15,7 @@ use bevy::{
         },
         texture::Image,
     },
+    scene::ron::de,
 };
 
 use crate::{colonists::ChildMaterials, Position, Terrain};
@@ -176,17 +177,21 @@ impl Material for BasicMaterial {
         "shaders/basic.wgsl".into()
     }
 
-    fn alpha_mode(&self) -> AlphaMode {
-        AlphaMode::Opaque
-    }
-
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
         layout: &MeshVertexBufferLayout,
         key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
-        let fragment = descriptor.fragment.as_mut().unwrap();
+        let label = descriptor.label.clone().unwrap();
+
+        if label == "prepass_pipeline" {
+            return Ok(());
+        }
+
+        let Some(fragment) = descriptor.fragment.as_mut() else {
+            return Ok(());
+        };
 
         let mut vertex_attributes = vec![];
         let mut defs: Vec<ShaderDefVal> = vec![];

@@ -1,4 +1,5 @@
 use bevy::gltf::GltfPlugin;
+use bevy::pbr::NotShadowCaster;
 use bevy::prelude::*;
 use bevy::render::mesh::MeshVertexAttribute;
 use bevy::utils::hashbrown::HashMap;
@@ -24,7 +25,10 @@ use colonists::{
     SpawnJobSupplyEvent, TaskState,
 };
 use common::Rand;
-use controls::{raycast, setup_camera, update_camera, Raycast};
+use controls::{
+    raycast, setup_camera, toggle_prepass_view, update_camera, PrepassDebugText,
+    PrepassOutputMaterial, Raycast, ShowPrepassSettings,
+};
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use items::{
     on_set_slot, on_spawn_axe, on_spawn_commodity, on_spawn_pickaxe,
@@ -129,6 +133,12 @@ fn main() {
             ..default()
         })
         .add_plugins(MaterialPlugin::<BasicMaterial> {
+            prepass_enabled: true,
+            ..default()
+        })
+        .add_plugins(MaterialPlugin::<PrepassOutputMaterial> {
+            // This material only needs to read the prepass textures,
+            // but the meshes using it should not contribute to the prepass render, so we can disable it.
             prepass_enabled: false,
             ..default()
         })
@@ -178,6 +188,7 @@ fn main() {
         .add_systems(Update, partition_debug)
         .add_systems(Update, job_accessibility)
         .add_systems(Update, fatigue_system)
+        .add_systems(Update, toggle_prepass_view)
         .add_systems(Update, destroy_items)
         .add_systems(Update, block_move_system)
         .add_systems(PostUpdate, job_despawn_complete)
@@ -251,6 +262,7 @@ fn main() {
             PostUpdate,
             (chunk_meshing, partition, update_positions).chain(),
         )
+        .insert_resource(Msaa::Off)
         .run();
 }
 

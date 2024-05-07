@@ -1,10 +1,14 @@
 use bevy::{
+    core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass},
     input::mouse::{MouseMotion, MouseWheel},
+    pbr::NotShadowCaster,
     prelude::*,
     window::PrimaryWindow,
 };
 
 use crate::TerrainSlice;
+
+use super::{PrepassDebugText, PrepassOutputMaterial, ShowPrepassSettings};
 
 #[derive(Component)]
 pub struct MainCamera {
@@ -132,24 +136,69 @@ fn get_primary_window_size(window: &Window) -> Vec2 {
 }
 
 /// Spawn a camera like this
-pub fn setup_camera(mut cmd: Commands) {
+pub fn setup_camera(
+    mut cmd: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut std_materials: ResMut<Assets<StandardMaterial>>,
+    mut depth_materials: ResMut<Assets<PrepassOutputMaterial>>,
+) {
     let translation = Vec3::new(0., 64., 0.);
     let radius = translation.length();
     let focus = Vec3::new(32., 50., 32.);
 
-    cmd.spawn((
-        Camera3dBundle {
-            transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
-            projection: Projection::Perspective(PerspectiveProjection {
-                fov: std::f32::consts::PI / 5.0,
+    let camera = cmd
+        .spawn((
+            Camera3dBundle {
+                transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
+                projection: Projection::Perspective(PerspectiveProjection {
+                    fov: std::f32::consts::PI / 5.0,
+                    ..Default::default()
+                }),
                 ..Default::default()
-            }),
-            ..Default::default()
-        },
-        MainCamera {
-            radius,
-            focus,
-            ..Default::default()
-        },
+            },
+            DepthPrepass,
+            NormalPrepass,
+            MotionVectorPrepass,
+            MainCamera {
+                radius,
+                focus,
+                ..Default::default()
+            },
+        ))
+        .id();
+
+    let style = TextStyle {
+        font_size: 18.0,
+        ..default()
+    };
+
+    cmd.spawn((
+        TextBundle::from_sections(vec![TextSection::new(
+            "Prepass Output: transparent\n",
+            style.clone(),
+        )])
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(30.0),
+            left: Val::Px(10.0),
+            ..default()
+        }),
+        PrepassDebugText,
     ));
+
+    let overlay = cmd
+        .spawn((
+            MaterialMeshBundle {
+                mesh: meshes.add(Rectangle::new(20.0, 20.0)),
+                material: depth_materials.add(PrepassOutputMaterial {
+                    settings: ShowPrepassSettings::default(),
+                }),
+                transform: Transform::from_xyz(0.0, 0.0, -1.0),
+                ..default()
+            },
+            NotShadowCaster,
+        ))
+        .id();
+
+    cmd.entity(overlay).set_parent(camera);
 }

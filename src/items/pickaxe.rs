@@ -8,6 +8,7 @@ use bevy::{
     pbr::MaterialMeshBundle,
     prelude::default,
     render::{
+        color::Color,
         texture::{
             Image, ImageAddressMode, ImageFilterMode, ImageLoaderSettings, ImageSampler,
             ImageSamplerDescriptor,
@@ -19,10 +20,7 @@ use bevy::{
 
 use crate::{
     colonists::{Faller, Item, ItemTag},
-    rendering::{
-        BasicMaterial,
-        SlotIndex::{self, Slot0},
-    },
+    rendering::{BasicMaterial, SlotIndex},
     structures::{PartSlot, PartSlots},
     Position,
 };
@@ -57,10 +55,13 @@ pub fn on_spawn_pickaxe(
         let terrain_texture: Handle<Image> =
             asset_server.load_with_settings("textures/comfy.png", image_loader_settings);
         let mesh = asset_server.load("pickaxe.gltf#Mesh0/Primitive0");
-        let material = materials.add(BasicMaterial {
+        let bmat = BasicMaterial {
+            color: Color::WHITE,
             slots_texture: Some(terrain_texture),
             ..Default::default()
-        });
+        };
+
+        let material = materials.add(bmat);
 
         let entity = cmd
             .spawn((

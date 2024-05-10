@@ -6,6 +6,7 @@ use bevy::{
     ecs::system::Resource,
     math::Quat,
     render::{mesh::Mesh, texture::Image},
+    scene::Scene,
     utils::HashMap,
 };
 
@@ -68,6 +69,7 @@ pub enum BlueprintType {
     Ladder,
     TorchStanding,
     TorchWall,
+    Door,
 }
 
 #[derive(Clone)]
@@ -86,7 +88,7 @@ pub struct Blueprint {
     pub name: String,
     pub center: [u32; 3],
     pub tiles: Vec<BlueprintTile>,
-    pub texture: Handle<Image>,
+    pub texture: Option<Handle<Image>>,
     pub mesh: Handle<Mesh>,
     pub slots: BuildSlots,
 }

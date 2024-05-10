@@ -11,7 +11,8 @@ bitflags! {
         const LADDER = 2;
         const TALL = 4;
         const CLIMB = 8;
-        const COLONIST = Self::TALL.bits() | Self::LADDER.bits() | Self::CLIMB.bits();
+        const DOOR = 16;
+        const COLONIST = Self::TALL.bits() | Self::DOOR.bits() | Self::LADDER.bits() | Self::CLIMB.bits();
         const CAT = Self::SHORT.bits();
     }
 }

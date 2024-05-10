@@ -1,12 +1,7 @@
-use bevy::{
-    asset::{AssetServer, Handle},
-    ecs::system::Res,
-    render::texture::Image,
-};
+use bevy::{asset::AssetServer, ecs::system::Res};
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
-    items::image_loader_settings,
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
         BuildSlots, DirectionSimple, TileRequirement,
@@ -16,9 +11,6 @@ use crate::{
 use bevy::ecs::system::ResMut;
 
 pub fn setup_blueprint_torches(mut blueprints: ResMut<Blueprints>, asset_server: Res<AssetServer>) {
-    let wood_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/wood.png", image_loader_settings);
-
     blueprints.0.insert(
         BlueprintType::TorchWall,
         Blueprint {
@@ -67,7 +59,7 @@ pub fn setup_blueprint_torches(mut blueprints: ResMut<Blueprints>, asset_server:
                     is_occupied: false,
                 },
             ],
-            texture: wood_texture.clone(),
+            texture: None,
             mesh: asset_server.load("torch_wall.gltf#Mesh0/Primitive0"),
         },
     );
@@ -150,7 +142,7 @@ pub fn setup_blueprint_torches(mut blueprints: ResMut<Blueprints>, asset_server:
                     is_occupied: true,
                 },
             ],
-            texture: wood_texture.clone(),
+            texture: None,
             mesh: asset_server.load("torch_standing.gltf#Mesh0/Primitive0"),
         },
     );

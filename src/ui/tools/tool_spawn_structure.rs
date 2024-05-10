@@ -7,6 +7,7 @@ use bevy::{
         system::{Commands, Local, Query, Res},
     },
     input::{keyboard::KeyCode, mouse::MouseButton, ButtonInput},
+    render::view::Visibility,
 };
 
 use crate::{
@@ -20,6 +21,7 @@ pub struct StructurePlacementState {
     structure: Option<Entity>,
     rotation: u8,
     is_flipped: bool,
+    last_build_pos: [u32; 3],
 }
 
 impl Default for StructurePlacementState {
@@ -28,6 +30,7 @@ impl Default for StructurePlacementState {
             structure: None,
             rotation: 0,
             is_flipped: true,
+            last_build_pos: [0, 0, 0],
         }
     }
 }
@@ -79,6 +82,7 @@ pub fn tool_spawn_structure(
             structure.is_dirty = true;
             ev_spawn_build_job.send(SpawnJobBuildEvent { structure: entity });
             state.structure = None;
+            state.last_build_pos = raycast.adj_pos
         } else {
             println!("invalid placement!");
         }
@@ -102,6 +106,13 @@ pub fn tool_spawn_structure(
     if !raycast.is_adj_hit {
         structure.is_valid = false;
         return;
+    }
+
+    if raycast.adj_pos[0] != state.last_build_pos[0]
+        || raycast.adj_pos[1] != state.last_build_pos[1]
+        || raycast.adj_pos[2] != state.last_build_pos[2]
+    {
+        cmd.entity(entity).insert(Visibility::Inherited);
     }
 
     structure.position = raycast.adj_pos;

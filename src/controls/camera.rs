@@ -1,7 +1,7 @@
 use bevy::{
     core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass},
     input::mouse::{MouseMotion, MouseWheel},
-    pbr::NotShadowCaster,
+    pbr::{NotShadowCaster, ScreenSpaceAmbientOcclusionBundle},
     prelude::*,
     window::PrimaryWindow,
 };
@@ -135,11 +135,9 @@ fn get_primary_window_size(window: &Window) -> Vec2 {
     Vec2::new(window.width(), window.height())
 }
 
-/// Spawn a camera like this
 pub fn setup_camera(
     mut cmd: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut std_materials: ResMut<Assets<StandardMaterial>>,
     mut depth_materials: ResMut<Assets<PrepassOutputMaterial>>,
 ) {
     let translation = Vec3::new(0., 64., 0.);

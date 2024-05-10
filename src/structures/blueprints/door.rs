@@ -1,23 +1,26 @@
-use bevy::{asset::AssetServer, ecs::system::Res};
+use bevy::{
+    asset::AssetServer,
+    ecs::{
+        event::EventReader,
+        system::{Commands, Res},
+    },
+};
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
-        BuildSlots, DirectionSimple, TileRequirement,
+        BuildSlots, BuiltStructureEvent, DirectionSimple, TileRequirement,
     },
 };
 
 use bevy::ecs::system::ResMut;
 
-pub fn setup_blueprint_workbench(
-    mut blueprints: ResMut<Blueprints>,
-    asset_server: Res<AssetServer>,
-) {
+pub fn setup_blueprint_door(mut blueprints: ResMut<Blueprints>, asset_server: Res<AssetServer>) {
     blueprints.0.insert(
-        BlueprintType::Workbench,
+        BlueprintType::Door,
         Blueprint {
-            name: "Workbench".to_string(),
+            name: "Door".to_string(),
             slots: BuildSlots {
                 slot_0: Some(BuildSlot {
                     flags: vec![ItemTag::BasicBuildMaterial],
@@ -25,27 +28,25 @@ pub fn setup_blueprint_workbench(
                 slot_1: Some(BuildSlot {
                     flags: vec![ItemTag::BasicBuildMaterial],
                 }),
-                slot_2: Some(BuildSlot {
-                    flags: vec![ItemTag::BasicBuildMaterial],
-                }),
+                slot_2: None,
             },
             center: [0, 0, 0],
             tiles: vec![
                 BlueprintTile {
                     position: [0, 0, 0],
                     hotspot: None,
-                    requirements: TileRequirement::IS_WALKABLE | TileRequirement::IS_EMPTY,
-                    nav_flags: NavigationFlags::NONE,
+                    requirements: TileRequirement::IS_EMPTY,
+                    nav_flags: NavigationFlags::DOOR,
                     is_blocker: true,
                     is_occupied: true,
                 },
                 BlueprintTile {
-                    position: [1, 0, 0],
+                    position: [0, 1, 0],
                     hotspot: None,
-                    requirements: TileRequirement::IS_WALKABLE | TileRequirement::IS_EMPTY,
+                    requirements: TileRequirement::IS_EMPTY,
                     nav_flags: NavigationFlags::NONE,
-                    is_blocker: true,
-                    is_occupied: true,
+                    is_blocker: false,
+                    is_occupied: false,
                 },
                 BlueprintTile {
                     position: [0, 0, -1],
@@ -60,10 +61,10 @@ pub fn setup_blueprint_workbench(
                     is_occupied: false,
                 },
                 BlueprintTile {
-                    position: [1, 0, -1],
+                    position: [0, 0, 1],
                     hotspot: Some(BlueprintHotspot {
-                        is_optional: false,
-                        direction: DirectionSimple::North,
+                        is_optional: true,
+                        direction: DirectionSimple::South,
                         nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TileRequirement::empty(),
@@ -71,25 +72,30 @@ pub fn setup_blueprint_workbench(
                     is_blocker: false,
                     is_occupied: false,
                 },
-                BlueprintTile {
-                    position: [0, 1, 0],
-                    hotspot: None,
-                    requirements: TileRequirement::IS_EMPTY,
-                    nav_flags: NavigationFlags::NONE,
-                    is_blocker: true,
-                    is_occupied: true,
-                },
-                BlueprintTile {
-                    position: [1, 1, 0],
-                    hotspot: None,
-                    requirements: TileRequirement::IS_EMPTY,
-                    nav_flags: NavigationFlags::NONE,
-                    is_blocker: true,
-                    is_occupied: true,
-                },
             ],
             texture: None,
-            mesh: asset_server.load("workbench.gltf#Mesh0/Primitive0"),
+            mesh: asset_server.load("door.gltf#Mesh0/Primitive0"),
         },
     );
+}
+
+pub fn setup_structure_door(
+    mut cmd: Commands,
+    mut ev_built_structure: EventReader<BuiltStructureEvent>,
+) {
+    for ev in ev_built_structure.read() {
+        if !matches!(ev.blueprint_type, BlueprintType::Door) {
+            continue;
+        }
+
+        println!("Door spawned");
+
+        // let mut ecmd = cmd.entity(ev.entity);
+
+        // ecmd.try_insert(GltfBinding {
+        //     armature_name: "Door_Armature".into(),
+        //     mesh_name: "Door_01".into(),
+        //     texture_path: None,
+        // });
+    }
 }

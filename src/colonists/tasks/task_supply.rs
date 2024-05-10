@@ -8,9 +8,7 @@ use bevy::ecs::{
 use task_derive::TaskBuilder;
 
 use crate::{
-    colonists::{
-        Actor, ActorRef, Blackboard, InInventory, Inventory, JobCancelEvent, TaskBuilder, TaskState,
-    },
+    colonists::{Actor, ActorRef, Blackboard, InInventory, Inventory, TaskBuilder, TaskState},
     items::SetSlotEvent,
     rendering::SlotIndex,
     structures::PartSlots,

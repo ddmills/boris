@@ -40,12 +40,14 @@ pub struct BasicMaterial {
     #[texture(5)]
     #[sampler(6)]
     pub slots_texture: Option<Handle<Image>>,
-
     #[uniform[7]]
-    pub slot_0_color: Color,
+    pub slots_uv_scale: f32,
+
     #[uniform[8]]
-    pub slot_1_color: Color,
+    pub slot_0_color: Color,
     #[uniform[9]]
+    pub slot_1_color: Color,
+    #[uniform[10]]
     pub slot_2_color: Color,
 
     #[uniform[11]]
@@ -67,6 +69,7 @@ impl Default for BasicMaterial {
             slot_0_color: Color::WHITE,
             slot_1_color: Color::WHITE,
             slot_2_color: Color::WHITE,
+            slots_uv_scale: 2.0,
         }
     }
 }
@@ -124,6 +127,7 @@ impl BasicMaterial {
             slot_1_color: Color::WHITE,
             slot_2_color: Color::WHITE,
             slot_indexes: 0,
+            slots_uv_scale: 2.0,
         }
     }
 

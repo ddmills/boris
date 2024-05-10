@@ -1,9 +1,6 @@
 use bevy::gltf::GltfPlugin;
-use bevy::pbr::NotShadowCaster;
+use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
-use bevy::render::mesh::MeshVertexAttribute;
-use bevy::utils::hashbrown::HashMap;
-use bevy::{gltf::GltfLoader, pbr::wireframe::WireframePlugin};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_obj::ObjPlugin;
@@ -13,21 +10,19 @@ use colonists::{
     job_despawn_cancelled, job_despawn_complete, on_cancel_job, on_spawn_colonist,
     on_spawn_job_build, on_spawn_job_chop, on_spawn_job_mine, on_spawn_job_place_block,
     on_spawn_job_supply, partition, partition_debug, score_build, score_chop, score_mine,
-    score_place_block, score_supply, score_wander, setup_colonists, task_animate, task_build,
-    task_check_has_item, task_chop_tree, task_debug, task_find_bed, task_find_nearest_item,
-    task_get_job_location, task_idle, task_is_target_empty, task_item_equip, task_item_pick_up,
-    task_job_assign, task_job_cancel, task_job_complete, task_job_unassign, task_look_at,
-    task_mine_block, task_move_to, task_pick_random_spot, task_place_block, task_sleep,
-    task_supply, ActorRef, Blackboard, ColonistAnimations, DestroyItemEvent, HasBehavior,
-    InInventory, Inventory, Item, ItemTag, JobCancelEvent, NavigationGraph, PartitionDebug,
-    PartitionPathRequest, Path, Score, ScorerPlugin, Scorers, SpawnColonistEvent,
-    SpawnJobBuildEvent, SpawnJobChopEvent, SpawnJobMineEvent, SpawnJobPlaceBlockEvent,
-    SpawnJobSupplyEvent, TaskState,
+    score_place_block, score_supply, score_wander, task_animate, task_build, task_check_has_item,
+    task_chop_tree, task_debug, task_find_bed, task_find_nearest_item, task_get_job_location,
+    task_idle, task_is_target_empty, task_item_equip, task_item_pick_up, task_job_assign,
+    task_job_cancel, task_job_complete, task_job_unassign, task_look_at, task_mine_block,
+    task_move_to, task_pick_random_spot, task_place_block, task_sleep, task_supply, ActorRef,
+    Blackboard, ColonistAnimations, DestroyItemEvent, HasBehavior, InInventory, Inventory, Item,
+    ItemTag, JobCancelEvent, NavigationGraph, PartitionDebug, PartitionPathRequest, Path, Score,
+    ScorerPlugin, Scorers, SpawnColonistEvent, SpawnJobBuildEvent, SpawnJobChopEvent,
+    SpawnJobMineEvent, SpawnJobPlaceBlockEvent, SpawnJobSupplyEvent, TaskState,
 };
 use common::Rand;
 use controls::{
-    raycast, setup_camera, toggle_prepass_view, update_camera, PrepassDebugText,
-    PrepassOutputMaterial, Raycast, ShowPrepassSettings,
+    raycast, setup_camera, toggle_prepass_view, update_camera, PrepassOutputMaterial, Raycast,
 };
 use debug::{debug_settings::DebugSettings, fps::FpsPlugin, pathfinding::path_debug};
 use items::{
@@ -36,14 +31,14 @@ use items::{
     SpawnAxeEvent, SpawnCommodityEvent, SpawnPickaxeEvent,
 };
 use rendering::{
-    update_basic_material_children_lighting, update_basic_material_lighting, BasicMaterial,
-    ATTRIBUTE_SLOTS,
+    setup_gltf_objects, update_basic_material_children_lighting, update_basic_material_lighting,
+    BasicMaterial, ATTRIBUTE_SLOTS,
 };
 use structures::{
     check_structures, on_build_structure, on_remove_structure, on_spawn_structure,
-    setup_blueprint_ladder, setup_blueprint_torches, setup_blueprint_workbench,
-    structure_material_update, Blueprints, BuildStructureEvent, RemoveStructureEvent,
-    SpawnStructureEvent,
+    setup_blueprint_door, setup_blueprint_ladder, setup_blueprint_torches,
+    setup_blueprint_workbench, setup_structure_door, structure_material_update, Blueprints,
+    BuildStructureEvent, BuiltStructureEvent, RemoveStructureEvent, SpawnStructureEvent,
 };
 use terrain::*;
 use ui::{
@@ -65,7 +60,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(4, 3, 4, 16))
+        .insert_resource(Terrain::new(8, 4, 8, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Blueprints::default())
@@ -109,6 +104,7 @@ fn main() {
         .add_event::<SpawnStructureEvent>()
         .add_event::<RemoveStructureEvent>()
         .add_event::<BuildStructureEvent>()
+        .add_event::<BuiltStructureEvent>()
         .add_event::<TerrainSliceChangeEvent>()
         .add_event::<JobCancelEvent>()
         .add_event::<SpawnCommodityEvent>()
@@ -151,6 +147,7 @@ fn main() {
                 setup_blueprint_ladder,
                 setup_blueprint_torches,
                 setup_blueprint_workbench,
+                setup_blueprint_door,
                 setup_commodity_wood_birch_log,
                 setup_commodity_stone_shale_boulder,
                 setup_terrain,
@@ -161,6 +158,7 @@ fn main() {
             )
                 .chain(),
         )
+        .add_systems(Update, setup_structure_door)
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
@@ -255,7 +253,7 @@ fn main() {
         .add_systems(Update, task_is_target_empty)
         .add_systems(Update, task_animate)
         .add_systems(Update, colonist_animations)
-        .add_systems(Update, setup_colonists)
+        .add_systems(Update, setup_gltf_objects)
         .add_systems(Update, update_basic_material_lighting)
         .add_systems(Update, update_basic_material_children_lighting)
         .add_systems(
@@ -269,17 +267,11 @@ fn main() {
 #[derive(Component, Default)]
 struct Cursor {}
 
-#[derive(Resource)]
-struct HumanGltf(Handle<Scene>);
-
 fn setup(
     mut cmd: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<BasicMaterial>>,
 ) {
-    let gltf = asset_server.load("human.gltf#Scene0");
-    cmd.insert_resource(HumanGltf(gltf));
-
     cmd.insert_resource(ColonistAnimations {
         swing_axe: asset_server.load("human.gltf#Animation0"),
         base: asset_server.load("human.gltf#Animation1"),
@@ -290,17 +282,14 @@ fn setup(
         run: asset_server.load("human.gltf#Animation6"),
     });
 
-    let mesh = asset_server.load("cube_offset.gltf#Mesh0/Primitive0");
-    let material = materials.add(BasicMaterial {
-        color: Color::YELLOW,
-        is_lit: false,
-        ..Default::default()
-    });
-
     cmd.spawn((
         MaterialMeshBundle {
-            mesh,
-            material,
+            mesh: asset_server.load("cube_offset.gltf#Mesh0/Primitive0"),
+            material: materials.add(BasicMaterial {
+                color: Color::YELLOW,
+                is_lit: false,
+                ..Default::default()
+            }),
             ..default()
         },
         Cursor::default(),

@@ -16,9 +16,6 @@ use crate::{
 use bevy::ecs::system::ResMut;
 
 pub fn setup_blueprint_ladder(mut blueprints: ResMut<Blueprints>, asset_server: Res<AssetServer>) {
-    let wood_texture: Handle<Image> =
-        asset_server.load_with_settings("textures/wood.png", image_loader_settings);
-
     blueprints.0.insert(
         BlueprintType::Ladder,
         Blueprint {
@@ -42,7 +39,7 @@ pub fn setup_blueprint_ladder(mut blueprints: ResMut<Blueprints>, asset_server: 
                         nav_flag_requirements: NavigationFlags::TALL,
                     }),
                     requirements: TileRequirement::IS_EMPTY,
-                    nav_flags: NavigationFlags::LADDER,
+                    nav_flags: NavigationFlags::DOOR,
                     is_blocker: false,
                     is_occupied: true,
                 },
@@ -50,7 +47,7 @@ pub fn setup_blueprint_ladder(mut blueprints: ResMut<Blueprints>, asset_server: 
                     position: [0, 1, 0],
                     hotspot: None,
                     requirements: TileRequirement::empty(),
-                    nav_flags: NavigationFlags::LADDER,
+                    nav_flags: NavigationFlags::NONE,
                     is_blocker: false,
                     is_occupied: false,
                 },
@@ -63,7 +60,7 @@ pub fn setup_blueprint_ladder(mut blueprints: ResMut<Blueprints>, asset_server: 
                     is_occupied: false,
                 },
             ],
-            texture: wood_texture.clone(),
+            texture: None,
             mesh: asset_server.load("ladder.gltf#Mesh0/Primitive0"),
         },
     );

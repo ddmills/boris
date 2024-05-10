@@ -15,9 +15,9 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Workbench",
+			"name":"Door_01",
 			"translation":[
-				-3.5,
+				7.5,
 				0,
 				-0.5
 			]
@@ -25,7 +25,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Workbench",
+			"name":"Door_1",
 			"primitives":[
 				{
 					"attributes":{
@@ -44,92 +44,92 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":364,
+			"count":72,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":364,
+			"count":72,
 			"max":[
-				1.4900000095367432,
-				1.5000001192092896,
-				0.4997192621231079
+				0.4900001287460327,
+				1.9800002574920654,
+				0.149999737739563
 			],
 			"min":[
-				-0.49000000953674316,
-				-2.9802322387695312e-08,
-				-0.5000002384185791
+				-0.5000000596046448,
+				0.02999996952712536,
+				-0.15000009536743164
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":364,
+			"count":72,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":3,
 			"componentType":5126,
-			"count":364,
+			"count":72,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":364,
+			"count":72,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":594,
+			"count":144,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":5824,
+			"byteLength":1152,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4368,
-			"byteOffset":5824,
+			"byteLength":864,
+			"byteOffset":1152,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4368,
-			"byteOffset":10192,
+			"byteLength":864,
+			"byteOffset":2016,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2912,
-			"byteOffset":14560,
+			"byteLength":576,
+			"byteOffset":2880,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4368,
-			"byteOffset":17472,
+			"byteLength":864,
+			"byteOffset":3456,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1188,
-			"byteOffset":21840,
+			"byteLength":288,
+			"byteOffset":4320,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":23028,
-			"uri":"workbench.bin"
+			"byteLength":4608,
+			"uri":"door.bin"
 		}
 	]
 }

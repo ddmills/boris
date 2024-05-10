@@ -229,6 +229,10 @@ pub fn job_access_points(pos: [u32; 3], job: JobType) -> Vec<[u32; 3]> {
                 }
             }
 
+            if y > 0 {
+                goals.push([x, y - 1, z]);
+            }
+
             if z > 0 {
                 goals.push([x, y, z - 1]);
                 goals.push([x, y + 1, z - 1]);

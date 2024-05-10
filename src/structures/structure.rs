@@ -14,13 +14,14 @@ use bevy::{
     pbr::MaterialMeshBundle,
     prelude::default,
     render::{color::Color, texture::Image, view::Visibility},
+    scene::SceneBundle,
     transform::components::Transform,
 };
 
 use crate::{
     colonists::{get_block_flags, InSlot, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
     items::image_loader_settings,
-    rendering::{BasicMaterial, SlotIndex},
+    rendering::{BasicMaterial, GltfBinding, SlotIndex},
     Position, StructureTileDetail, Terrain,
 };
 
@@ -154,6 +155,12 @@ pub struct BuildStructureEvent {
     pub entity: Entity,
 }
 
+#[derive(Event)]
+pub struct BuiltStructureEvent {
+    pub entity: Entity,
+    pub blueprint_type: BlueprintType,
+}
+
 pub fn on_spawn_structure(
     mut cmd: Commands,
     mut ev_spawn_structure: EventReader<SpawnStructureEvent>,
@@ -278,7 +285,7 @@ pub fn on_spawn_structure(
                     ev.pos[1] as f32,
                     ev.pos[2] as f32 + 0.5,
                 ),
-                visibility: Visibility::Visible,
+                visibility: Visibility::Hidden,
                 ..default()
             },
         ));

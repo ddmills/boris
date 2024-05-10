@@ -39,7 +39,7 @@ pub fn on_spawn_job_build(
             .tiles
             .iter()
             .filter_map(|t| {
-                if t.is_blocker || t.requirements.contains(TileRequirement::IS_ATTACHABLE) {
+                if t.is_blocker || t.is_occupied {
                     Some([
                         t.position[0] as u32,
                         t.position[1] as u32,

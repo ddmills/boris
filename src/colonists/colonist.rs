@@ -1,32 +1,27 @@
 use std::sync::Arc;
 
 use bevy::{
-    asset::{AssetServer, Assets, Handle},
+    asset::{AssetServer, Handle},
     core::Name,
     ecs::{
         component::Component,
-        entity::Entity,
         event::{Event, EventReader},
-        query::{With, Without},
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Res},
     },
-    hierarchy::Children,
-    pbr::StandardMaterial,
     prelude::default,
-    render::{texture::Image, view::Visibility},
+    render::view::Visibility,
     scene::SceneBundle,
     transform::components::Transform,
 };
 
 use crate::{
-    colonists::AnimState, items::image_loader_settings, rendering::BasicMaterial, HumanGltf,
-    Position,
+    rendering::{BasicMaterial, GltfBinding},
+    HumanGltf, Position,
 };
 
 use super::{
-    get_child_by_name_recursive, Actor, AnimClip, Animator, Faller, Fatigue, Inventory,
-    NavigationFlags, ScorerBuild, ScorerChop, ScorerMine, ScorerPlaceBlock, ScorerSupply,
-    ScorerWander, Thinker,
+    Actor, Faller, Fatigue, Inventory, NavigationFlags, ScorerBuild, ScorerChop, ScorerMine,
+    ScorerPlaceBlock, ScorerSupply, ScorerWander, Thinker,
 };
 
 #[derive(Component, Default)]
@@ -43,13 +38,15 @@ pub struct SpawnColonistEvent {
 pub fn on_spawn_colonist(
     mut cmd: Commands,
     mut ev_spawn_colonist: EventReader<SpawnColonistEvent>,
-    human_gltf: Res<HumanGltf>,
+    asset_server: Res<AssetServer>,
 ) {
     for ev in ev_spawn_colonist.read() {
+        let gltf = asset_server.load("human.gltf#Scene0");
+
         cmd.spawn((
             Name::new("Colonist"),
             SceneBundle {
-                scene: human_gltf.0.clone(),
+                scene: gltf,
                 transform: Transform::from_xyz(
                     ev.pos[0] as f32 + 0.5,
                     ev.pos[1] as f32,
@@ -57,6 +54,11 @@ pub fn on_spawn_colonist(
                 ),
                 visibility: Visibility::Hidden,
                 ..default()
+            },
+            GltfBinding {
+                armature_name: Some("Armature".into()),
+                mesh_name: "HumanMesh".into(),
+                texture_path: Some("textures/colonist.png".into()),
             },
             Fatigue {
                 value: 30.,
@@ -79,52 +81,5 @@ pub fn on_spawn_colonist(
             Position::default(),
             NavigationFlags::COLONIST,
         ));
-    }
-}
-
-pub fn setup_colonists(
-    mut cmd: Commands,
-    q_children: Query<&Children>,
-    q_names: Query<&Name>,
-    q_colonists: Query<Entity, (With<Colonist>, Without<Animator>)>,
-    asset_server: Res<AssetServer>,
-    mut basic_materials: ResMut<Assets<BasicMaterial>>,
-) {
-    for colonist in q_colonists.iter() {
-        if let Some(armature) =
-            get_child_by_name_recursive(&colonist, "Armature", &q_names, &q_children)
-        {
-            let mut e_cmd = cmd.entity(colonist);
-            e_cmd.insert(Animator {
-                clip: AnimClip::Idle,
-                armature,
-                prev_clip: AnimClip::None,
-                state: AnimState::Completed,
-            });
-        }
-
-        if let Some(mesh) =
-            get_child_by_name_recursive(&colonist, "HumanMesh", &q_names, &q_children)
-        {
-            let mut mesh_cmd = cmd.entity(mesh);
-
-            let texture: Handle<Image> =
-                asset_server.load_with_settings("textures/colonist.png", image_loader_settings);
-
-            let basic_material = basic_materials.add(BasicMaterial {
-                texture: Some(texture.clone()),
-                is_lit: true,
-                ..Default::default()
-            });
-
-            mesh_cmd.insert(basic_material.clone());
-            mesh_cmd.remove::<Handle<StandardMaterial>>();
-
-            let mut e_cmd = cmd.entity(colonist);
-            e_cmd.insert(ChildMaterials(basic_material.clone()));
-        }
-
-        let mut e_cmd = cmd.entity(colonist);
-        e_cmd.insert(Visibility::Visible);
     }
 }

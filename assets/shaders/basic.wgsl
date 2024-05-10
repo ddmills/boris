@@ -13,10 +13,11 @@
 
 @group(2) @binding(5) var slots_texture: texture_2d<f32>;
 @group(2) @binding(6) var slots_texture_sampler: sampler;
+@group(2) @binding(7) var<uniform> slots_uv_scale: f32;
 
-@group(2) @binding(7) var<uniform> slot_0_color: vec4<f32>;
-@group(2) @binding(8) var<uniform> slot_1_color: vec4<f32>;
-@group(2) @binding(9) var<uniform> slot_2_color: vec4<f32>;
+@group(2) @binding(8) var<uniform> slot_0_color: vec4<f32>;
+@group(2) @binding(9) var<uniform> slot_1_color: vec4<f32>;
+@group(2) @binding(10) var<uniform> slot_2_color: vec4<f32>;
 
 @group(2) @binding(11) var<uniform> slot_indexes: u32;
 
@@ -190,7 +191,10 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let slot_1_offset = vec2(f32(slot_1_idx % texture_count), f32(slot_1_idx / texture_count)) / texture_count_f32;
     let slot_2_offset = vec2(f32(slot_2_idx % texture_count), f32(slot_2_idx / texture_count)) / texture_count_f32;
 
-    let uv_clamped = vec2(abs(mesh.uv[0] % 1), abs(mesh.uv[1] % 1)) / texture_count_f32;
+    let uv_x = abs((mesh.uv[0] * slots_uv_scale) % 1);
+    let uv_y = abs((mesh.uv[1] * slots_uv_scale) % 1);
+
+    let uv_clamped = vec2(uv_x, uv_y) / texture_count_f32;
 
     let slot_0_uv = slot_0_offset + uv_clamped;
     let slot_1_uv = slot_1_offset + uv_clamped;
@@ -204,13 +208,18 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let slot_1_weighted = slot_1_texture_color * mesh.slots[1];
     let slot_2_weighted = slot_2_texture_color * mesh.slots[2];
 
-    out = out * (slot_0_weighted + slot_1_weighted + slot_2_weighted);
+    if (mesh.slots[0] > 0.1 || mesh.slots[1] > 0.1 || mesh.slots[2] > 0.1) {
+        out = out * (slot_0_weighted + slot_1_weighted + slot_2_weighted);
+    }
+
 #else
     let slot_0_weighted = slot_0_color * mesh.slots[0];
     let slot_1_weighted = slot_1_color * mesh.slots[1];
     let slot_2_weighted = slot_2_color * mesh.slots[2];
 
-    out = out * (slot_0_weighted + slot_1_weighted + slot_2_weighted);
+    if (mesh.slots[0] > 0.1 || mesh.slots[1] > 0.1 || mesh.slots[2] > 0.1) {
+        out = out * (slot_0_weighted + slot_1_weighted + slot_2_weighted);
+    }
 #endif
 #endif
 

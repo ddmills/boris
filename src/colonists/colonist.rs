@@ -16,7 +16,7 @@ use bevy::{
 
 use crate::{
     rendering::{BasicMaterial, GltfBinding},
-    HumanGltf, Position,
+    Position,
 };
 
 use super::{

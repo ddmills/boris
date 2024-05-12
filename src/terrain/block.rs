@@ -42,22 +42,14 @@ impl Block {
     pub fn is_walkable(&self) -> bool {
         !matches!(
             self.block,
-            BlockType::OOB
-                | BlockType::EMPTY
-                | BlockType::LADDER
-                | BlockType::MAGMA
-                | BlockType::LEAVES
+            BlockType::OOB | BlockType::EMPTY | BlockType::MAGMA | BlockType::LEAVES
         )
     }
 
     pub fn is_attachable(&self) -> bool {
         !matches!(
             self.block,
-            BlockType::OOB
-                | BlockType::EMPTY
-                | BlockType::LADDER
-                | BlockType::MAGMA
-                | BlockType::LEAVES
+            BlockType::OOB | BlockType::EMPTY | BlockType::MAGMA | BlockType::LEAVES
         )
     }
 
@@ -104,7 +96,6 @@ impl Block {
             BlockType::ASHLAR_LARGE => 4,
             BlockType::ASHLAR => 5,
             BlockType::MAGMA => 6,
-            BlockType::LADDER => 7,
             BlockType::LAMP => 8,
             BlockType::LEAVES => 40,
             BlockType::TREE_TRUNK => 32,
@@ -124,7 +115,6 @@ impl Block {
             BlockType::MAGMA => String::from("magma"),
             BlockType::ASHLAR_LARGE => String::from("ashlar (large)"),
             BlockType::ASHLAR => String::from("ashlar"),
-            BlockType::LADDER => String::from("ladder"),
             _ => String::from("unknown"),
         }
     }
@@ -143,7 +133,6 @@ impl BlockType {
     pub const MAGMA: Self = Self(6);
     pub const ASHLAR_LARGE: Self = Self(7);
     pub const ASHLAR: Self = Self(8);
-    pub const LADDER: Self = Self(9);
     pub const TREE_TRUNK: Self = Self(10);
     pub const LEAVES: Self = Self(11);
 }
@@ -172,7 +161,6 @@ impl BlockType {
             Self::MAGMA => String::from("magma"),
             Self::ASHLAR_LARGE => String::from("ashlar (large)"),
             Self::ASHLAR => String::from("ashlar"),
-            Self::LADDER => String::from("ladder"),
             Self::TREE_TRUNK => String::from("trunk"),
             Self::LEAVES => String::from("leaves"),
             _ => String::from("unknown"),

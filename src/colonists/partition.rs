@@ -1,4 +1,4 @@
-use crate::{BlockType, Terrain};
+use crate::Terrain;
 
 use super::NavigationFlags;
 
@@ -6,10 +6,6 @@ pub fn get_block_flags(terrain: &Terrain, x: i32, y: i32, z: i32) -> NavigationF
     let block = terrain.get_block_i32(x, y, z);
 
     let mut flags = NavigationFlags::NONE;
-
-    if block.block == BlockType::LADDER {
-        return NavigationFlags::LADDER;
-    }
 
     if !block.is_empty() {
         return NavigationFlags::NONE;

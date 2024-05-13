@@ -1,12 +1,7 @@
-use bevy::{
-    asset::{AssetServer, Handle},
-    ecs::system::Res,
-    render::texture::Image,
-};
+use bevy::{asset::AssetServer, ecs::system::Res};
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
-    items::image_loader_settings,
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
         BuildSlots, DirectionSimple, TileRequirement,

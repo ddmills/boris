@@ -24,6 +24,7 @@ pub struct Chunk {
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
     pub structures: Box<[HashMap<Entity, StructureTileDetail>]>,
+    pub lamps: Box<[HashMap<Entity, LampDetail>]>,
     pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
@@ -32,6 +33,11 @@ pub struct Chunk {
     pub world_z: u32,
     pub is_mesh_dirty: bool,
     pub is_nav_dirty: bool,
+}
+
+#[derive(Clone, Copy)]
+pub struct LampDetail {
+    pub torchlight: u8,
 }
 
 #[derive(Clone, Copy)]
@@ -49,6 +55,7 @@ impl Chunk {
             items: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             structures: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
+            lamps: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             block_count: shape.size(),
             shape,
             chunk_idx: 0,
@@ -137,6 +144,28 @@ impl Chunk {
     ) -> Option<StructureTileDetail> {
         if let Some(structures) = self.structures.get_mut(block_idx as usize) {
             return structures.remove(structure);
+        }
+
+        None
+    }
+
+    pub fn get_lamps(&self, block_idx: u32) -> HashMap<Entity, LampDetail> {
+        if let Some(lamps) = self.lamps.get(block_idx as usize) {
+            return lamps.clone();
+        }
+
+        HashMap::new()
+    }
+
+    pub fn add_lamp(&mut self, block_idx: u32, lamp: Entity, detail: LampDetail) {
+        if let Some(lamps) = self.lamps.get_mut(block_idx as usize) {
+            lamps.insert(lamp, detail);
+        }
+    }
+
+    pub fn remove_lamp(&mut self, block_idx: u32, lamp: &Entity) -> Option<LampDetail> {
+        if let Some(lamps) = self.lamps.get_mut(block_idx as usize) {
+            return lamps.remove(lamp);
         }
 
         None

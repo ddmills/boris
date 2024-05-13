@@ -1,7 +1,7 @@
 use bevy::{
     core_pipeline::prepass::{DepthPrepass, MotionVectorPrepass, NormalPrepass},
     input::mouse::{MouseMotion, MouseWheel},
-    pbr::{NotShadowCaster, ScreenSpaceAmbientOcclusionBundle},
+    pbr::NotShadowCaster,
     prelude::*,
     window::PrimaryWindow,
 };

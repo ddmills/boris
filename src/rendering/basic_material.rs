@@ -4,7 +4,7 @@ use bevy::{
         query::Changed,
         system::{Query, Res, ResMut},
     },
-    pbr::{AlphaMode, Material, MaterialPipeline, MaterialPipelineKey, MeshPipelineKey},
+    pbr::{Material, MaterialPipeline, MaterialPipelineKey},
     reflect::TypePath,
     render::{
         color::Color,
@@ -15,7 +15,6 @@ use bevy::{
         },
         texture::Image,
     },
-    scene::ron::de,
 };
 
 use crate::{colonists::ChildMaterials, Position, Terrain};
@@ -100,16 +99,6 @@ pub enum SlotIndex {
     Slot0,
     Slot1,
     Slot2,
-}
-
-impl SlotIndex {
-    pub fn to_idx(&self) -> usize {
-        match self {
-            SlotIndex::Slot0 => 0,
-            SlotIndex::Slot1 => 1,
-            SlotIndex::Slot2 => 2,
-        }
-    }
 }
 
 impl BasicMaterial {

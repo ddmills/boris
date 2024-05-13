@@ -1,5 +1,3 @@
-use std::process::id;
-
 use bevy::{
     asset::{AssetServer, Assets, Handle},
     core::Name,
@@ -14,14 +12,13 @@ use bevy::{
     pbr::MaterialMeshBundle,
     prelude::default,
     render::{color::Color, texture::Image, view::Visibility},
-    scene::SceneBundle,
     transform::components::Transform,
 };
 
 use crate::{
     colonists::{get_block_flags, InSlot, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
     items::image_loader_settings,
-    rendering::{BasicMaterial, GltfBinding, SlotIndex},
+    rendering::{BasicMaterial, SlotIndex},
     Position, StructureTileDetail, Terrain,
 };
 
@@ -294,6 +291,7 @@ pub fn on_spawn_structure(
 
 pub fn on_build_structure(
     mut ev_build_structure: EventReader<BuildStructureEvent>,
+    mut ev_built_structure: EventWriter<BuiltStructureEvent>,
     mut q_structures: Query<&mut Structure>,
     mut terrain: ResMut<Terrain>,
 ) {
@@ -335,6 +333,11 @@ pub fn on_build_structure(
 
             terrain.set_chunk_nav_dirty(chunk_idx, true);
         }
+
+        ev_built_structure.send(BuiltStructureEvent {
+            entity: ev.entity,
+            blueprint_type: structure.blueprint_type,
+        });
     }
 }
 

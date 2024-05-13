@@ -37,8 +37,9 @@ use rendering::{
 use structures::{
     check_structures, on_build_structure, on_remove_structure, on_spawn_structure,
     setup_blueprint_door, setup_blueprint_ladder, setup_blueprint_torches,
-    setup_blueprint_workbench, setup_structure_door, structure_material_update, Blueprints,
-    BuildStructureEvent, BuiltStructureEvent, RemoveStructureEvent, SpawnStructureEvent,
+    setup_blueprint_workbench, setup_structure_door, setup_structure_torch,
+    structure_material_update, Blueprints, BuildStructureEvent, BuiltStructureEvent,
+    RemoveStructureEvent, SpawnStructureEvent,
 };
 use terrain::*;
 use ui::{
@@ -102,6 +103,7 @@ fn main() {
         .add_event::<SpawnJobSupplyEvent>()
         .add_event::<SpawnJobBuildEvent>()
         .add_event::<SpawnStructureEvent>()
+        .add_event::<SpawnLampEvent>()
         .add_event::<RemoveStructureEvent>()
         .add_event::<BuildStructureEvent>()
         .add_event::<BuiltStructureEvent>()
@@ -159,6 +161,7 @@ fn main() {
                 .chain(),
         )
         .add_systems(Update, setup_structure_door)
+        .add_systems(Update, setup_structure_torch)
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
@@ -176,6 +179,7 @@ fn main() {
         .add_systems(Update, job_toolbar)
         .add_systems(Update, path_debug)
         .add_systems(Update, on_spawn_commodity)
+        .add_systems(Update, on_spawn_lamp)
         .add_systems(Update, on_spawn_tree)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)

@@ -8,7 +8,7 @@ use bevy::ecs::{
 
 use crate::{
     rendering::SlotIndex,
-    structures::{PartSlots, Structure, TileRequirement},
+    structures::{PartSlots, Structure},
 };
 
 use super::{IsJobCancelled, Job, JobCancelEvent, JobLocation, SpawnJobSupplyEvent};

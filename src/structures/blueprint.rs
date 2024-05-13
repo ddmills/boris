@@ -6,7 +6,6 @@ use bevy::{
     ecs::system::Resource,
     math::Quat,
     render::{mesh::Mesh, texture::Image},
-    scene::Scene,
     utils::HashMap,
 };
 

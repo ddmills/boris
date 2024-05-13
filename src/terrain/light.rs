@@ -41,7 +41,12 @@ pub fn light_system(mut terrain: ResMut<Terrain>) {
                 let n_y_u32 = n_y as u32;
                 let n_z_u32 = n_z as u32;
 
-                if n_block.is_light() {
+                let [chunk_idx, block_idx] = terrain.get_block_indexes(n_x_u32, n_y_u32, n_z_u32);
+                let lamps = terrain.get_lamps(chunk_idx, block_idx);
+
+                if let Some(lamp) = lamps.values().max_by_key(|x| x.torchlight) {
+                    terrain.add_light(n_x_u32, n_y_u32, n_z_u32, lamp.torchlight);
+                } else if n_block.is_light() {
                     terrain.add_light(n_x_u32, n_y_u32, n_z_u32, n_block.get_light_level());
                 } else {
                     terrain.set_torchlight(n_x_u32, n_y_u32, n_z_u32, 0);

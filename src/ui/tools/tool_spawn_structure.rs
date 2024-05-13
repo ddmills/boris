@@ -1,5 +1,3 @@
-use std::default;
-
 use bevy::{
     ecs::{
         entity::Entity,

@@ -4,7 +4,9 @@ use bevy::{
 };
 use ndshape::{RuntimeShape, Shape};
 
-use crate::{common::sig_num, Block, BlockFace, BlockType, Chunk, LightNode, StructureTileDetail};
+use crate::{
+    common::sig_num, Block, BlockFace, BlockType, Chunk, LampDetail, LightNode, StructureTileDetail,
+};
 
 #[derive(Resource)]
 pub struct Terrain {
@@ -315,6 +317,35 @@ impl Terrain {
     ) -> Option<StructureTileDetail> {
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             return chunk.remove_structure(block_idx, structure);
+        }
+
+        None
+    }
+
+    pub fn get_lamps(&self, chunk_idx: u32, block_idx: u32) -> HashMap<Entity, LampDetail> {
+        if let Some(chunk) = self.get_chunk(chunk_idx) {
+            return chunk.get_lamps(block_idx);
+        }
+
+        HashMap::new()
+    }
+
+    pub fn add_lamp(&mut self, chunk_idx: u32, block_idx: u32, lamp: Entity, detail: LampDetail) {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            chunk.add_lamp(block_idx, lamp, detail);
+            let [x, y, z] = self.get_block_world_pos(chunk_idx, block_idx);
+            self.add_light(x, y, z, detail.torchlight);
+        }
+    }
+
+    pub fn remove_lamp(
+        &mut self,
+        chunk_idx: u32,
+        block_idx: u32,
+        lamp: &Entity,
+    ) -> Option<LampDetail> {
+        if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
+            return chunk.remove_lamp(block_idx, lamp);
         }
 
         None

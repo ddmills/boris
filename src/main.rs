@@ -103,7 +103,6 @@ fn main() {
         .add_event::<SpawnJobSupplyEvent>()
         .add_event::<SpawnJobBuildEvent>()
         .add_event::<SpawnStructureEvent>()
-        .add_event::<SpawnLampEvent>()
         .add_event::<RemoveStructureEvent>()
         .add_event::<BuildStructureEvent>()
         .add_event::<BuiltStructureEvent>()
@@ -114,6 +113,7 @@ fn main() {
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
+        .init_resource::<Lamps>()
         .add_plugins((
             DefaultPlugins
                 .set(GltfPlugin::default().add_custom_vertex_attribute("SLOT", ATTRIBUTE_SLOTS)),
@@ -171,6 +171,7 @@ fn main() {
         .add_systems(Update, on_build_structure)
         .add_systems(Update, update_slice_mesh)
         .add_systems(Update, hide_sliced_objects)
+        .add_systems(Update, on_removed_lamp)
         .add_systems(Update, light_system)
         .add_systems(Update, update_camera)
         .add_systems(Update, toolbar_select)
@@ -179,7 +180,7 @@ fn main() {
         .add_systems(Update, job_toolbar)
         .add_systems(Update, path_debug)
         .add_systems(Update, on_spawn_commodity)
-        .add_systems(Update, on_spawn_lamp)
+        .add_systems(Update, on_moved_lamp)
         .add_systems(Update, on_spawn_tree)
         .add_systems(Update, on_spawn_colonist)
         .add_systems(Update, on_spawn_pickaxe)

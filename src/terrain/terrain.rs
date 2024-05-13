@@ -344,6 +344,8 @@ impl Terrain {
         block_idx: u32,
         lamp: &Entity,
     ) -> Option<LampDetail> {
+        let [x, y, z] = self.get_block_world_pos(chunk_idx, block_idx);
+        self.remove_light(x, y, z);
         if let Some(chunk) = self.get_chunk_mut(chunk_idx) {
             return chunk.remove_lamp(block_idx, lamp);
         }

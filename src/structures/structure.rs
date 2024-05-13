@@ -506,7 +506,7 @@ pub fn check_structures(
                     guide_is_valid = false;
                 }
 
-                structure.guides.iter().enumerate().for_each(|(_, h)| {
+                structure.guides.iter().for_each(|h| {
                     let Ok(mut guide) = q_guides.get_mut(*h) else {
                         return;
                     };

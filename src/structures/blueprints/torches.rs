@@ -1,10 +1,9 @@
 use bevy::{
     asset::AssetServer,
     ecs::{
-        event::{EventReader, EventWriter},
-        system::{Commands, Query, Res},
+        event::EventReader,
+        system::{Commands, Res},
     },
-    hierarchy::BuildChildren,
 };
 
 use crate::{
@@ -13,7 +12,7 @@ use crate::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
         BuildSlots, BuiltStructureEvent, DirectionSimple, TileRequirement,
     },
-    Position, SpawnLampEvent, Terrain,
+    Lamp,
 };
 
 use bevy::ecs::system::ResMut;
@@ -158,31 +157,19 @@ pub fn setup_blueprint_torches(mut blueprints: ResMut<Blueprints>, asset_server:
 
 pub fn setup_structure_torch(
     mut cmd: Commands,
-    mut ev_spawn_lamp: EventWriter<SpawnLampEvent>,
     mut ev_built_structure: EventReader<BuiltStructureEvent>,
-    q_positions: Query<&Position>,
 ) {
     for ev in ev_built_structure.read() {
-        if !matches!(
-            ev.blueprint_type,
-            BlueprintType::TorchStanding | BlueprintType::TorchWall
-        ) {
-            continue;
+        if matches!(ev.blueprint_type, BlueprintType::TorchStanding) {
+            cmd.entity(ev.entity).insert(Lamp {
+                value: 12,
+                offset: [0, 1, 0],
+            });
+        } else if matches!(ev.blueprint_type, BlueprintType::TorchWall) {
+            cmd.entity(ev.entity).insert(Lamp {
+                value: 12,
+                offset: [0, 0, 0],
+            });
         }
-
-        let Ok(position) = q_positions.get(ev.entity) else {
-            println!("No position! can't create lamp!");
-            continue;
-        };
-
-        let lamp = cmd.spawn_empty().id();
-
-        cmd.entity(ev.entity).add_child(lamp);
-
-        ev_spawn_lamp.send(SpawnLampEvent {
-            value: 12,
-            pos: [position.x, position.y + 1, position.z],
-            entity: lamp,
-        });
     }
 }

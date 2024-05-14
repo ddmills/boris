@@ -11,21 +11,16 @@ use crate::{colonists::NavigationFlags, Block, BlockType};
 #[derive(Component)]
 pub struct ChunkMesh {
     pub chunk_idx: u32,
-    pub world_x: u32,
-    pub world_y: u32,
-    pub world_z: u32,
     pub mesh_handle: Handle<Mesh>,
 }
 
 #[derive(Clone)]
 pub struct Chunk {
-    pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
     pub structures: Box<[HashMap<Entity, StructureTileDetail>]>,
     pub lamps: Box<[HashMap<Entity, LampDetail>]>,
-    pub block_count: u32,
     pub chunk_idx: u32,
     pub chunk_size: u32,
     pub world_x: u32,
@@ -56,8 +51,6 @@ impl Chunk {
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             structures: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             lamps: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
-            block_count: shape.size(),
-            shape,
             chunk_idx: 0,
             chunk_size: 0,
             world_x: 0,

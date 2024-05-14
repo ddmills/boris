@@ -1,16 +1,10 @@
-use bevy::{
-    asset::AssetServer,
-    ecs::{
-        event::EventReader,
-        system::{Commands, Res},
-    },
-};
+use bevy::{asset::AssetServer, ecs::system::Res};
 
 use crate::{
     colonists::{ItemTag, NavigationFlags},
     structures::{
         Blueprint, BlueprintHotspot, BlueprintTile, BlueprintType, Blueprints, BuildSlot,
-        BuildSlots, BuiltStructureEvent, DirectionSimple, TileRequirement,
+        BuildSlots, DirectionSimple, TileRequirement,
     },
 };
 
@@ -77,25 +71,4 @@ pub fn setup_blueprint_door(mut blueprints: ResMut<Blueprints>, asset_server: Re
             mesh: asset_server.load("door.gltf#Mesh0/Primitive0"),
         },
     );
-}
-
-pub fn setup_structure_door(
-    mut cmd: Commands,
-    mut ev_built_structure: EventReader<BuiltStructureEvent>,
-) {
-    for ev in ev_built_structure.read() {
-        if !matches!(ev.blueprint_type, BlueprintType::Door) {
-            continue;
-        }
-
-        println!("Door spawned");
-
-        // let mut ecmd = cmd.entity(ev.entity);
-
-        // ecmd.try_insert(GltfBinding {
-        //     armature_name: "Door_Armature".into(),
-        //     mesh_name: "Door_01".into(),
-        //     texture_path: None,
-        // });
-    }
 }

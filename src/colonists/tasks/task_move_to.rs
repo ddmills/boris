@@ -157,7 +157,7 @@ pub fn task_move_to(
                 continue;
             };
 
-            path.blocks = granular_path.blocks.clone();
+            path.blocks.clone_from(&granular_path.blocks);
             path.current_block_idx = path.blocks.len() - 1;
         }
 

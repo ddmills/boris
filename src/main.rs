@@ -37,9 +37,8 @@ use rendering::{
 use structures::{
     check_structures, on_build_structure, on_remove_structure, on_spawn_structure,
     setup_blueprint_door, setup_blueprint_ladder, setup_blueprint_torches,
-    setup_blueprint_workbench, setup_structure_door, setup_structure_torch,
-    structure_material_update, Blueprints, BuildStructureEvent, BuiltStructureEvent,
-    RemoveStructureEvent, SpawnStructureEvent,
+    setup_blueprint_workbench, setup_structure_torch, structure_material_update, Blueprints,
+    BuildStructureEvent, BuiltStructureEvent, RemoveStructureEvent, SpawnStructureEvent,
 };
 use terrain::*;
 use ui::{
@@ -160,7 +159,6 @@ fn main() {
             )
                 .chain(),
         )
-        .add_systems(Update, setup_structure_door)
         .add_systems(Update, setup_structure_torch)
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)

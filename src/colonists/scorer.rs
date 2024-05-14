@@ -35,9 +35,6 @@ pub struct Scorers {
     pub scorers: Vec<Entity>,
 }
 
-#[derive(Component)]
-pub struct ScoreBuilderRef(pub usize);
-
 #[bevy_trait_query::queryable]
 pub trait ScorerBuilder: Send + Sync {
     fn insert(&self, cmd: &mut EntityCommands);
@@ -69,15 +66,9 @@ pub fn spawn_scorers(
         let scorers = thinker
             .score_builders
             .iter()
-            .enumerate()
-            .map(|(idx, builder)| {
+            .map(|builder| {
                 let scorer = cmd
-                    .spawn((
-                        Name::new("Behavior Scorer"),
-                        ActorRef(actor),
-                        ScoreBuilderRef(idx),
-                        Score(0.),
-                    ))
+                    .spawn((Name::new("Behavior Scorer"), ActorRef(actor), Score(0.)))
                     .id();
 
                 let mut e_cmd = cmd.entity(scorer);

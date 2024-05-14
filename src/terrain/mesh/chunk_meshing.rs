@@ -74,9 +74,6 @@ pub fn setup_chunk_meshes(
             ChunkMesh {
                 chunk_idx,
                 mesh_handle: mesh_handle.clone(),
-                world_x: x,
-                world_y: y,
-                world_z: z,
             },
             MaterialMeshBundle {
                 mesh: mesh_handle.clone(),

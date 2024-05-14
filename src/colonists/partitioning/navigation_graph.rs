@@ -374,11 +374,14 @@ impl NavigationGraph {
                     self.get_partition_mut(partition_id).unwrap().region_id = *region_id;
                 }
 
-                self.get_region_mut(region_id).unwrap().partition_ids = island.clone();
+                self.get_region_mut(region_id)
+                    .unwrap()
+                    .partition_ids
+                    .clone_from(island);
             } else {
                 let new_region_id = self.create_region(flags);
                 let new_region = self.get_region_mut(&new_region_id).unwrap();
-                new_region.partition_ids = island.clone();
+                new_region.partition_ids.clone_from(island);
 
                 for neighbor_id in neighbors_ids.iter() {
                     self.set_region_neighbors(&new_region_id, neighbor_id);

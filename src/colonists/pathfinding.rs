@@ -41,9 +41,6 @@ pub struct GranularPathRequest {
 
 pub struct GranularPath {
     pub blocks: Vec<[i32; 3]>,
-    pub flags: NavigationFlags,
-    pub goals: Vec<[u32; 3]>,
-    pub goal_partition_id: u32,
 }
 
 pub fn get_granular_path(
@@ -167,9 +164,6 @@ pub fn get_granular_path(
 
     Some(GranularPath {
         blocks: result.path,
-        flags: request.flags,
-        goals: request.goals.clone(),
-        goal_partition_id: request.goal_partition_id,
     })
 }
 

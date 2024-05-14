@@ -30,7 +30,6 @@ pub struct RayResult {
     pub x: u32,
     pub y: u32,
     pub z: u32,
-    pub attempts: u32,
     pub face: BlockFace,
 }
 
@@ -553,7 +552,6 @@ impl Terrain {
                 x: 0,
                 y: 0,
                 z: 0,
-                attempts: 0,
                 face,
             };
         }
@@ -583,7 +581,6 @@ impl Terrain {
                         x: x as u32,
                         y: y as u32,
                         z: z as u32,
-                        attempts,
                         face,
                     };
                 }
@@ -644,7 +641,6 @@ impl Terrain {
             x: 0,
             y: 0,
             z: 0,
-            attempts,
             face: BlockFace::PosY,
         }
     }

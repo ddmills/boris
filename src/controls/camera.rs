@@ -8,7 +8,7 @@ use bevy::{
 
 use crate::TerrainSlice;
 
-use super::{PrepassDebugText, PrepassOutputMaterial, ShowPrepassSettings};
+use super::{PrepassOutputMaterial, ShowPrepassSettings};
 
 #[derive(Component)]
 pub struct MainCamera {
@@ -164,25 +164,6 @@ pub fn setup_camera(
             },
         ))
         .id();
-
-    let style = TextStyle {
-        font_size: 18.0,
-        ..default()
-    };
-
-    cmd.spawn((
-        TextBundle::from_sections(vec![TextSection::new(
-            "Prepass Output: transparent\n",
-            style.clone(),
-        )])
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(30.0),
-            left: Val::Px(10.0),
-            ..default()
-        }),
-        PrepassDebugText,
-    ));
 
     let overlay = cmd
         .spawn((

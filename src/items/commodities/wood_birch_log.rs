@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{colonists::ItemTag, items::image_loader_settings};
 
-use super::{Commodities, Commodity, CommodityData, CommodityFlag};
+use super::{Commodities, Commodity, CommodityData};
 
 pub fn setup_commodity_wood_birch_log(
     mut commodities: ResMut<Commodities>,
@@ -23,7 +23,6 @@ pub fn setup_commodity_wood_birch_log(
             texture_idx: 34,
             mesh,
             color: Color::rgb(1.0, 0.8, 0.8),
-            flags: CommodityFlag::WOOD | CommodityFlag::LOG,
             tags: vec![ItemTag::Log, ItemTag::BasicBuildMaterial],
         },
     );

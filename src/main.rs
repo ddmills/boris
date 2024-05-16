@@ -1,6 +1,6 @@
-use bevy::gltf::GltfPlugin;
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
+use bevy::{gltf::GltfPlugin, utils::hashbrown::HashMap};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_obj::ObjPlugin;
@@ -42,10 +42,10 @@ use structures::{
 };
 use terrain::*;
 use ui::{
-    job_toolbar, setup_block_toolbar_ui, tool_block_info, tool_chop, tool_clear_block, tool_mine,
-    tool_place_blocks, tool_place_stone, tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe,
-    tool_spawn_structure, tool_toggle_path, toolbar_select, ui_capture_pointer, GameSpeed, Tool,
-    Toolbar, Ui,
+    job_toolbar, on_toolbar_submenu_btn, on_toolbar_tool_btn, setup_block_toolbar_ui,
+    tool_block_info, tool_chop, tool_clear_block, tool_mine, tool_place_blocks, tool_place_stone,
+    tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe, tool_spawn_structure,
+    tool_toggle_path, ui_capture_pointer, GameSpeed, Tool, Toolbar, Ui,
 };
 
 mod colonists;
@@ -60,13 +60,15 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(8, 4, 8, 16))
+        .insert_resource(Terrain::new(1, 4, 1, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Blueprints::default())
         .insert_resource(Commodities::default())
         .insert_resource(Toolbar {
             tool: Tool::PlaceBlocks(BlockType::STONE),
+            submenu: None,
+            submenus: HashMap::new(),
         })
         .insert_resource(Ui {
             pointer_captured: false,
@@ -172,7 +174,8 @@ fn main() {
         .add_systems(Update, on_removed_lamp)
         .add_systems(Update, light_system)
         .add_systems(Update, update_camera)
-        .add_systems(Update, toolbar_select)
+        .add_systems(Update, on_toolbar_tool_btn)
+        .add_systems(Update, on_toolbar_submenu_btn)
         .add_systems(Update, check_job_supply_valid)
         .add_systems(Update, check_job_build_valid)
         .add_systems(Update, job_toolbar)

@@ -188,7 +188,6 @@ impl Path {
 pub struct PartitionPath {
     pub path: Vec<u32>,
     pub goals: Vec<[u32; 3]>,
-    pub flags: NavigationFlags,
 }
 
 pub fn is_reachable(
@@ -262,7 +261,6 @@ pub fn get_partition_path(
         return Some(PartitionPath {
             path: vec![starting_partition_id],
             goals: request.goals.clone(),
-            flags: request.flags,
         });
     }
 
@@ -319,6 +317,5 @@ pub fn get_partition_path(
     Some(PartitionPath {
         path: partition_path.path,
         goals: request.goals.clone(),
-        flags: request.flags,
     })
 }

@@ -24,9 +24,6 @@ pub struct ShowPrepassSettings {
     padding_2: u32,
 }
 
-#[derive(Component)]
-pub struct PrepassDebugText;
-
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct PrepassOutputMaterial {
     #[uniform(0)]
@@ -50,23 +47,9 @@ pub fn toggle_prepass_view(
     keycode: Res<ButtonInput<KeyCode>>,
     material_handle: Query<&Handle<PrepassOutputMaterial>>,
     mut materials: ResMut<Assets<PrepassOutputMaterial>>,
-    mut text: Query<&mut Text, With<PrepassDebugText>>,
 ) {
     if keycode.just_pressed(KeyCode::Space) {
         *prepass_view = (*prepass_view + 1) % 4;
-
-        let label = match *prepass_view {
-            0 => "transparent",
-            1 => "depth",
-            2 => "normals",
-            3 => "motion vectors",
-            _ => unreachable!(),
-        };
-        let mut text = text.single_mut();
-        text.sections[0].value = format!("Prepass Output: {label}\n");
-        for section in &mut text.sections {
-            section.style.color = Color::WHITE;
-        }
 
         let handle = material_handle.single();
         let mat = materials.get_mut(handle).unwrap();

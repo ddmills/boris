@@ -24,20 +24,6 @@ use crate::{
     Position,
 };
 
-use bitflags::bitflags;
-
-bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Component)]
-    pub struct CommodityFlag: u32 {
-        const NONE = 0;
-        const STONE = 1;
-        const WOOD = 2;
-        const BOULDER = 4;
-        const LOG = 8;
-        const BASIC_BUILD = Self::STONE.bits() | Self::WOOD.bits();
-    }
-}
-
 #[derive(Component, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Commodity {
     WoodBirchLog,
@@ -50,7 +36,6 @@ pub struct CommodityData {
     pub texture_idx: u8,
     pub mesh: Handle<Mesh>,
     pub color: Color,
-    pub flags: CommodityFlag,
     pub tags: Vec<ItemTag>,
 }
 

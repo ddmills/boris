@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{colonists::ItemTag, items::image_loader_settings};
 
-use super::{Commodities, Commodity, CommodityData, CommodityFlag};
+use super::{Commodities, Commodity, CommodityData};
 
 pub fn setup_commodity_stone_shale_boulder(
     mut commodities: ResMut<Commodities>,
@@ -23,7 +23,6 @@ pub fn setup_commodity_stone_shale_boulder(
             texture_idx: 3,
             mesh,
             color: Color::WHITE,
-            flags: CommodityFlag::STONE | CommodityFlag::BOULDER,
             tags: vec![ItemTag::Stone, ItemTag::BasicBuildMaterial],
         },
     );

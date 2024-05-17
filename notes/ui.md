@@ -12,6 +12,12 @@ lights|workshops|ladder
 #ff0000
 
 
-_[orders]___________    _[build]___________________    _[zones]________________
-mine | chop | gather    lights | workshops | ladder    stockpile | room | areas
+
+
+
+                         _[lights]__________________
+                        | Torch (pole) | Torch (wall)
+                        |
+_[orders]___________    |_[build]_____________________   _[zones]________________
+mine | chop | gather    *lights* | workshops | ladder    stockpile | room | areas
 

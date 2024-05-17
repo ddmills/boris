@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use bevy::{gltf::GltfPlugin, utils::hashbrown::HashMap};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_mod_picking::debug::DebugPickingMode;
+use bevy_mod_picking::DefaultPickingPlugins;
 use bevy_obj::ObjPlugin;
 use colonists::{
     apply_falling, behavior_pick_system, behavior_system, block_move_system, check_job_build_valid,
@@ -42,10 +44,11 @@ use structures::{
 };
 use terrain::*;
 use ui::{
-    job_toolbar, on_toolbar_submenu_btn, on_toolbar_tool_btn, setup_block_toolbar_ui,
-    tool_block_info, tool_chop, tool_clear_block, tool_mine, tool_place_blocks, tool_place_stone,
-    tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe, tool_spawn_structure,
-    tool_toggle_path, ui_capture_pointer, GameSpeed, Tool, Toolbar, Ui,
+    job_toolbar, on_colonist_clicked, on_toolbar_submenu_btn, on_toolbar_tool_btn,
+    setup_block_toolbar_ui, tool_block_info, tool_chop, tool_clear_block, tool_mine,
+    tool_place_blocks, tool_place_stone, tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe,
+    tool_spawn_structure, tool_toggle_path, ui_capture_pointer, ColonistClickedEvent, GameSpeed,
+    Tool, Toolbar, Ui,
 };
 
 mod colonists;
@@ -111,10 +114,12 @@ fn main() {
         .add_event::<JobCancelEvent>()
         .add_event::<SpawnCommodityEvent>()
         .add_event::<SetSlotEvent>()
+        .add_event::<ColonistClickedEvent>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
         .init_resource::<Lamps>()
+        .insert_resource(DebugPickingMode::Normal)
         .add_plugins((
             DefaultPlugins
                 .set(GltfPlugin::default().add_custom_vertex_attribute("SLOT", ATTRIBUTE_SLOTS)),
@@ -123,6 +128,7 @@ fn main() {
         .add_plugins(EguiPlugin)
         .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
+        .add_plugins(DefaultPickingPlugins)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
             ..default()
@@ -176,6 +182,7 @@ fn main() {
         .add_systems(Update, update_camera)
         .add_systems(Update, on_toolbar_tool_btn)
         .add_systems(Update, on_toolbar_submenu_btn)
+        .add_systems(Update, on_colonist_clicked)
         .add_systems(Update, check_job_supply_valid)
         .add_systems(Update, check_job_build_valid)
         .add_systems(Update, job_toolbar)

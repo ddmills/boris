@@ -5,6 +5,7 @@ use bevy::{
     prelude::*,
     window::PrimaryWindow,
 };
+use bevy_mod_picking::picking_core::Pickable;
 
 use crate::TerrainSlice;
 
@@ -176,6 +177,10 @@ pub fn setup_camera(
                 ..default()
             },
             NotShadowCaster,
+            Pickable {
+                is_hoverable: false,
+                should_block_lower: false,
+            },
         ))
         .id();
 

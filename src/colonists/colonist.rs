@@ -1,21 +1,32 @@
 use std::sync::Arc;
 
 use bevy::{
-    asset::{AssetServer, Handle},
+    asset::{AssetServer, Assets, Handle},
     core::Name,
     ecs::{
         component::Component,
         event::{Event, EventReader},
-        system::{Commands, Res},
+        system::{Commands, Res, ResMut},
     },
+    math::primitives::Cuboid,
     prelude::default,
-    render::view::Visibility,
+    render::{
+        mesh::{shape::Cube, Mesh},
+        view::Visibility,
+    },
     scene::SceneBundle,
     transform::components::Transform,
+};
+use bevy_mod_picking::{
+    backends::raycast::bevy_mod_raycast::markers::SimplifiedMesh,
+    events::{Down, Pointer},
+    prelude::On,
+    PickableBundle,
 };
 
 use crate::{
     rendering::{BasicMaterial, GltfBinding},
+    ui::ColonistClickedEvent,
     Position,
 };
 
@@ -38,6 +49,7 @@ pub struct SpawnColonistEvent {
 pub fn on_spawn_colonist(
     mut cmd: Commands,
     mut ev_spawn_colonist: EventReader<SpawnColonistEvent>,
+    mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
 ) {
     for ev in ev_spawn_colonist.read() {
@@ -55,6 +67,9 @@ pub fn on_spawn_colonist(
                 visibility: Visibility::Hidden,
                 ..default()
             },
+            SimplifiedMesh {
+                mesh: meshes.add(Cuboid::default()),
+            },
             GltfBinding {
                 armature_name: Some("Armature".into()),
                 mesh_name: "HumanMesh".into(),
@@ -67,6 +82,8 @@ pub fn on_spawn_colonist(
             Actor,
             Inventory::default(),
             Colonist::default(),
+            PickableBundle::default(),
+            On::<Pointer<Down>>::send_event::<ColonistClickedEvent>(),
             Thinker {
                 score_builders: vec![
                     Arc::new(ScorerWander),

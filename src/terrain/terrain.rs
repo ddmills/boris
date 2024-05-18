@@ -95,23 +95,33 @@ impl Terrain {
         return self.chunks.get(chunk_idx as usize);
     }
 
-    pub fn get_is_chunk_mesh_dirty(&self, chunk_idx: u32) -> bool {
+    pub fn is_layer_dirty(&self, chunk_idx: u32, global_y: u32) -> bool {
         if let Some(chunk) = self.chunks.get(chunk_idx as usize) {
-            return chunk.is_mesh_dirty;
+            let local_y = global_y % self.chunk_size;
+            return chunk.is_y_dirty(&local_y);
         }
         false
     }
 
-    pub fn set_chunk_dirty(&mut self, chunk_idx: u32, value: bool) {
+    pub fn set_layer_dirty(&mut self, chunk_idx: u32, global_y: u32, value: bool) {
         if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
-            chunk.is_mesh_dirty = value;
+            let local_y = global_y % self.chunk_size;
+            chunk.set_layer_dirty(local_y, value);
             chunk.is_nav_dirty = value;
         }
     }
 
-    pub fn set_chunk_mesh_dirty(&mut self, chunk_idx: u32, value: bool) {
+    pub fn set_layer_mesh_dirty(&mut self, chunk_idx: u32, global_y: u32, value: bool) {
         if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
-            chunk.is_mesh_dirty = value;
+            let local_y = global_y % self.chunk_size;
+            chunk.set_layer_dirty(local_y, value);
+        }
+    }
+
+    pub fn set_layer_position_mesh_dirty(&mut self, x: u32, y: u32, z: u32, value: bool) {
+        let [chunk_idx, block_idx] = self.get_block_indexes(x, y, z);
+        if let Some(chunk) = self.chunks.get_mut(chunk_idx as usize) {
+            chunk.set_block_dirty(block_idx);
         }
     }
 
@@ -194,32 +204,81 @@ impl Terrain {
         // what chunks does this block touch?
         if local_x == 0 && x > 0 {
             // update chunk left
-            let left_chunk_idx = self.shape.linearize([chunk_x - 1, chunk_y, chunk_z]);
-            self.set_chunk_dirty(left_chunk_idx, true);
+            // let left_chunk_idx = self.shape.linearize([chunk_x - 1, chunk_y, chunk_z]);
+            // let left_below_chunk_idx = self.shape.linearize([chunk_x - 1, chunk_y - 1, chunk_z]);
+            // let left_above_chunk_idx = self.shape.linearize([chunk_x - 1, chunk_y + 1, chunk_z]);
+
+            // self.set_layer_dirty(left_chunk_idx, y, true);
+            // self.set_layer_dirty(left_below_chunk_idx, y - 1, true);
+            // self.set_layer_dirty(left_above_chunk_idx, y + 1, true);
+
+            self.set_layer_position_mesh_dirty(x - 1, y, z, true);
+            self.set_layer_position_mesh_dirty(x - 1, y - 1, z, true);
+            self.set_layer_position_mesh_dirty(x - 1, y + 1, z, true);
         } else if local_x == self.chunk_size - 1 && x < self.world_size_x() - 1 {
             // update chunk right
-            let right_chunk_idx = self.shape.linearize([chunk_x + 1, chunk_y, chunk_z]);
-            self.set_chunk_dirty(right_chunk_idx, true);
+            // let right_chunk_idx = self.shape.linearize([chunk_x + 1, chunk_y, chunk_z]);
+            // let right_below_chunk_idx = self.shape.linearize([chunk_x + 1, chunk_y - 1, chunk_z]);
+            // let right_above_chunk_idx = self.shape.linearize([chunk_x + 1, chunk_y + 1, chunk_z]);
+
+            // self.set_layer_dirty(right_chunk_idx, y, true);
+            // self.set_layer_dirty(right_below_chunk_idx, y - 1, true);
+            // self.set_layer_dirty(right_above_chunk_idx, y + 1, true);
+
+            self.set_layer_position_mesh_dirty(x + 1, y, z, true);
+            self.set_layer_position_mesh_dirty(x + 1, y - 1, z, true);
+            self.set_layer_position_mesh_dirty(x + 1, y + 1, z, true);
         }
 
-        if local_y == 0 && y > 0 {
-            // update chunk below
-            let below_chunk_idx = self.shape.linearize([chunk_x, chunk_y - 1, chunk_z]);
-            self.set_chunk_dirty(below_chunk_idx, true);
-        } else if local_y == self.chunk_size - 1 && y < self.world_size_y() - 1 {
-            // update chunk above
-            let above_chunk_idx = self.shape.linearize([chunk_x, chunk_y + 1, chunk_z]);
-            self.set_chunk_dirty(above_chunk_idx, true);
+        // if local_y == 0 && y > 0 {
+        //     // update chunk below
+        //     let below_chunk_idx = self.shape.linearize([chunk_x, chunk_y - 1, chunk_z]);
+        //     self.set_layer_dirty(below_chunk_idx, y - 1, true);
+        //     self.set_layer_dirty(chunk_idx, y + 1, true);
+
+        // } else if local_y == self.chunk_size - 1 && y < self.world_size_y() - 1 {
+        //     let above_chunk_idx = self.shape.linearize([chunk_x, chunk_y + 1, chunk_z]);
+        //     // update chunk above
+        //     self.set_layer_dirty(above_chunk_idx, y + 1, true);
+        //     self.set_layer_dirty(chunk_idx, y - 1, true);
+        // } else {
+        //     self.set_layer_dirty(chunk_idx, y + 1, true);
+        //     self.set_layer_dirty(chunk_idx, y - 1, true);
+
+        // }
+        if y > 0 {
+            self.set_layer_position_mesh_dirty(x, y - 1, z, true);
+        }
+        if y < self.world_size_y() - 1 {
+            self.set_layer_position_mesh_dirty(x, y + 1, z, true);
         }
 
         if local_z == 0 && z > 0 {
             // update chunk forward
-            let forward_chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z - 1]);
-            self.set_chunk_dirty(forward_chunk_idx, true);
+            // let forward_chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z - 1]);
+            // let forward_below_chunk_idx = self.shape.linearize([chunk_x, chunk_y - 1, chunk_z - 1]);
+            // let forward_above_chunk_idx = self.shape.linearize([chunk_x, chunk_y + 1, chunk_z - 1]);
+
+            // self.set_layer_dirty(forward_chunk_idx, y, true);
+            // self.set_layer_dirty(forward_below_chunk_idx, y - 1, true);
+            // self.set_layer_dirty(forward_above_chunk_idx, y + 1, true);
+
+            self.set_layer_position_mesh_dirty(x, y, z - 1, true);
+            self.set_layer_position_mesh_dirty(x, y - 1, z - 1, true);
+            self.set_layer_position_mesh_dirty(x, y + 1, z - 1, true);
         } else if local_z == self.chunk_size - 1 && z < self.world_size_z() - 1 {
             // update chunk behind
-            let behind_chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z + 1]);
-            self.set_chunk_dirty(behind_chunk_idx, true);
+            // let behind_chunk_idx = self.shape.linearize([chunk_x, chunk_y, chunk_z + 1]);
+            // let behind_below_chunk_idx = self.shape.linearize([chunk_x, chunk_y - 1, chunk_z + 1]);
+            // let behind_above_chunk_idx = self.shape.linearize([chunk_x, chunk_y + 1, chunk_z + 1]);
+
+            // self.set_layer_dirty(behind_chunk_idx, y, true);
+            // self.set_layer_dirty(behind_below_chunk_idx, y - 1, true);
+            // self.set_layer_dirty(behind_above_chunk_idx, y + 1, true);
+
+            self.set_layer_position_mesh_dirty(x, y, z + 1, true);
+            self.set_layer_position_mesh_dirty(x, y - 1, z + 1, true);
+            self.set_layer_position_mesh_dirty(x, y + 1, z + 1, true);
         }
     }
 
@@ -366,6 +425,10 @@ impl Terrain {
     pub fn add_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.set_sunlight(x, y, z, value);
         self.sunlight_queue_add.push(LightNode { x, y, z, value });
+
+        if y > 0 {
+            self.set_layer_position_mesh_dirty(x, y - 1, z, true)
+        }
     }
 
     pub fn remove_sunlight(&mut self, x: u32, y: u32, z: u32) {

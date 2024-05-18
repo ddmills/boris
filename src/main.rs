@@ -1,5 +1,6 @@
 use bevy::pbr::wireframe::WireframePlugin;
 use bevy::prelude::*;
+use bevy::window::PresentMode;
 use bevy::{gltf::GltfPlugin, utils::hashbrown::HashMap};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -63,7 +64,7 @@ mod ui;
 
 fn main() {
     App::new()
-        .insert_resource(Terrain::new(1, 4, 1, 16))
+        .insert_resource(Terrain::new(8, 3, 8, 16))
         .insert_resource(Rand::new())
         .insert_resource(DebugSettings::default())
         .insert_resource(Blueprints::default())
@@ -122,11 +123,18 @@ fn main() {
         .insert_resource(DebugPickingMode::Normal)
         .add_plugins((
             DefaultPlugins
-                .set(GltfPlugin::default().add_custom_vertex_attribute("SLOT", ATTRIBUTE_SLOTS)),
+                .set(GltfPlugin::default().add_custom_vertex_attribute("SLOT", ATTRIBUTE_SLOTS))
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        present_mode: PresentMode::Immediate,
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
             ObjPlugin,
         ))
         .add_plugins(EguiPlugin)
-        .add_plugins(WorldInspectorPlugin::default())
+        // .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
         .add_plugins(DefaultPickingPlugins)
         .add_plugins(MaterialPlugin::<ChunkMaterial> {

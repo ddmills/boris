@@ -18,9 +18,8 @@ struct VertexOutput {
     @location(0) packed_block: u32,
     @location(1) position: vec3<f32>,
     @location(2) position_world: vec4<f32>,
-    @location(4) vertex_index: u32,
-    @location(5) ao: f32,
-    @location(6) light: f32,
+    @location(3) ao: f32,
+    @location(4) light: f32,
 };
 
 @vertex 
@@ -38,8 +37,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         get_model_matrix(vertex.instance_index),
         vec4<f32>(vertex.position, 1.0),
     );
-
-    out.vertex_index = vertex.instance_index;
 
     let vertex_ao = vertex.packed_block >> 11u & 3u;
 
@@ -63,7 +60,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     let torch = vertex.light & 0xf;
     let sun = (vertex.light >> 4) & 0xf;
-    out.light = f32(max(sun, torch)) / 15.0 + 0.05;
+    out.light = f32(max(sun, torch)) / 15.0 + 0.1;
 
     return out;
 }
@@ -76,7 +73,6 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let vertex_mine = (mesh.packed_block >> 13u & 1u) == 1u;
     let vertex_chop = (mesh.packed_block >> 14u & 1u) == 1u;
     let vertex_blue = (mesh.packed_block >> 15u & 1u) == 1u;
-    let vert = mesh.vertex_index % 4;
 
     var uv: vec2<f32>;
     var uv_px_offset: vec2<f32>;
@@ -85,13 +81,6 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let oy = f32(block_type / texture_count);
 
     let ceil_mp_y = ceil(mesh.position_world.y);
-    let terrain_slice_y_f32 = f32(terrain_slice_y);
-
-    let is_sliced_out = (ceil_mp_y > terrain_slice_y_f32) || (block_face == 3u && ceil_mp_y >= terrain_slice_y_f32);
-
-    if (is_sliced_out) {
-        discard;
-    }
 
     var light: f32;
     let position_local = mesh.position_world % 1.0;

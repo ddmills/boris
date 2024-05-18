@@ -44,8 +44,8 @@ pub fn task_mine_block(
         }
 
         if task.progress >= 3. {
-            terrain.set_block_type(x, y, z, BlockType::EMPTY);
             terrain.set_flag_mine(x, y, z, false);
+            terrain.set_block_type(x, y, z, BlockType::EMPTY);
 
             if rand.bool(0.15) {
                 ev_spawn_commodity.send(SpawnCommodityEvent {

@@ -214,6 +214,10 @@ pub fn tool_block_info(
         let [chunk_idx, block_idx] =
             terrain.get_block_indexes(raycast.adj_pos[0], raycast.adj_pos[1], raycast.adj_pos[2]);
 
+        let block = terrain.get_block_by_idx(chunk_idx, block_idx);
+
+        println!("sunlight={}, torchlight={}", block.sunlight, block.light);
+
         let Some(partition_id) = terrain.get_partition_id(chunk_idx, block_idx) else {
             println!("no partition");
             return;

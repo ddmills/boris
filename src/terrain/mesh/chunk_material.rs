@@ -14,11 +14,6 @@ use bevy::{
 
 use crate::{Block, BlockFace, ATTRIBUTE_BLOCK_LIGHT, ATTRIBUTE_BLOCK_PACKED};
 
-#[derive(Resource)]
-pub struct ChunkMaterialRes {
-    pub handle: Handle<ChunkMaterial>,
-}
-
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct ChunkMaterial {
     #[texture(0)]
@@ -28,8 +23,6 @@ pub struct ChunkMaterial {
     pub color: Color,
     #[uniform[3]]
     pub texture_count: u32,
-    #[uniform[4]]
-    pub terrain_slice_y: u32,
 }
 
 impl Material for ChunkMaterial {

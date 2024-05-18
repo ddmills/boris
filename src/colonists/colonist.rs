@@ -10,10 +10,7 @@ use bevy::{
     },
     math::primitives::Cuboid,
     prelude::default,
-    render::{
-        mesh::{shape::Cube, Mesh},
-        view::Visibility,
-    },
+    render::{mesh::Mesh, view::Visibility},
     scene::SceneBundle,
     transform::components::Transform,
 };

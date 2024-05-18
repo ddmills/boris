@@ -9,13 +9,15 @@ use ndshape::{AbstractShape, RuntimeShape};
 use crate::{colonists::NavigationFlags, Block, BlockType};
 
 #[derive(Component)]
-pub struct ChunkMesh {
+pub struct ChunkLayerMesh {
     pub chunk_idx: u32,
+    pub global_y: u32,
     pub mesh_handle: Handle<Mesh>,
 }
 
 #[derive(Clone)]
 pub struct Chunk {
+    pub shape: RuntimeShape<u32, 3>,
     pub blocks: Box<[Block]>,
     pub items: Box<[HashSet<Entity>]>,
     pub trees: Box<[HashSet<Entity>]>,
@@ -26,7 +28,7 @@ pub struct Chunk {
     pub world_x: u32,
     pub world_y: u32,
     pub world_z: u32,
-    pub is_mesh_dirty: bool,
+    pub dirty_layers: HashSet<u32>,
     pub is_nav_dirty: bool,
 }
 
@@ -51,19 +53,37 @@ impl Chunk {
             trees: vec![HashSet::new(); shape.size() as usize].into_boxed_slice(),
             structures: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
             lamps: vec![HashMap::new(); shape.size() as usize].into_boxed_slice(),
+            shape,
             chunk_idx: 0,
             chunk_size: 0,
             world_x: 0,
             world_y: 0,
             world_z: 0,
-            is_mesh_dirty: true,
+            dirty_layers: HashSet::new(),
             is_nav_dirty: true,
         }
     }
 
+    pub fn is_y_dirty(&self, local_y: &u32) -> bool {
+        self.dirty_layers.contains(local_y)
+    }
+
+    pub fn set_layer_dirty(&mut self, local_y: u32, value: bool) {
+        if value {
+            self.dirty_layers.insert(local_y);
+        } else {
+            self.dirty_layers.remove(&local_y);
+        }
+    }
+
+    pub fn set_block_dirty(&mut self, block_idx: u32) {
+        let [_, y, _] = self.shape.delinearize(block_idx);
+        self.dirty_layers.insert(y);
+    }
+
     pub fn set_block_type(&mut self, block_idx: u32, value: BlockType) {
         self.blocks[block_idx as usize].block = value;
-        self.is_mesh_dirty = true;
+        self.set_block_dirty(block_idx);
         self.is_nav_dirty = true;
     }
 
@@ -191,7 +211,7 @@ impl Chunk {
         let is_changed = block.flag_mine != value;
         self.blocks[block_idx as usize].flag_mine = value;
         if is_changed {
-            self.is_mesh_dirty = true;
+            self.set_block_dirty(block_idx);
         }
         is_changed
     }
@@ -201,21 +221,19 @@ impl Chunk {
         let is_changed = block.flag_chop != value;
         self.blocks[block_idx as usize].flag_chop = value;
         if is_changed {
-            self.is_mesh_dirty = true;
+            self.set_block_dirty(block_idx);
         }
         is_changed
     }
 
-    #[inline]
     pub fn set_sunlight(&mut self, block_idx: u32, value: u8) {
         self.blocks[block_idx as usize].sunlight = value;
-        self.is_mesh_dirty = true;
+        self.set_block_dirty(block_idx);
     }
 
-    #[inline]
     pub fn set_torchlight(&mut self, block_idx: u32, value: u8) {
         self.blocks[block_idx as usize].light = value;
-        self.is_mesh_dirty = true;
+        self.set_block_dirty(block_idx);
     }
 }
 

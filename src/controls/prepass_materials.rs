@@ -1,18 +1,10 @@
 use bevy::{
     asset::{Asset, Assets, Handle},
-    ecs::{
-        component::Component,
-        query::With,
-        system::{Local, Query, Res, ResMut},
-    },
+    ecs::system::{Local, Query, Res, ResMut},
     input::{keyboard::KeyCode, ButtonInput},
     pbr::{AlphaMode, Material},
     reflect::TypePath,
-    render::{
-        color::Color,
-        render_resource::{AsBindGroup, ShaderRef, ShaderType},
-    },
-    text::Text,
+    render::render_resource::{AsBindGroup, ShaderRef, ShaderType},
 };
 
 #[derive(Debug, Clone, Default, ShaderType)]

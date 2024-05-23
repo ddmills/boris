@@ -22,6 +22,7 @@ use crate::{
     colonists::{Faller, Item, ItemTag},
     rendering::{BasicMaterial, SlotIndex},
     structures::{PartSlot, PartSlots},
+    ui::Inspectable,
     Position,
 };
 
@@ -66,6 +67,9 @@ pub fn on_spawn_pickaxe(
         let entity = cmd
             .spawn((
                 Name::new("Pickaxe"),
+                Inspectable {
+                    display_name: "Pickaxe".into(),
+                },
                 MaterialMeshBundle {
                     mesh: mesh.clone(),
                     material: material.clone(),

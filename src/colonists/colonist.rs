@@ -14,16 +14,11 @@ use bevy::{
     scene::SceneBundle,
     transform::components::Transform,
 };
-use bevy_mod_picking::{
-    backends::raycast::bevy_mod_raycast::markers::SimplifiedMesh,
-    events::{Down, Pointer},
-    prelude::On,
-    PickableBundle,
-};
+use bevy_mod_picking::backends::raycast::bevy_mod_raycast::markers::SimplifiedMesh;
 
 use crate::{
     rendering::{BasicMaterial, GltfBinding},
-    ui::ColonistClickedEvent,
+    ui::Inspectable,
     Position,
 };
 
@@ -64,9 +59,7 @@ pub fn on_spawn_colonist(
                 visibility: Visibility::Hidden,
                 ..default()
             },
-            SimplifiedMesh {
-                mesh: meshes.add(Cuboid::default()),
-            },
+            meshes.add(Cuboid::new(1., 2., 1.)),
             GltfBinding {
                 armature_name: Some("Armature".into()),
                 mesh_name: "HumanMesh".into(),
@@ -79,8 +72,9 @@ pub fn on_spawn_colonist(
             Actor,
             Inventory::default(),
             Colonist::default(),
-            PickableBundle::default(),
-            On::<Pointer<Down>>::send_event::<ColonistClickedEvent>(),
+            Inspectable {
+                display_name: "Colonist".into(),
+            },
             Thinker {
                 score_builders: vec![
                     Arc::new(ScorerWander),

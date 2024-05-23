@@ -15,6 +15,7 @@ use crate::{
     colonists::{Faller, Item, ItemTag},
     rendering::{BasicMaterial, SlotIndex},
     structures::{PartSlot, PartSlots},
+    ui::Inspectable,
     Position,
 };
 
@@ -44,6 +45,9 @@ pub fn on_spawn_axe(
         let entity = cmd
             .spawn((
                 Name::new("Axe"),
+                Inspectable {
+                    display_name: "Axe".into(),
+                },
                 MaterialMeshBundle {
                     mesh: mesh.clone(),
                     material: material.clone(),

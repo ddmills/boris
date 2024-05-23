@@ -19,6 +19,7 @@ use crate::{
     colonists::{get_block_flags, InSlot, ItemTag, JobBuild, JobCancelEvent, NavigationFlags},
     items::image_loader_settings,
     rendering::{BasicMaterial, SlotIndex},
+    ui::Inspectable,
     Position, StructureTileDetail, Terrain,
 };
 
@@ -111,6 +112,14 @@ impl PartSlots {
             SlotIndex::Slot0 => self.slot_0.as_mut(),
             SlotIndex::Slot1 => self.slot_1.as_mut(),
             SlotIndex::Slot2 => self.slot_2.as_mut(),
+        }
+    }
+
+    pub fn get(&self, idx: SlotIndex) -> Option<&PartSlot> {
+        match idx {
+            SlotIndex::Slot0 => self.slot_0.as_ref(),
+            SlotIndex::Slot1 => self.slot_1.as_ref(),
+            SlotIndex::Slot2 => self.slot_2.as_ref(),
         }
     }
 }
@@ -260,6 +269,9 @@ pub fn on_spawn_structure(
 
         cmd.entity(ev.entity).insert((
             Name::new(blueprint.name.clone()),
+            Inspectable {
+                display_name: format!("{} blueprint", blueprint.name.clone()),
+            },
             Structure {
                 position: ev.pos,
                 is_valid: false,

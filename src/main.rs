@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy::{gltf::GltfPlugin, utils::hashbrown::HashMap};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_mod_picking::debug::DebugPickingMode;
 use bevy_mod_picking::DefaultPickingPlugins;
 use bevy_obj::ObjPlugin;
@@ -45,10 +44,11 @@ use structures::{
 };
 use terrain::*;
 use ui::{
-    job_toolbar, on_colonist_clicked, on_toolbar_submenu_btn, on_toolbar_tool_btn,
-    setup_block_toolbar_ui, tool_block_info, tool_chop, tool_clear_block, tool_mine,
-    tool_place_blocks, tool_place_stone, tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe,
-    tool_spawn_structure, tool_toggle_path, ui_capture_pointer, ColonistClickedEvent, GameSpeed,
+    job_toolbar, on_inspectable_clicked, on_inspector_close, on_toolbar_submenu_btn,
+    on_toolbar_tool_btn, setup_block_toolbar_ui, setup_inspectables, setup_inspector_ui,
+    tool_block_info, tool_chop, tool_clear_block, tool_mine, tool_place_blocks, tool_place_stone,
+    tool_spawn_axe, tool_spawn_colonist, tool_spawn_pickaxe, tool_spawn_structure,
+    tool_toggle_path, ui_capture_pointer, update_inspector, GameSpeed, InspectableClickedEvent,
     Tool, Toolbar, Ui,
 };
 
@@ -115,7 +115,7 @@ fn main() {
         .add_event::<JobCancelEvent>()
         .add_event::<SpawnCommodityEvent>()
         .add_event::<SetSlotEvent>()
-        .add_event::<ColonistClickedEvent>()
+        .add_event::<InspectableClickedEvent>()
         .init_resource::<NavigationGraph>()
         .init_resource::<PartitionDebug>()
         .init_resource::<GameSpeed>()
@@ -126,7 +126,7 @@ fn main() {
                 .set(GltfPlugin::default().add_custom_vertex_attribute("SLOT", ATTRIBUTE_SLOTS))
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        present_mode: PresentMode::Immediate,
+                        present_mode: PresentMode::AutoNoVsync,
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -136,7 +136,7 @@ fn main() {
         .add_plugins(EguiPlugin)
         // .add_plugins(WorldInspectorPlugin::default())
         .add_plugins(ScorerPlugin)
-        .add_plugins(DefaultPickingPlugins)
+        .add_plugins(DefaultPickingPlugins.build())
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
             prepass_enabled: false,
             ..default()
@@ -171,11 +171,13 @@ fn main() {
                 setup_terrain_slice,
                 setup_chunk_meshes,
                 setup_camera,
+                setup_inspector_ui,
                 setup_block_toolbar_ui,
             )
                 .chain(),
         )
         .add_systems(Update, setup_structure_torch)
+        .add_systems(Update, (setup_gltf_objects, setup_inspectables).chain())
         .add_systems(Update, ui_capture_pointer)
         .add_systems(Update, draw_gizmos)
         .add_systems(Update, raycast)
@@ -190,7 +192,8 @@ fn main() {
         .add_systems(Update, update_camera)
         .add_systems(Update, on_toolbar_tool_btn)
         .add_systems(Update, on_toolbar_submenu_btn)
-        .add_systems(Update, on_colonist_clicked)
+        .add_systems(Update, (on_inspectable_clicked, update_inspector).chain())
+        .add_systems(Update, on_inspector_close)
         .add_systems(Update, check_job_supply_valid)
         .add_systems(Update, check_job_build_valid)
         .add_systems(Update, job_toolbar)
@@ -274,7 +277,6 @@ fn main() {
         .add_systems(Update, task_is_target_empty)
         .add_systems(Update, task_animate)
         .add_systems(Update, colonist_animations)
-        .add_systems(Update, setup_gltf_objects)
         .add_systems(Update, update_basic_material_lighting)
         .add_systems(Update, update_basic_material_children_lighting)
         .add_systems(

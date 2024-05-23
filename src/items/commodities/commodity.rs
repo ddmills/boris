@@ -16,11 +16,9 @@ use bevy::{
 
 use crate::{
     colonists::{Faller, InSlot, Item, ItemTag},
-    rendering::{
-        BasicMaterial,
-        SlotIndex::{self},
-    },
+    rendering::{BasicMaterial, SlotIndex},
     structures::PartSlots,
+    ui::Inspectable,
     Position,
 };
 
@@ -75,6 +73,9 @@ pub fn on_spawn_commodity(
 
         ecmd.insert((
             Name::new(commodity.name.clone()),
+            Inspectable {
+                display_name: commodity.name.clone(),
+            },
             MaterialMeshBundle {
                 mesh: commodity.mesh.clone(),
                 material,

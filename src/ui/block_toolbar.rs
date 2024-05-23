@@ -4,10 +4,10 @@ use crate::{items::image_loader_settings, structures::BlueprintType, BlockType};
 
 use super::Tool;
 
-const BTN_PRESSED: Color = Color::rgb(39. / 255., 55. / 255., 66. / 255.);
-const BTN_NONE: Color = Color::rgb(55. / 255., 79. / 255., 94. / 255.);
-const BTN_HOVERED: Color = Color::rgb(42. / 255., 53. / 255., 71. / 255.);
-const BTN_TOGGLED: Color = Color::rgb(78. / 255., 44. / 255., 44. / 255.);
+pub const BTN_PRESSED: Color = Color::rgb(39. / 255., 55. / 255., 66. / 255.);
+pub const BTN_NONE: Color = Color::rgb(55. / 255., 79. / 255., 94. / 255.);
+pub const BTN_HOVERED: Color = Color::rgb(42. / 255., 53. / 255., 71. / 255.);
+pub const BTN_TOGGLED: Color = Color::rgb(78. / 255., 44. / 255., 44. / 255.);
 
 #[derive(Component)]
 pub struct BtnTool {
@@ -42,8 +42,6 @@ pub fn on_toolbar_submenu_btn(
     for (interaction, btn, mut bkg) in &mut btn_query {
         match *interaction {
             Interaction::Pressed => {
-                println!("pressed");
-
                 if Some(btn.submenu) == current_submenu {
                     toolbar.submenu = None;
                 } else {
@@ -289,7 +287,6 @@ pub fn setup_block_toolbar_ui(
 
     cmd.spawn((
         NodeBundle {
-            focus_policy: FocusPolicy::Block,
             style: Style {
                 position_type: PositionType::Absolute,
                 width: Val::Percent(100.0),
@@ -324,7 +321,6 @@ pub fn setup_block_toolbar_ui(
 
     cmd.spawn((
         NodeBundle {
-            focus_policy: FocusPolicy::Block,
             style: Style {
                 position_type: PositionType::Absolute,
                 width: Val::Percent(100.0),
@@ -357,7 +353,6 @@ pub fn setup_block_toolbar_ui(
     let block_submenu = cmd
         .spawn((
             NodeBundle {
-                focus_policy: FocusPolicy::Block,
                 style: Style {
                     position_type: PositionType::Absolute,
                     width: Val::Percent(100.0),
@@ -425,7 +420,6 @@ pub fn setup_block_toolbar_ui(
     let build_submenu = cmd
         .spawn((
             NodeBundle {
-                focus_policy: FocusPolicy::Block,
                 style: Style {
                     position_type: PositionType::Absolute,
                     width: Val::Percent(100.0),

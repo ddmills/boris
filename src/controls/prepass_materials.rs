@@ -11,7 +11,6 @@ use bevy::{
 pub struct ShowPrepassSettings {
     show_depth: u32,
     show_normals: u32,
-    show_motion_vectors: u32,
     padding_1: u32,
     padding_2: u32,
 }
@@ -41,12 +40,11 @@ pub fn toggle_prepass_view(
     mut materials: ResMut<Assets<PrepassOutputMaterial>>,
 ) {
     if keycode.just_pressed(KeyCode::Space) {
-        *prepass_view = (*prepass_view + 1) % 4;
+        *prepass_view = (*prepass_view + 1) % 3;
 
         let handle = material_handle.single();
         let mat = materials.get_mut(handle).unwrap();
         mat.settings.show_depth = (*prepass_view == 1) as u32;
         mat.settings.show_normals = (*prepass_view == 2) as u32;
-        mat.settings.show_motion_vectors = (*prepass_view == 3) as u32;
     }
 }

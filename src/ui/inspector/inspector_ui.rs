@@ -174,7 +174,7 @@ pub fn setup_inspector_ui(mut cmd: Commands, asset_server: Res<AssetServer>) {
                 position_type: PositionType::Absolute,
                 width: Val::Px(300.),
                 height: Val::Px(400.),
-                top: Val::Px(24.),
+                top: Val::Px(92.),
                 left: Val::Px(24.),
                 border: UiRect::all(Val::Px(2.0)),
                 padding: UiRect::all(Val::Px(8.0)),

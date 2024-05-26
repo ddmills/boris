@@ -276,9 +276,20 @@ impl Material for SliceMaterial {
         layout: &MeshVertexBufferLayout,
         _key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
+        let label = descriptor.label.clone().unwrap();
+
+        if label == "prepass_pipeline" {
+            return Ok(());
+        }
+
+        let Some(fragment) = descriptor.fragment.as_mut() else {
+            return Ok(());
+        };
+
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-            ATTRIBUTE_BLOCK_PACKED.at_shader_location(1),
+            Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
+            ATTRIBUTE_BLOCK_PACKED.at_shader_location(2),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())

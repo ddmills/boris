@@ -138,11 +138,11 @@ fn main() {
         .add_plugins(ScorerPlugin)
         .add_plugins(DefaultPickingPlugins.build())
         .add_plugins(MaterialPlugin::<ChunkMaterial> {
-            prepass_enabled: false,
+            prepass_enabled: true,
             ..default()
         })
         .add_plugins(MaterialPlugin::<SliceMaterial> {
-            prepass_enabled: false,
+            prepass_enabled: true,
             ..default()
         })
         .add_plugins(MaterialPlugin::<BasicMaterial> {

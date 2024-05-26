@@ -157,7 +157,7 @@ pub fn setup_camera(
             },
             DepthPrepass,
             NormalPrepass,
-            MotionVectorPrepass,
+            // MotionVectorPrepass,
             MainCamera {
                 radius,
                 focus,

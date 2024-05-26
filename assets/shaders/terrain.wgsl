@@ -9,8 +9,9 @@
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
-    @location(1) packed_block: u32,
-    @location(2) light: u32,
+    @location(1) normal: vec3<f32>,
+    @location(2) packed_block: u32,
+    @location(3) light: u32,
 }
 
 struct VertexOutput {

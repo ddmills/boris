@@ -34,7 +34,7 @@ use items::{
 };
 use rendering::{
     setup_gltf_objects, update_basic_material_children_lighting, update_basic_material_lighting,
-    BasicMaterial, ATTRIBUTE_SLOTS,
+    BasicMaterial, SilhouettePlugin, ATTRIBUTE_SLOTS,
 };
 use structures::{
     check_structures, on_build_structure, on_remove_structure, on_spawn_structure,
@@ -132,6 +132,7 @@ fn main() {
                     ..Default::default()
                 }),
             ObjPlugin,
+            SilhouettePlugin,
         ))
         .add_plugins(EguiPlugin)
         // .add_plugins(WorldInspectorPlugin::default())

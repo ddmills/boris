@@ -7,7 +7,7 @@ use bevy::{
 };
 use bevy_mod_picking::picking_core::Pickable;
 
-use crate::TerrainSlice;
+use crate::{rendering::SilhouetteSettings, TerrainSlice};
 
 use super::{PrepassOutputMaterial, ShowPrepassSettings};
 
@@ -157,7 +157,7 @@ pub fn setup_camera(
             },
             DepthPrepass,
             NormalPrepass,
-            // MotionVectorPrepass,
+            SilhouetteSettings { intensity: 0.02 },
             MainCamera {
                 radius,
                 focus,

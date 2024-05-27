@@ -157,7 +157,7 @@ pub fn setup_camera(
             },
             DepthPrepass,
             NormalPrepass,
-            SilhouetteSettings { intensity: 0.02 },
+            SilhouetteSettings { intensity: 0.01 },
             MainCamera {
                 radius,
                 focus,

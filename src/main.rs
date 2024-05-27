@@ -147,7 +147,7 @@ fn main() {
             ..default()
         })
         .add_plugins(MaterialPlugin::<BasicMaterial> {
-            prepass_enabled: true,
+            prepass_enabled: false,
             ..default()
         })
         .add_plugins(MaterialPlugin::<PrepassOutputMaterial> {

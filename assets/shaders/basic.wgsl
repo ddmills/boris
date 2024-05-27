@@ -223,5 +223,12 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 #endif
 #endif
 
+    let scene_depth = bevy_pbr::prepass_utils::prepass_depth(mesh.position, 0u);
+    let frag_depth = mesh.position.z;
+    
+    // if (frag_depth > scene_depth) {
+    //     out = vec4(1.0);
+    // }
+
     return out;
 }

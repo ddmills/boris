@@ -2,7 +2,10 @@ use bevy::{
     app::Plugin,
     asset::AssetServer,
     core_pipeline::{
-        core_3d::graph::{Core3d, Node3d},
+        core_3d::{
+            graph::{Core3d, Node3d},
+            Camera3dDepthLoadOp,
+        },
         fullscreen_vertex_shader::fullscreen_shader_vertex_state,
     },
     ecs::{component::Component, system::Resource, world::FromWorld},
@@ -15,13 +18,14 @@ use bevy::{
             binding_types::{sampler, texture_2d, uniform_buffer},
             BindGroupEntries, BindGroupLayout, BindGroupLayoutEntries, CachedRenderPipelineId,
             ColorTargetState, ColorWrites, FragmentState, MultisampleState, Operations,
-            PipelineCache, PrimitiveState, RenderPassColorAttachment, RenderPassDescriptor,
-            RenderPipelineDescriptor, Sampler, SamplerBindingType, SamplerDescriptor, ShaderStages,
-            ShaderType, TextureFormat, TextureSampleType,
+            PipelineCache, PrimitiveState, RenderPassColorAttachment,
+            RenderPassDepthStencilAttachment, RenderPassDescriptor, RenderPipelineDescriptor,
+            Sampler, SamplerBindingType, SamplerDescriptor, ShaderStages, ShaderType, StoreOp,
+            TextureFormat, TextureSampleType,
         },
         renderer::RenderDevice,
         texture::BevyDefault,
-        view::ViewTarget,
+        view::{ViewDepthTexture, ViewTarget},
         RenderApp,
     },
 };
@@ -72,13 +76,20 @@ struct SilhouetteLabel;
 struct SilhouetteNode;
 
 impl ViewNode for SilhouetteNode {
-    type ViewQuery = (&'static ViewTarget, &'static SilhouetteSettings);
+    type ViewQuery = (
+        &'static ViewTarget,
+        &'static SilhouetteSettings,
+        &'static ViewDepthTexture,
+    );
 
     fn run<'w>(
         &self,
         _graph: &mut bevy::render::render_graph::RenderGraphContext,
         render_context: &mut bevy::render::renderer::RenderContext<'w>,
-        (view_target, _silhouette_settings): bevy::ecs::query::QueryItem<'w, Self::ViewQuery>,
+        (view_target, _silhouette_settings, depth): bevy::ecs::query::QueryItem<
+            'w,
+            Self::ViewQuery,
+        >,
         world: &'w bevy::prelude::World,
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
         let silhouette_pipeline = world.resource::<SilhouettePipeline>();
@@ -109,11 +120,11 @@ impl ViewNode for SilhouetteNode {
         let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
             label: Some("silhouette_pass"),
             color_attachments: &[Some(RenderPassColorAttachment {
-                view: &post_process.destination,
+                view: post_process.destination,
                 resolve_target: None,
                 ops: Operations::default(),
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment: Some(depth.get_attachment(StoreOp::Store)),
             timestamp_writes: None,
             occlusion_query_set: None,
         });
